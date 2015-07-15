@@ -1,0 +1,20 @@
+set(MODULE src)
+set(BASE "${CMAKE_CURRENT_SOURCE_DIR}")
+
+add_subdirectory(drivers)
+
+set(
+    SOURCES
+    "${BASE}/arbiter.cpp"
+    "${BASE}/driver.cpp"
+)
+
+set(
+    HEADERS
+    "${BASE}/arbiter.hpp"
+    "${BASE}/driver.hpp"
+)
+
+install(FILES ${HEADERS} DESTINATION include/arbiter)
+add_library(${MODULE} OBJECT ${SOURCES})
+
