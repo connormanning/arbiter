@@ -12,9 +12,16 @@ namespace
 }
 
 Arbiter::Arbiter(DriverMap drivers)
-    : m_drivers{{ "fs", std::make_shared<FsDriver>(FsDriver()) }}
+    : m_drivers()
+    , m_pool(32)
 {
-    m_drivers.insert(drivers.begin(), drivers.end());
+    m_drivers["fs"] = std::make_shared<FsDriver>(FsDriver());
+    m_drivers["http"] = std::make_shared<HttpDriver>(HttpDriver(m_pool));
+
+    for (auto d : drivers)
+    {
+        m_drivers[d.first] = d.second;
+    }
 }
 
 Arbiter::~Arbiter()

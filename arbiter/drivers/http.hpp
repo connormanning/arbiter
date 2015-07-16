@@ -10,6 +10,8 @@
 
 #include <curl/curl.h>
 
+#include <arbiter/driver.hpp>
+
 namespace arbiter
 {
 
@@ -21,98 +23,112 @@ public:
         , m_data()
     { }
 
-    HttpResponse(int code, std::shared_ptr<std::vector<char>> data)
+    HttpResponse(int code, std::vector<char> data)
         : m_code(code)
         , m_data(data)
     { }
 
     ~HttpResponse() { }
 
-    int code() const { return m_code; }
-    const std::vector<char>& data() const { return *m_data; }
-    std::vector<char>& data() { return *m_data; }
+    bool ok() const     { return m_code / 100 == 2; }
+    bool retry() const  { return m_code / 100 == 5; }   // Only server errors.
+    int code() const    { return m_code; }
+
+    std::vector<char> data() const { return m_data; }
 
 private:
     int m_code;
-    std::shared_ptr<std::vector<char>> m_data;
+    std::vector<char> m_data;
 };
+
+typedef std::vector<std::string> Headers;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+class HttpPool;
+
+class HttpDriver : public Driver
+{
+public:
+    HttpDriver(HttpPool& pool, std::size_t retry = 0);
+
+    virtual std::string type() const { return "http"; }
+    virtual std::vector<char> get(std::string path);
+    virtual void put(std::string path, const std::vector<char>& data);
+
+private:
+    HttpPool& m_pool;
+    std::size_t m_retry;
+};
+
 class Curl
 {
-    // Only CurlBatch can create.
-    friend class CurlBatch;
+    // Only HttpPool may create.
+    friend class HttpPool;
 
 public:
     ~Curl();
 
-    HttpResponse get(std::string url, std::vector<std::string> headers);
+    HttpResponse get(std::string path, std::vector<std::string> headers);
     HttpResponse put(
-            std::string url,
-            std::vector<std::string> headers,
-            const std::vector<char>& data);
+            std::string path,
+            const std::vector<char>& data,
+            std::vector<std::string> headers);
 
 private:
-    Curl(std::size_t id);
-    std::size_t id() const { return m_id; }
+    Curl();
+
+    void init(std::string path, const std::vector<std::string>& headers);
+
+    Curl(const Curl&);
+    Curl& operator=(const Curl&);
 
     CURL* m_curl;
     curl_slist* m_headers;
 
     std::vector<char> m_data;
-
-    const std::size_t m_id;
-
-    void init(std::string url, const std::vector<std::string>& headers);
 };
 
-///////////////////////////////////////////////////////////////////////////////
-
-class CurlBatch
+class HttpResource
 {
-    // Only CurlPool can create.
-    friend class CurlPool;
-
 public:
+    HttpResource(HttpPool& pool, Curl& curl, std::size_t id);
+    ~HttpResource();
+
     HttpResponse get(
-            std::string url,
-            std::vector<std::string> headers);
+            std::string path,
+            std::size_t retry,
+            Headers headers = Headers());
 
     HttpResponse put(
-            std::string url,
-            std::vector<std::string> headers,
-            const std::vector<char>& data);
+            std::string path,
+            const std::vector<char>& data,
+            std::size_t retry,
+            Headers headers = Headers());
 
 private:
-    CurlBatch(std::size_t id, std::size_t batchSize);
-    std::size_t id() const { return m_id; }
+    HttpPool& m_pool;
+    Curl& m_curl;
+    std::size_t m_id;
 
-    std::shared_ptr<Curl> acquire();
-    void release(std::shared_ptr<Curl>);
-
-    std::vector<std::size_t> m_available;
-    std::vector<std::shared_ptr<Curl>> m_curls;
-
-    const std::size_t m_id;
-
-    std::mutex m_mutex;
-    std::condition_variable m_cv;
+    HttpResponse exec(std::function<HttpResponse()> f, std::size_t retry);
 };
 
-///////////////////////////////////////////////////////////////////////////////
-
-class CurlPool
+class HttpPool
 {
-public:
-    CurlPool(std::size_t numBatches, std::size_t batchSize);
+    // Only HttpResource may release.
+    friend class HttpResource;
 
-    std::shared_ptr<CurlBatch> acquire();
-    void release(std::shared_ptr<CurlBatch> curlBatch);
+public:
+    HttpPool(std::size_t concurrent);
+
+    HttpResource acquire();
 
 private:
+    void release(std::size_t id);
+
+    std::vector<std::unique_ptr<Curl>> m_curls;
     std::vector<std::size_t> m_available;
-    std::map<std::size_t, std::shared_ptr<CurlBatch>> m_curlBatches;
 
     std::mutex m_mutex;
     std::condition_variable m_cv;

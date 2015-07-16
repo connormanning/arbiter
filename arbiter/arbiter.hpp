@@ -4,6 +4,7 @@
 #include <string>
 
 #include <arbiter/driver.hpp>
+#include <arbiter/drivers/http.hpp>
 
 namespace arbiter
 {
@@ -56,6 +57,7 @@ private:
     std::string parseType(const std::string path) const;
 
     DriverMap m_drivers;
+    HttpPool m_pool;
 };
 
 } // namespace arbiter
