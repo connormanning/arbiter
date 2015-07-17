@@ -16,20 +16,11 @@ namespace arbiter
 
 namespace
 {
-    const std::size_t httpAttempts(200);
-    const auto baseSleepTime(std::chrono::milliseconds(1));
-    const auto maxSleepTime (std::chrono::milliseconds(4096));
-
     const std::string baseUrl(".s3.amazonaws.com/");
-
-    // TODO Configure.  Also move this elsewhere.
-    const std::size_t curlNumBatches(16);
-    const std::size_t curlBatchSize(64);
-    arbiter::CurlPool curlPool(curlNumBatches, curlBatchSize);
 
     std::size_t split(std::string fullPath)
     {
-        if (fullPath.back() == '/') fullPath.pop_back();
+        // if (fullPath.back() == '/') fullPath.pop_back();
         return fullPath.find("/");
     }
 
@@ -49,6 +40,20 @@ namespace
         }
 
         return object;
+    }
+
+    std::string getQueryString(const Query& query)
+    {
+        std::string result;
+
+        bool first(true);
+        for (const auto& q : query)
+        {
+            result += (first ? "?" : "&") + q.first + "=" + q.second;
+            first = false;
+        }
+
+        return result;
     }
 
     typedef Xml::xml_node<> XmlNode;
@@ -71,47 +76,46 @@ std::string AwsAuth::hidden() const
     return m_hidden;
 }
 
-S3Driver::S3Driver(const AwsAuth& auth)
-    : m_auth(auth)
-    , m_curlBatch(curlPool.acquire())
+S3Driver::S3Driver(HttpPool& pool, const AwsAuth auth)
+    : m_pool(pool)
+    , m_auth(auth)
 { }
 
-S3Driver::~S3Driver()
+std::vector<char> S3Driver::get(const std::string rawPath)
 {
-    curlPool.release(m_curlBatch);
+    return get(rawPath, Query());
 }
 
-std::vector<char> S3Driver::get(const std::string path)
+std::vector<char> S3Driver::get(const std::string rawPath, const Query& query)
 {
-    auto getFunc([this, path]()->HttpResponse
-    {
-        return tryGet(getBucket(path), getObject(path));
-    });
+    const std::string bucket(getBucket(rawPath));
+    const std::string object(getObject(rawPath));
 
-    HttpResponse res(httpExec(getFunc, httpAttempts));
+    const std::string path(
+            "http://" + bucket + baseUrl + object + getQueryString(query));
+    const Headers headers(httpGetHeaders(rawPath));
 
-    if (res.code() != 200)
-    {
-        std::cout <<
-            res.code() << ": " <<
-            std::string(res.data().begin(), res.data().end()) <<
-            std::endl;
-        throw std::runtime_error("Couldn't fetch " + path);
-    }
+    auto http(m_pool.acquire());
 
-    return res.data();
+    HttpResponse res(http.get(path, headers));
+
+    if (res.ok()) return res.data();
+    else throw std::runtime_error("Couldn't S3 GET " + rawPath);
 }
 
-void S3Driver::put(std::string path, const std::vector<char>& data)
+void S3Driver::put(std::string rawPath, const std::vector<char>& data)
 {
-    auto putFunc([this, path, &data]()->HttpResponse
-    {
-        return tryPut(path, data);
-    });
+    const std::string bucket(getBucket(rawPath));
+    const std::string object(getObject(rawPath));
 
-    if (httpExec(putFunc, httpAttempts).code() != 200)
+    const std::string path("http://" + bucket + baseUrl + object);
+    const Headers headers(httpPutHeaders(rawPath));
+
+    auto http(m_pool.acquire());
+
+    if (!http.put(path, data, headers).ok())
     {
-        throw std::runtime_error("Couldn't write " + path);
+        throw std::runtime_error("Couldn't S3 PUT to " + rawPath);
     }
 }
 
@@ -135,137 +139,70 @@ std::vector<std::string> S3Driver::glob(std::string path, bool verbose)
 
     if (prefix.size()) query["prefix"] = prefix;
 
-    HttpResponse res;
     bool more(false);
 
     do
     {
         if (verbose) std::cout << "." << std::flush;
 
-        auto getFunc([this, &bucket, &query]()->HttpResponse
+        auto data = get(bucket + "/", query);
+        data.push_back('\0');
+
+        Xml::xml_document<> xml;
+
+        // May throw Xml::parse_error.
+        xml.parse<0>(data.data());
+
+        if (XmlNode* topNode = xml.first_node("ListBucketResult"))
         {
-            return tryGet(bucket, "", query);
-        });
-
-        res = httpExec(getFunc, httpAttempts);
-
-        if (res.code() == 200)
-        {
-            Xml::xml_document<> xml;
-            res.data().push_back('\0');
-
-            // May throw Xml::parse_error.
-            xml.parse<0>(res.data().data());
-
-            if (XmlNode* topNode = xml.first_node("ListBucketResult"))
+            if (XmlNode* truncNode = topNode->first_node("IsTruncated"))
             {
-                if (XmlNode* truncNode = topNode->first_node("IsTruncated"))
+                std::string t(truncNode->value());
+                std::transform(t.begin(), t.end(), t.begin(), tolower);
+
+                more = (t == "true");
+            }
+
+            XmlNode* conNode(topNode->first_node("Contents"));
+
+            if (!conNode) throw std::runtime_error(badResponse);
+
+            for ( ; conNode; conNode = conNode->next_sibling())
+            {
+                if (XmlNode* keyNode = conNode->first_node("Key"))
                 {
-                    std::string t(truncNode->value());
-                    std::transform(t.begin(), t.end(), t.begin(), tolower);
+                    std::string key(keyNode->value());
 
-                    more = (t == "true");
-                }
-
-                XmlNode* conNode(topNode->first_node("Contents"));
-
-                if (!conNode) throw std::runtime_error(badResponse);
-
-                for ( ; conNode; conNode = conNode->next_sibling())
-                {
-                    if (XmlNode* keyNode = conNode->first_node("Key"))
+                    // The prefix may contain slashes (i.e. is a sub-dir)
+                    // but we only include the top level after that.
+                    if (key.find('/', prefix.size()) == std::string::npos)
                     {
-                        std::string key(keyNode->value());
+                        results.push_back("s3://" + bucket + "/" + key);
 
-                        // The prefix may contain slashes (i.e. is a sub-dir)
-                        // but we only include the top level after that.
-                        if (key.find('/', prefix.size()) == std::string::npos)
+                        if (more)
                         {
-                            results.push_back("s3://" + bucket + "/" + key);
-
-                            if (more)
-                            {
-                                query["marker"] =
-                                    (object.size() ? object + "/" : "") +
-                                    key.substr(prefix.size());
-                            }
+                            query["marker"] =
+                                (object.size() ? object + "/" : "") +
+                                key.substr(prefix.size());
                         }
                     }
-                    else
-                    {
-                        throw std::runtime_error(badResponse);
-                    }
+                }
+                else
+                {
+                    throw std::runtime_error(badResponse);
                 }
             }
-            else
-            {
-                throw std::runtime_error(badResponse);
-            }
-
-            xml.clear();
         }
         else
         {
-            throw std::runtime_error("Couldn't query bucket contents");
+            throw std::runtime_error(badResponse);
         }
+
+        xml.clear();
     }
     while (more);
 
     return results;
-}
-
-HttpResponse S3Driver::httpExec(
-        std::function<HttpResponse()> f,
-        const std::size_t tries)
-{
-    std::size_t fails(0);
-    HttpResponse res;
-    auto sleepTime(baseSleepTime);
-
-    do
-    {
-        res = f();
-
-        if (res.code() != 200)
-        {
-            std::this_thread::sleep_for(sleepTime);
-            sleepTime *= 2;
-            if (sleepTime > maxSleepTime) sleepTime = maxSleepTime;
-
-            if (fails == 5)
-            {
-                std::cout << "Detected bad S3 connection quality" << std::endl;
-            }
-        }
-    }
-    // Only retry for server errors.
-    while ((res.code() / 100 == 5) && ++fails < tries);
-
-    return res;
-}
-
-HttpResponse S3Driver::tryGet(
-        std::string bucket,
-        std::string object,
-        Query query)
-{
-    std::string endpoint("http://" + bucket + baseUrl + object);
-
-    bool first(true);
-    for (const auto& q : query)
-    {
-        endpoint += (first ? "?" : "&") + q.first + "=" + q.second;
-        first = false;
-    }
-
-    return m_curlBatch->get(endpoint, httpGetHeaders(bucket + "/" + object));
-}
-
-HttpResponse S3Driver::tryPut(std::string path, const std::vector<char>& data)
-{
-    const std::string endpoint(
-            "http://" + getBucket(path) + baseUrl + getObject(path));
-    return m_curlBatch->put(endpoint, httpPutHeaders(path), data);
 }
 
 std::vector<std::string> S3Driver::httpGetHeaders(std::string filePath) const

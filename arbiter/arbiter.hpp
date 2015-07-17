@@ -9,13 +9,13 @@
 namespace arbiter
 {
 
+class AwsAuth;
+
 class Arbiter
 {
 public:
-    Arbiter(DriverMap drivers = DriverMap());
+    Arbiter(AwsAuth* awsAuth = 0);
     ~Arbiter();
-
-    void add(std::shared_ptr<Driver> driver);
 
     // Read/write operations.  Each may throw std::runtime_error if the
     // path is inacessible for the requested operation.

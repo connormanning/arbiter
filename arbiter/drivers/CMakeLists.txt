@@ -5,14 +5,14 @@ set(
     SOURCES
     "${BASE}/fs.cpp"
     "${BASE}/http.cpp"
-    # "${BASE}/s3.cpp"
+    "${BASE}/s3.cpp"
 )
 
 set(
     HEADERS
     "${BASE}/fs.hpp"
     "${BASE}/http.hpp"
-    # "${BASE}/s3.hpp"
+    "${BASE}/s3.hpp"
 )
 
 install(FILES ${HEADERS} DESTINATION include/arbiter/${MODULE})

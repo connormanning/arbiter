@@ -23,11 +23,12 @@ private:
     std::string m_hidden;
 };
 
+typedef std::map<std::string, std::string> Query;
+
 class S3Driver : public Driver
 {
 public:
-    S3Driver(const AwsAuth& awsAuth);
-    ~S3Driver();
+    S3Driver(HttpPool& pool, AwsAuth awsAuth);
 
     virtual std::string type() const { return "s3"; }
     virtual std::vector<char> get(std::string path);
@@ -36,20 +37,10 @@ public:
 private:
     virtual std::vector<std::string> glob(std::string path, bool verbose);
 
-    // TODO Move somewhere else.
-    HttpResponse httpExec(std::function<HttpResponse()> f, std::size_t tries);
+    std::vector<char> get(std::string path, const Query& query);
 
-    typedef std::map<std::string, std::string> Query;
-
-    HttpResponse tryGet(
-            std::string bucket,
-            std::string object,
-            Query query = Query());
-
-    HttpResponse tryPut(std::string file, const std::vector<char>& data);
-
-    std::vector<std::string> httpGetHeaders(std::string filePath) const;
-    std::vector<std::string> httpPutHeaders(std::string filePath) const;
+    Headers httpGetHeaders(std::string filePath) const;
+    Headers httpPutHeaders(std::string filePath) const;
 
     std::string getHttpDate() const;
 
@@ -68,8 +59,8 @@ private:
     std::vector<char> signString(std::string input) const;
     std::string encodeBase64(std::vector<char> input) const;
 
+    HttpPool& m_pool;
     AwsAuth m_auth;
-    std::shared_ptr<CurlBatch> m_curlBatch;
 };
 
 } // namespace arbiter

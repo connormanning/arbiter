@@ -47,22 +47,29 @@ namespace
         return fullBytes;
     }
 
+    size_t eatLogging(void *out, size_t size, size_t num, void *in)
+    {
+        return size * num;
+    }
+
     const bool followRedirect(true);
     const bool verbose(false);
+
+    const auto baseSleepTime(std::chrono::milliseconds(1));
+    const auto maxSleepTime (std::chrono::milliseconds(4096));
 }
 
 namespace arbiter
 {
 
-HttpDriver::HttpDriver(HttpPool& pool, const std::size_t retry)
+HttpDriver::HttpDriver(HttpPool& pool)
     : m_pool(pool)
-    , m_retry(retry)
 { }
 
 std::vector<char> HttpDriver::get(const std::string path)
 {
     auto http(m_pool.acquire());
-    HttpResponse res(http.get(path, m_retry));
+    HttpResponse res(http.get(path));
 
     if (res.ok()) return res.data();
     else throw std::runtime_error("Couldn't HTTP GET " + path);
@@ -72,9 +79,9 @@ void HttpDriver::put(const std::string path, const std::vector<char>& data)
 {
     auto http(m_pool.acquire());
 
-    if (!http.put(path, data, m_retry).ok())
+    if (!http.put(path, data).ok())
     {
-        throw std::runtime_error("Couldn't HTTP GET " + path);
+        throw std::runtime_error("Couldn't HTTP PUT to " + path);
     }
 }
 
@@ -169,6 +176,10 @@ HttpResponse Curl::put(
     // will likely be incorrect.
     curl_easy_setopt(m_curl, CURLOPT_INFILESIZE_LARGE, data.size());
 
+    // Hide Curl's habit of printing things to console even with verbose set
+    // to false.
+    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, eatLogging);
+
     // Run the command.
     curl_easy_perform(m_curl);
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
@@ -179,10 +190,15 @@ HttpResponse Curl::put(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-HttpResource::HttpResource(HttpPool& pool, Curl& curl, const std::size_t id)
+HttpResource::HttpResource(
+        HttpPool& pool,
+        Curl& curl,
+        const std::size_t id,
+        const std::size_t retry)
     : m_pool(pool)
     , m_curl(curl)
     , m_id(id)
+    , m_retry(retry)
 { }
 
 HttpResource::~HttpResource()
@@ -192,7 +208,6 @@ HttpResource::~HttpResource()
 
 HttpResponse HttpResource::get(
         const std::string path,
-        const std::size_t retry,
         const Headers headers)
 {
     auto f([this, path, headers]()->HttpResponse
@@ -200,13 +215,12 @@ HttpResponse HttpResource::get(
         return m_curl.get(path, headers);
     });
 
-    return exec(f, retry);
+    return exec(f);
 }
 
 HttpResponse HttpResource::put(
         std::string path,
         const std::vector<char>& data,
-        const std::size_t retry,
         Headers headers)
 {
     auto f([this, path, &data, headers]()->HttpResponse
@@ -214,12 +228,10 @@ HttpResponse HttpResource::put(
         return m_curl.put(path, data, headers);
     });
 
-    return exec(f, retry);
+    return exec(f);
 }
 
-HttpResponse HttpResource::exec(
-        std::function<HttpResponse()> f,
-        const std::size_t retry)
+HttpResponse HttpResource::exec(std::function<HttpResponse()> f)
 {
     HttpResponse res;
     std::size_t tries(0);
@@ -228,16 +240,17 @@ HttpResponse HttpResource::exec(
     {
         res = f();
     }
-    while (res.retry() && tries++ < retry);
+    while (res.retry() && tries++ < m_retry);
 
     return res;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-HttpPool::HttpPool(std::size_t concurrent)
+HttpPool::HttpPool(std::size_t concurrent, std::size_t retry)
     : m_curls(concurrent)
     , m_available(concurrent)
+    , m_retry(retry)
     , m_mutex()
     , m_cv()
 {
@@ -258,7 +271,7 @@ HttpResource HttpPool::acquire()
 
     m_available.pop_back();
 
-    return HttpResource(*this, curl, id);
+    return HttpResource(*this, curl, id, m_retry);
 }
 
 void HttpPool::release(const std::size_t id)

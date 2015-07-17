@@ -50,7 +50,7 @@ class HttpPool;
 class HttpDriver : public Driver
 {
 public:
-    HttpDriver(HttpPool& pool, std::size_t retry = 0);
+    HttpDriver(HttpPool& pool);
 
     virtual std::string type() const { return "http"; }
     virtual std::vector<char> get(std::string path);
@@ -58,7 +58,6 @@ public:
 
 private:
     HttpPool& m_pool;
-    std::size_t m_retry;
 };
 
 class Curl
@@ -69,16 +68,16 @@ class Curl
 public:
     ~Curl();
 
-    HttpResponse get(std::string path, std::vector<std::string> headers);
+    HttpResponse get(std::string path, Headers headers);
     HttpResponse put(
             std::string path,
             const std::vector<char>& data,
-            std::vector<std::string> headers);
+            Headers headers);
 
 private:
     Curl();
 
-    void init(std::string path, const std::vector<std::string>& headers);
+    void init(std::string path, const Headers& headers);
 
     Curl(const Curl&);
     Curl& operator=(const Curl&);
@@ -92,26 +91,25 @@ private:
 class HttpResource
 {
 public:
-    HttpResource(HttpPool& pool, Curl& curl, std::size_t id);
+    HttpResource(HttpPool& pool, Curl& curl, std::size_t id, std::size_t retry);
     ~HttpResource();
 
     HttpResponse get(
             std::string path,
-            std::size_t retry,
             Headers headers = Headers());
 
     HttpResponse put(
             std::string path,
             const std::vector<char>& data,
-            std::size_t retry,
             Headers headers = Headers());
 
 private:
     HttpPool& m_pool;
     Curl& m_curl;
     std::size_t m_id;
+    std::size_t m_retry;
 
-    HttpResponse exec(std::function<HttpResponse()> f, std::size_t retry);
+    HttpResponse exec(std::function<HttpResponse()> f);
 };
 
 class HttpPool
@@ -120,7 +118,7 @@ class HttpPool
     friend class HttpResource;
 
 public:
-    HttpPool(std::size_t concurrent);
+    HttpPool(std::size_t concurrent, std::size_t retry);
 
     HttpResource acquire();
 
@@ -129,6 +127,7 @@ private:
 
     std::vector<std::unique_ptr<Curl>> m_curls;
     std::vector<std::size_t> m_available;
+    std::size_t m_retry;
 
     std::mutex m_mutex;
     std::condition_variable m_cv;
