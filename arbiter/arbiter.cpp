@@ -2,8 +2,6 @@
 #include <arbiter/arbiter.hpp>
 
 #include <arbiter/driver.hpp>
-#include <arbiter/drivers/fs.hpp>
-#include <arbiter/drivers/s3.hpp>
 #endif
 
 namespace arbiter
@@ -16,7 +14,7 @@ namespace
 
 Arbiter::Arbiter(AwsAuth* awsAuth)
     : m_drivers()
-    , m_pool(32, 5)
+    , m_pool(32, 8)
 {
     m_drivers["fs"] = std::make_shared<FsDriver>(FsDriver());
     m_drivers["http"] = std::make_shared<HttpDriver>(HttpDriver(m_pool));
@@ -41,12 +39,12 @@ std::vector<char> Arbiter::getBinary(const std::string path) const
     return getDriver(path).getBinary(stripType(path));
 }
 
-void Arbiter::put(const std::string path, const std::vector<char>& data)
+void Arbiter::put(const std::string path, const std::string& data)
 {
     return getDriver(path).put(stripType(path), data);
 }
 
-void Arbiter::put(const std::string path, const std::string& data)
+void Arbiter::put(const std::string path, const std::vector<char>& data)
 {
     return getDriver(path).put(stripType(path), data);
 }
@@ -60,7 +58,12 @@ std::vector<std::string> Arbiter::resolve(
         const std::string path,
         const bool verbose) const
 {
-    return getDriver(path).resolve(path, verbose);
+    return getDriver(path).resolve(stripType(path), verbose);
+}
+
+Endpoint Arbiter::getEndpoint(const std::string root) const
+{
+    return Endpoint(getDriver(root), stripType(root));
 }
 
 Driver& Arbiter::getDriver(const std::string path) const

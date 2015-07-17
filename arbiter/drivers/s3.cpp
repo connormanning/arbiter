@@ -108,8 +108,8 @@ std::vector<char> S3Driver::get(const std::string rawPath, const Query& query)
     else
     {
         // TODO If verbose:
-        std::cout << std::string(res.data().begin(), res.data().end()) <<
-            std::endl;
+        // std::cout << std::string(res.data().begin(), res.data().end()) <<
+            // std::endl;
         throw std::runtime_error("Couldn't S3 GET " + rawPath);
     }
 }

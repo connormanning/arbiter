@@ -74,6 +74,7 @@ def amalgamate_source(source_top_dir=None,
     header.add_file("arbiter/third/xml/rapidxml.hpp")
     header.add_file("arbiter/third/xml/xml.hpp")
     header.add_file("arbiter/drivers/s3.hpp")
+    header.add_file("arbiter/endpoint.hpp")
     header.add_file("arbiter/arbiter.hpp")
 
     target_header_path = os.path.join(os.path.dirname(target_source_path), header_include_path)
@@ -95,6 +96,7 @@ def amalgamate_source(source_top_dir=None,
     source.add_text("")
     source.add_file("arbiter/arbiter.cpp")
     source.add_file("arbiter/driver.cpp")
+    source.add_file("arbiter/endpoint.cpp")
     source.add_file("arbiter/drivers/fs.cpp")
     source.add_file("arbiter/drivers/http.cpp")
     source.add_file("arbiter/drivers/s3.cpp")

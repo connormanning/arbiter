@@ -5,13 +5,14 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/driver.hpp>
+#include <arbiter/endpoint.hpp>
+#include <arbiter/drivers/fs.hpp>
 #include <arbiter/drivers/http.hpp>
+#include <arbiter/drivers/s3.hpp>
 #endif
 
 namespace arbiter
 {
-
-class AwsAuth;
 
 class Arbiter
 {
@@ -24,8 +25,8 @@ public:
     std::string get(std::string path) const;
     std::vector<char> getBinary(std::string path) const;
 
-    void put(std::string path, const std::vector<char>& data);
     void put(std::string path, const std::string& data);
+    void put(std::string path, const std::vector<char>& data);
 
     // Returns true if this path is a filesystem path, otherwise false.
     bool isRemote(std::string path) const;
@@ -33,6 +34,8 @@ public:
     // If a path ends with "/*", this operation will attempt to glob the
     // preceding directory, returning all resolved paths.  Otherwise a vector
     // of size one containing only _path_, unaltered, is returned.
+    //
+    // Globbed resolution is non-recursive.
     //
     // Will throw std::runtime_error if the selected driver does not support
     // globbing (e.g. HTTP).
@@ -42,6 +45,10 @@ public:
     std::vector<std::string> resolve(
             std::string path,
             bool verbose = false) const;
+
+    // If many subpaths from a common root will be addressed, an Endpoint may
+    // be used to simplify paths.
+    Endpoint getEndpoint(std::string root) const;
 
     // The substring prior to the delimiter "://" denotes the driver type, if
     // this delimiter exists - otherwise the path is assumed to refer to the

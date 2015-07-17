@@ -7,12 +7,14 @@ set(
     SOURCES
     "${BASE}/arbiter.cpp"
     "${BASE}/driver.cpp"
+    "${BASE}/endpoint.cpp"
 )
 
 set(
     HEADERS
     "${BASE}/arbiter.hpp"
     "${BASE}/driver.hpp"
+    "${BASE}/endpoint.hpp"
 )
 
 install(FILES ${HEADERS} DESTINATION include/arbiter)

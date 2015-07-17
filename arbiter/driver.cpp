@@ -26,10 +26,11 @@ std::vector<std::string> Driver::resolve(std::string path, bool verbose)
     {
         if (verbose)
         {
-            std::cout << "Resolving " << path << " ..." << std::flush;
+            std::cout << "Resolving [" << type() << "]: " << path << " ..." <<
+                std::flush;
         }
 
-        results = glob(Arbiter::stripType(path), verbose);
+        results = glob(path, verbose);
 
         if (verbose)
         {
