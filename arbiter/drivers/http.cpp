@@ -1,4 +1,6 @@
+#ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/drivers/http.hpp>
+#endif
 
 #include <cstring>
 #include <iostream>

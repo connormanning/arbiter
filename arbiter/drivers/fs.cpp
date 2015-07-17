@@ -1,4 +1,6 @@
+#ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/drivers/fs.hpp>
+#endif
 
 #include <fstream>
 #include <glob.h>

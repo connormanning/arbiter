@@ -1,4 +1,6 @@
+#ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/drivers/s3.hpp>
+#endif
 
 #include <algorithm>
 #include <chrono>
@@ -7,7 +9,9 @@
 #include <iostream>
 #include <thread>
 
+#ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/third/xml/xml.hpp>
+#endif
 
 #include <openssl/hmac.h>
 

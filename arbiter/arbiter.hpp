@@ -3,8 +3,10 @@
 #include <vector>
 #include <string>
 
+#ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/driver.hpp>
 #include <arbiter/drivers/http.hpp>
+#endif
 
 namespace arbiter
 {

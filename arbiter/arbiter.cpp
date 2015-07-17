@@ -1,8 +1,10 @@
+#ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/arbiter.hpp>
 
 #include <arbiter/driver.hpp>
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/drivers/s3.hpp>
+#endif
 
 namespace arbiter
 {

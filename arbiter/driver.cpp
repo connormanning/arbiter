@@ -1,6 +1,8 @@
+#ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/driver.hpp>
 
 #include <arbiter/arbiter.hpp>
+#endif
 
 namespace arbiter
 {

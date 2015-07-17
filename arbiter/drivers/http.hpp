@@ -10,7 +10,9 @@
 
 #include <curl/curl.h>
 
+#ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/driver.hpp>
+#endif
 
 namespace arbiter
 {
