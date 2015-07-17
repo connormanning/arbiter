@@ -18,30 +18,6 @@ namespace
 {
     const std::string baseUrl(".s3.amazonaws.com/");
 
-    std::size_t split(std::string fullPath)
-    {
-        // if (fullPath.back() == '/') fullPath.pop_back();
-        return fullPath.find("/");
-    }
-
-    std::string getBucket(std::string fullPath)
-    {
-        return fullPath.substr(0, split(fullPath));
-    }
-
-    std::string getObject(std::string fullPath)
-    {
-        std::string object("");
-        const std::size_t pos(split(fullPath));
-
-        if (pos != std::string::npos)
-        {
-            object = fullPath.substr(pos + 1);
-        }
-
-        return object;
-    }
-
     std::string getQueryString(const Query& query)
     {
         std::string result;
@@ -55,6 +31,30 @@ namespace
 
         return result;
     }
+
+    struct Resource
+    {
+        Resource(std::string fullPath)
+        {
+            const std::size_t split(fullPath.find("/"));
+
+            bucket = fullPath.substr(0, split);
+
+            if (split != std::string::npos)
+            {
+                object = fullPath.substr(split + 1);
+            }
+        }
+
+        std::string buildPath(Query query = Query()) const
+        {
+            const std::string queryString(getQueryString(query));
+            return "http://" + bucket + baseUrl + object + queryString;
+        }
+
+        std::string bucket;
+        std::string object;
+    };
 
     typedef Xml::xml_node<> XmlNode;
 
@@ -88,27 +88,33 @@ std::vector<char> S3Driver::get(const std::string rawPath)
 
 std::vector<char> S3Driver::get(const std::string rawPath, const Query& query)
 {
-    const std::string bucket(getBucket(rawPath));
-    const std::string object(getObject(rawPath));
+    const Resource resource(rawPath);
 
-    const std::string path(
-            "http://" + bucket + baseUrl + object + getQueryString(query));
+    const std::string path(resource.buildPath(query));
     const Headers headers(httpGetHeaders(rawPath));
 
     auto http(m_pool.acquire());
 
     HttpResponse res(http.get(path, headers));
 
-    if (res.ok()) return res.data();
-    else throw std::runtime_error("Couldn't S3 GET " + rawPath);
+    if (res.ok())
+    {
+        return res.data();
+    }
+    else
+    {
+        // TODO If verbose:
+        std::cout << std::string(res.data().begin(), res.data().end()) <<
+            std::endl;
+        throw std::runtime_error("Couldn't S3 GET " + rawPath);
+    }
 }
 
 void S3Driver::put(std::string rawPath, const std::vector<char>& data)
 {
-    const std::string bucket(getBucket(rawPath));
-    const std::string object(getObject(rawPath));
+    const Resource resource(rawPath);
 
-    const std::string path("http://" + bucket + baseUrl + object);
+    const std::string path(resource.buildPath());
     const Headers headers(httpPutHeaders(rawPath));
 
     auto http(m_pool.acquire());
@@ -131,9 +137,11 @@ std::vector<std::string> S3Driver::glob(std::string path, bool verbose)
     path.resize(path.size() - 2);
 
     // https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGET.html
-    const std::string bucket(getBucket(path));
-    const std::string object(getObject(path));
-    const std::string prefix(object.empty() ? "" : object + "/");
+    const Resource resource(path);
+    const std::string& bucket(resource.bucket);
+    const std::string& object(resource.object);
+    const std::string prefix(
+            resource.object.empty() ? "" : resource.object + "/");
 
     Query query;
 
@@ -145,7 +153,7 @@ std::vector<std::string> S3Driver::glob(std::string path, bool verbose)
     {
         if (verbose) std::cout << "." << std::flush;
 
-        auto data = get(bucket + "/", query);
+        auto data = get(resource.bucket + "/", query);
         data.push_back('\0');
 
         Xml::xml_document<> xml;
