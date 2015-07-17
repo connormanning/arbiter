@@ -55,7 +55,7 @@ public:
     HttpDriver(HttpPool& pool);
 
     virtual std::string type() const { return "http"; }
-    virtual std::vector<char> get(std::string path);
+    virtual std::vector<char> getBinary(std::string path);
     virtual void put(std::string path, const std::vector<char>& data);
 
 private:

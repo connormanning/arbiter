@@ -1,4 +1,4 @@
-"""Amalgate Arbiter library sources into a single source and header file.
+"""Amalgamate Arbiter library sources into a single source and header file.
 
 Works with python2.6+ and python3.4+.
 
@@ -6,7 +6,7 @@ A near carbon copy of:
     https://github.com/open-source-parsers/jsoncpp/blob/master/amalgamate.py
 
 Example of invocation (must be invoked from top directory):
-python amalgate.py
+python amalgamate.py
 """
 import os
 import os.path
@@ -53,19 +53,19 @@ class AmalgamationFile:
 def amalgamate_source(source_top_dir=None,
                        target_source_path=None,
                        header_include_path=None):
-    """Produces amalgated source.
+    """Produces amalgamated source.
        Parameters:
            source_top_dir: top-directory
            target_source_path: output .cpp path
            header_include_path: generated header path relative to target_source_path.
     """
-    print("Amalgating header...")
+    print("Amalgamating header...")
     header = AmalgamationFile(source_top_dir)
-    header.add_text("/// Arbiter amalgated header (https://github.com/connormanning/arbiter).")
+    header.add_text("/// Arbiter amalgamated header (https://github.com/connormanning/arbiter).")
     header.add_text('/// It is intended to be used with #include "%s"' % header_include_path)
     header.add_file("LICENSE", wrap_in_comment=True)
     header.add_text("#pragma once")
-    header.add_text("/// If defined, indicates that the source file is amalgated")
+    header.add_text("/// If defined, indicates that the source file is amalgamated")
     header.add_text("/// to prevent private header inclusion.")
     header.add_text("#define ARBITER_IS_AMALGAMATION")
     header.add_file("arbiter/driver.hpp")
@@ -77,12 +77,12 @@ def amalgamate_source(source_top_dir=None,
     header.add_file("arbiter/arbiter.hpp")
 
     target_header_path = os.path.join(os.path.dirname(target_source_path), header_include_path)
-    print("Writing amalgated header to %r" % target_header_path)
+    print("Writing amalgamated header to %r" % target_header_path)
     header.write_to(target_header_path)
 
-    print("Amalgating source...")
+    print("Amalgamating source...")
     source = AmalgamationFile(source_top_dir)
-    source.add_text("/// Arbiter amalgated source (https://github.com/connormanning/arbiter).")
+    source.add_text("/// Arbiter amalgamated source (https://github.com/connormanning/arbiter).")
     source.add_text('/// It is intended to be used with #include "%s"' % header_include_path)
     source.add_file("LICENSE", wrap_in_comment=True)
     source.add_text("")
@@ -99,12 +99,12 @@ def amalgamate_source(source_top_dir=None,
     source.add_file("arbiter/drivers/http.cpp")
     source.add_file("arbiter/drivers/s3.cpp")
 
-    print("Writing amalgated source to %r" % target_source_path)
+    print("Writing amalgamated source to %r" % target_source_path)
     source.write_to(target_source_path)
 
 def main():
     usage = """%prog [options]
-Generate a single amalgated source and header file from the sources.
+Generate a single amalgamated source and header file from the sources.
 """
     from optparse import OptionParser
     parser = OptionParser(usage=usage)
@@ -112,7 +112,7 @@ Generate a single amalgated source and header file from the sources.
     parser.add_option("-s", "--source", dest="target_source_path", action="store", default="dist/arbiter.cpp",
         help="""Output .cpp source path. [Default: %default]""")
     parser.add_option("-i", "--include", dest="header_include_path", action="store", default="arbiter.hpp",
-        help="""Header include path. Used to include the header from the amalgated source file. [Default: %default]""")
+        help="""Header include path. Used to include the header from the amalgamated source file. [Default: %default]""")
     parser.add_option("-t", "--top-dir", dest="top_dir", action="store", default=os.getcwd(),
         help="""Source top-directory. [Default: %default]""")
     parser.enable_interspersed_args()
@@ -125,7 +125,7 @@ Generate a single amalgated source and header file from the sources.
         sys.stderr.write(msg + "\n")
         sys.exit(1)
     else:
-        print("Source succesfully amalagated")
+        print("Source successfully amalgamated")
 
 if __name__ == "__main__":
     main()

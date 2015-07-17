@@ -21,8 +21,8 @@ public:
 
     // Read/write operations.  Each may throw std::runtime_error if the
     // path is inacessible for the requested operation.
-    std::vector<char> get(std::string path) const;
-    std::string getAsString(std::string path) const;
+    std::string get(std::string path) const;
+    std::vector<char> getBinary(std::string path) const;
 
     void put(std::string path, const std::vector<char>& data);
     void put(std::string path, const std::string& data);

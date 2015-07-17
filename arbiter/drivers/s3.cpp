@@ -85,7 +85,7 @@ S3Driver::S3Driver(HttpPool& pool, const AwsAuth auth)
     , m_auth(auth)
 { }
 
-std::vector<char> S3Driver::get(const std::string rawPath)
+std::vector<char> S3Driver::getBinary(const std::string rawPath)
 {
     return get(rawPath, Query());
 }

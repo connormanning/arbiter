@@ -20,7 +20,7 @@ public:
     virtual std::string type() const = 0;
 
     // Read/write data.
-    virtual std::vector<char> get(std::string path) = 0;
+    virtual std::vector<char> getBinary(std::string path) = 0;
     virtual void put(std::string path, const std::vector<char>& data) = 0;
 
     // True for filesystem paths, otherwise false.  Derived classes other than
@@ -30,7 +30,7 @@ public:
 
 
     // Convenience overloads.
-    std::string getAsString(std::string path);
+    std::string get(std::string path);
     void put(std::string path, const std::string& data);
 
     // Resolve a possibly globbed path.

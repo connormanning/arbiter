@@ -18,7 +18,7 @@ namespace
             std::ofstream::trunc);
 }
 
-std::vector<char> FsDriver::get(const std::string path)
+std::vector<char> FsDriver::getBinary(const std::string path)
 {
     std::ifstream stream(path, std::ios::in | std::ios::binary);
 

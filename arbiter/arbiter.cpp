@@ -31,14 +31,14 @@ Arbiter::Arbiter(AwsAuth* awsAuth)
 Arbiter::~Arbiter()
 { }
 
-std::vector<char> Arbiter::get(const std::string path) const
+std::string Arbiter::get(const std::string path) const
 {
     return getDriver(path).get(stripType(path));
 }
 
-std::string Arbiter::getAsString(const std::string path) const
+std::vector<char> Arbiter::getBinary(const std::string path) const
 {
-    return getDriver(path).getAsString(stripType(path));
+    return getDriver(path).getBinary(stripType(path));
 }
 
 void Arbiter::put(const std::string path, const std::vector<char>& data)

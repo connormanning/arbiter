@@ -68,7 +68,7 @@ HttpDriver::HttpDriver(HttpPool& pool)
     : m_pool(pool)
 { }
 
-std::vector<char> HttpDriver::get(const std::string path)
+std::vector<char> HttpDriver::getBinary(const std::string path)
 {
     auto http(m_pool.acquire());
     HttpResponse res(http.get(path));

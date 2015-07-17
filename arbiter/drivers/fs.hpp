@@ -11,7 +11,7 @@ class FsDriver : public Driver
 {
 public:
     virtual std::string type() const { return "fs"; }
-    virtual std::vector<char> get(std::string path);
+    virtual std::vector<char> getBinary(std::string path);
     virtual void put(std::string path, const std::vector<char>& data);
 
     virtual std::vector<std::string> glob(std::string path, bool verbose);

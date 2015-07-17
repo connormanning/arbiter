@@ -7,9 +7,9 @@
 namespace arbiter
 {
 
-std::string Driver::getAsString(std::string path)
+std::string Driver::get(std::string path)
 {
-    const std::vector<char> data(get(path));
+    const std::vector<char> data(getBinary(path));
     return std::string(data.begin(), data.end());
 }
 
