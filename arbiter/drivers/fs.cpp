@@ -18,7 +18,7 @@ namespace
             std::ofstream::trunc);
 }
 
-std::vector<char> FsDriver::getBinary(const std::string path)
+std::vector<char> FsDriver::getBinary(const std::string path) const
 {
     std::ifstream stream(path, std::ios::in | std::ios::binary);
 
@@ -36,7 +36,7 @@ std::vector<char> FsDriver::getBinary(const std::string path)
     return data;
 }
 
-void FsDriver::put(const std::string path, const std::vector<char>& data)
+void FsDriver::put(const std::string path, const std::vector<char>& data) const
 {
     std::ofstream stream(path, binaryTruncMode);
 
@@ -53,7 +53,7 @@ void FsDriver::put(const std::string path, const std::vector<char>& data)
     }
 }
 
-std::vector<std::string> FsDriver::glob(const std::string path, bool)
+std::vector<std::string> FsDriver::glob(const std::string path, bool) const
 {
     // TODO Platform dependent.
     std::vector<std::string> results;

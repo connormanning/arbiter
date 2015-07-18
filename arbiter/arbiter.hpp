@@ -25,8 +25,8 @@ public:
     std::string get(std::string path) const;
     std::vector<char> getBinary(std::string path) const;
 
-    void put(std::string path, const std::string& data);
-    void put(std::string path, const std::vector<char>& data);
+    void put(std::string path, const std::string& data) const;
+    void put(std::string path, const std::vector<char>& data) const;
 
     // Returns true if this path is a filesystem path, otherwise false.
     bool isRemote(std::string path) const;
@@ -56,7 +56,7 @@ public:
     //
     // Will throw std::out_of_range if the delimiter exists but a driver for
     // its type does not exist.
-    Driver& getDriver(std::string path) const;
+    const Driver& getDriver(std::string path) const;
 
     static std::string stripType(const std::string path);
 

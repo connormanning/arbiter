@@ -18,18 +18,18 @@ public:
     std::string type() const;
     bool isRemote() const;
 
-    std::string getSubpath(std::string subpath);
-    std::vector<char> getSubpathBinary(std::string subpath);
+    std::string getSubpath(std::string subpath) const;
+    std::vector<char> getSubpathBinary(std::string subpath) const;
 
-    void putSubpath(std::string subpath, const std::string& data);
-    void putSubpath(std::string subpath, const std::vector<char>& data);
+    void putSubpath(std::string subpath, const std::string& data) const;
+    void putSubpath(std::string subpath, const std::vector<char>& data) const;
 
     std::string fullPath(const std::string& subpath) const;
 
 private:
-    Endpoint(Driver& driver, std::string root);
+    Endpoint(const Driver& driver, std::string root);
 
-    Driver& m_driver;
+    const Driver& m_driver;
     std::string m_root;
 };
 

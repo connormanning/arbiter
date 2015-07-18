@@ -17,7 +17,7 @@ namespace
     }
 }
 
-Endpoint::Endpoint(Driver& driver, const std::string root)
+Endpoint::Endpoint(const Driver& driver, const std::string root)
     : m_driver(driver)
     , m_root(postfixSlash(root))
 { }
@@ -37,24 +37,26 @@ bool Endpoint::isRemote() const
     return m_driver.isRemote();
 }
 
-std::string Endpoint::getSubpath(const std::string subpath)
+std::string Endpoint::getSubpath(const std::string subpath) const
 {
     return m_driver.get(fullPath(subpath));
 }
 
-std::vector<char> Endpoint::getSubpathBinary(const std::string subpath)
+std::vector<char> Endpoint::getSubpathBinary(const std::string subpath) const
 {
     return m_driver.getBinary(fullPath(subpath));
 }
 
-void Endpoint::putSubpath(const std::string subpath, const std::string& data)
+void Endpoint::putSubpath(
+        const std::string subpath,
+        const std::string& data) const
 {
     m_driver.put(fullPath(subpath), data);
 }
 
 void Endpoint::putSubpath(
         const std::string subpath,
-        const std::vector<char>& data)
+        const std::vector<char>& data) const
 {
     m_driver.put(fullPath(subpath), data);
 }

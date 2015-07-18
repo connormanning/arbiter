@@ -33,13 +33,13 @@ public:
     S3Driver(HttpPool& pool, AwsAuth awsAuth);
 
     virtual std::string type() const { return "s3"; }
-    virtual std::vector<char> getBinary(std::string path);
-    virtual void put(std::string path, const std::vector<char>& data);
+    virtual std::vector<char> getBinary(std::string path) const;
+    virtual void put(std::string path, const std::vector<char>& data) const;
 
 private:
-    virtual std::vector<std::string> glob(std::string path, bool verbose);
+    virtual std::vector<std::string> glob(std::string path, bool verbose) const;
 
-    std::vector<char> get(std::string path, const Query& query);
+    std::vector<char> get(std::string path, const Query& query) const;
 
     Headers httpGetHeaders(std::string filePath) const;
     Headers httpPutHeaders(std::string filePath) const;
