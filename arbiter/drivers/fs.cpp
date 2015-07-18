@@ -2,8 +2,10 @@
 #include <arbiter/drivers/fs.hpp>
 #endif
 
+#ifdef UNIX
 #include <glob.h>
 #include <sys/stat.h>
+#endif
 
 #include <cstdlib>
 #include <fstream>
@@ -74,9 +76,9 @@ void FsDriver::put(std::string path, const std::vector<char>& data) const
 
 std::vector<std::string> FsDriver::glob(std::string path, bool) const
 {
-    // TODO Platform dependent.
     std::vector<std::string> results;
 
+#ifdef UNIX
     path = expandTilde(path);
 
     glob_t buffer;
@@ -102,6 +104,9 @@ std::vector<std::string> FsDriver::glob(std::string path, bool) const
     }
 
     globfree(&buffer);
+#elif WINDOWS
+
+#endif
 
     return results;
 }
