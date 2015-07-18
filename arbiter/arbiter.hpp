@@ -17,7 +17,8 @@ namespace arbiter
 class Arbiter
 {
 public:
-    Arbiter(AwsAuth* awsAuth = 0);
+    Arbiter();
+    Arbiter(AwsAuth awsAuth);
     ~Arbiter();
 
     // Read/write operations.  Each may throw std::runtime_error if the
