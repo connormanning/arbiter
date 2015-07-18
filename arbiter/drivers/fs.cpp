@@ -87,11 +87,17 @@ std::vector<std::string> FsDriver::glob(std::string path, bool) const
     for (std::size_t i(0); i < buffer.gl_pathc; ++i)
     {
         const std::string val(buffer.gl_pathv[i]);
-        stat(val.c_str(), &info);
 
-        if (S_ISREG(info.st_mode))
+        if (stat(val.c_str(), &info) == 0)
         {
-            results.push_back(val);
+            if (S_ISREG(info.st_mode))
+            {
+                results.push_back(val);
+            }
+        }
+        else
+        {
+            throw std::runtime_error("Error globbing - POSIX stat failed");
         }
     }
 
