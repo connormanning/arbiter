@@ -3,6 +3,7 @@
 #endif
 
 #include <glob.h>
+#include <sys/stat.h>
 
 #include <cstdlib>
 #include <fstream>
@@ -79,12 +80,19 @@ std::vector<std::string> FsDriver::glob(std::string path, bool) const
     path = expandTilde(path);
 
     glob_t buffer;
+    struct stat info;
 
     ::glob(path.c_str(), GLOB_NOSORT | GLOB_TILDE, 0, &buffer);
 
     for (std::size_t i(0); i < buffer.gl_pathc; ++i)
     {
-        results.push_back(buffer.gl_pathv[i]);
+        const std::string val(buffer.gl_pathv[i]);
+        stat(val.c_str(), &info);
+
+        if (S_ISREG(info.st_mode))
+        {
+            results.push_back(val);
+        }
     }
 
     globfree(&buffer);
