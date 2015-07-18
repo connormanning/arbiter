@@ -4,10 +4,6 @@ Arbiter provides simple and thread-safe C++ access to filesystem, HTTP, and S3 r
 
 ## Using Arbiter in your project
 
-### Dependencies
-
-Arbiter depends on [Curl](http://curl.haxx.se/libcurl/) and [OpenSSL](https://www.openssl.org/), which are probably already installed on your machine.
-
 ### Installation
 
 Arbiter uses CMake for its build process.  To build and install, run:
@@ -32,7 +28,11 @@ The amalgamation method lets you integrate Arbiter into your project by compilin
 
 `python amalgamate.py`
 
-Then copy `dist/arbiter.hpp` and `dist/arbiter.cpp` into your project tree and include them in your build system like any other source files.
+Then copy `dist/arbiter.hpp` and `dist/arbiter.cpp` into your project tree and include them in your build system like any other source files.  With this method you'll need to link the [dependencies](#dependencies) into your project manually.
+
+### Dependencies
+
+Arbiter depends on [Curl](http://curl.haxx.se/libcurl/) and [OpenSSL](https://www.openssl.org/), which are probably already installed on your machine.  To manually link them on Unix-based operating systems, link with `-lcurl -lcrypto`.
 
 ## API sample
 
@@ -63,5 +63,3 @@ s3Data = a.get(s3Path);
 fsGlob = a.resolve("~/data/*");
 s3Glob = a.resolve("s3://some-bucket/some-dir/*");
 ```
-
-
