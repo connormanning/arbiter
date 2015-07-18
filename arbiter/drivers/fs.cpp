@@ -2,8 +2,10 @@
 #include <arbiter/drivers/fs.hpp>
 #endif
 
-#include <fstream>
 #include <glob.h>
+
+#include <cstdlib>
+#include <fstream>
 #include <stdexcept>
 
 namespace arbiter
@@ -16,10 +18,25 @@ namespace
             std::ofstream::binary |
             std::ofstream::out |
             std::ofstream::trunc);
+
+    const std::string home("HOME");
+
+    std::string expandTilde(std::string in)
+    {
+        std::string out(in);
+
+        if (!in.empty() && in.front() == '~')
+        {
+            out = getenv(home.c_str()) + in.substr(1);
+        }
+
+        return out;
+    }
 }
 
-std::vector<char> FsDriver::getBinary(const std::string path) const
+std::vector<char> FsDriver::getBinary(std::string path) const
 {
+    path = expandTilde(path);
     std::ifstream stream(path, std::ios::in | std::ios::binary);
 
     if (!stream.good())
@@ -36,8 +53,9 @@ std::vector<char> FsDriver::getBinary(const std::string path) const
     return data;
 }
 
-void FsDriver::put(const std::string path, const std::vector<char>& data) const
+void FsDriver::put(std::string path, const std::vector<char>& data) const
 {
+    path = expandTilde(path);
     std::ofstream stream(path, binaryTruncMode);
 
     if (!stream.good())
@@ -53,10 +71,12 @@ void FsDriver::put(const std::string path, const std::vector<char>& data) const
     }
 }
 
-std::vector<std::string> FsDriver::glob(const std::string path, bool) const
+std::vector<std::string> FsDriver::glob(std::string path, bool) const
 {
     // TODO Platform dependent.
     std::vector<std::string> results;
+
+    path = expandTilde(path);
 
     glob_t buffer;
 
