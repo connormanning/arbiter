@@ -61,7 +61,7 @@ The amalgamation method lets you integrate Arbiter into your project by adding a
 
 `python amalgamate.py`
 
-Then copy `dist/arbiter.hpp` and `dist/arbiter.cpp` into your project tree and include them in your build system like any other source files.  With this method you'll need to link the [Curl dependency](#dependencies) into your project manually.
+Then copy `dist/arbiter.hpp` and `dist/arbiter.cpp` into your project tree and include them in your build system like any other source files.  With this method you'll need to link the Curl [dependency](#dependencies) into your project manually.
 
 Once the amalgamated files are integrated with your source tree, simply `#include "arbiter.hpp"` and get to work.
 
