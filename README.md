@@ -1,16 +1,15 @@
 # Arbiter
 
-Arbiter provides simple and thread-safe C++ access to filesystem, HTTP, and S3 resources in a uniform way.
+Arbiter provides simple/fast/thread-safe C++ access to filesystem, HTTP, and S3 resources in a uniform way.
 
 ## Using Arbiter in your project
 
 ### Installation
 
-Arbiter uses CMake for its build process.  To build and install, run:
+Arbiter uses CMake for its build process.  To build and install, run from the top level:
 
 ```bash
-git clone git@github.com:connormanning/arbiter.git
-cd arbiter && mkdir build && cd build
+mkdir build && cd build
 cmake -G "<CMake generator type>" ..    # For example: cmake -G "Unix Makefiles" ..
 make
 make install
@@ -22,17 +21,23 @@ Then simply include the header in your project:
 #include <arbiter/arbiter.h>
 ```
 
+...and link with the library with `-larbiter`.
+
 ### Amalgamation
 
-The amalgamation method lets you integrate Arbiter into your project by compiling a single source and including a single header file.  Create the amalgamation by running from the top level:
+The amalgamation method lets you integrate Arbiter into your project by adding a single source and a single header to your project.  Create the amalgamation by running from the top level:
 
 `python amalgamate.py`
 
 Then copy `dist/arbiter.hpp` and `dist/arbiter.cpp` into your project tree and include them in your build system like any other source files.  With this method you'll need to link the [Curl dependency](#dependencies) into your project manually.
 
+Once the amalgamated files are integrated with your source tree, simply `#include "arbiter.hpp"` and get to work.
+
 ### Dependencies
 
-Arbiter depends on [Curl](http://curl.haxx.se/libcurl/), which comes preinstalled on most UNIX-based machines.  To manually link (for amalgamated usage) on Unix-based operating systems, link with `-lcurl`.
+Arbiter depends on [Curl](http://curl.haxx.se/libcurl/), which comes preinstalled on most UNIX-based machines.  To manually link (for amalgamated usage) on Unix-based operating systems, link with `-lcurl`.  Arbiter also works on Windows, but you'll have to obtain Curl yourself there.
+
+Arbiter requires C++11.
 
 ## API sample
 
@@ -47,7 +52,7 @@ std::string fsData, httpData, s3Data;
 std::vector<std::string> fsGlob, s3Glob;
 
 // Read and write data.
-fsPath = "~/fs.txt";
+fsPath = "~/fs.txt";  // Tilde expansion is supported on Unix.
 a.put(fsPath, "Filesystem contents!");
 fsData = a.get(fsPath);
 
@@ -63,4 +68,3 @@ s3Data = a.get(s3Path);
 fsGlob = a.resolve("~/data/*");
 s3Glob = a.resolve("s3://some-bucket/some-dir/*");
 ```
-
