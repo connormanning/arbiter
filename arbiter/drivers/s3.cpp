@@ -271,9 +271,16 @@ std::string S3Driver::getHttpDate() const
     char charBuf[80];
 
     time(&rawTime);
-    tm* timeInfo = localtime(&rawTime);
 
-    strftime(charBuf, 80, "%a, %d %b %Y %H:%M:%S %z", timeInfo);
+#ifndef WINDOWS
+    tm* timeInfoPtr = localtime(&rawTime);
+#else
+	tm timeInfo;
+	localtime_s(&timeInfo, &rawTime);
+	tm* timeInfoPtr(&timeInfo);
+#endif
+
+    strftime(charBuf, 80, "%a, %d %b %Y %H:%M:%S %z", timeInfoPtr);
     std::string stringBuf(charBuf);
 
     return stringBuf;

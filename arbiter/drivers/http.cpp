@@ -2,6 +2,12 @@
 #include <arbiter/drivers/http.hpp>
 #endif
 
+#ifdef WINDOWS
+#undef min
+#undef max
+#endif
+
+#include <algorithm>
 #include <cstring>
 #include <iostream>
 

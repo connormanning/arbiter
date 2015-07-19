@@ -18,5 +18,10 @@ set(
 )
 
 install(FILES ${HEADERS} DESTINATION include/arbiter)
-add_library(${MODULE} OBJECT ${SOURCES})
+
+if (WIN32)
+    add_library(${MODULE} OBJECT ${SOURCES} ${HEADERS})
+else()
+    add_library(${MODULE} OBJECT ${SOURCES})
+endif()
 
