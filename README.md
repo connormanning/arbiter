@@ -11,7 +11,7 @@ Arbiter uses CMake for its build process.  To build and install, run:
 ```bash
 git clone git@github.com:connormanning/arbiter.git
 cd arbiter && mkdir build && cd build
-cmake -G "<CMake generator type>" ..
+cmake -G "<CMake generator type>" ..    # For example: cmake -G "Unix Makefiles" ..
 make
 make install
 ```
@@ -28,11 +28,11 @@ The amalgamation method lets you integrate Arbiter into your project by compilin
 
 `python amalgamate.py`
 
-Then copy `dist/arbiter.hpp` and `dist/arbiter.cpp` into your project tree and include them in your build system like any other source files.  With this method you'll need to link the [dependencies](#dependencies) into your project manually.
+Then copy `dist/arbiter.hpp` and `dist/arbiter.cpp` into your project tree and include them in your build system like any other source files.  With this method you'll need to link the [Curl dependency](#dependencies) into your project manually.
 
 ### Dependencies
 
-Arbiter depends on [Curl](http://curl.haxx.se/libcurl/) and [OpenSSL](https://www.openssl.org/), which are probably already installed on your machine.  To manually link them on Unix-based operating systems, link with `-lcurl -lcrypto`.
+Arbiter depends on [Curl](http://curl.haxx.se/libcurl/), which comes preinstalled on most UNIX-based machines.  To manually link (for amalgamated usage) on Unix-based operating systems, link with `-lcurl`.
 
 ## API sample
 
@@ -63,3 +63,4 @@ s3Data = a.get(s3Path);
 fsGlob = a.resolve("~/data/*");
 s3Glob = a.resolve("s3://some-bucket/some-dir/*");
 ```
+

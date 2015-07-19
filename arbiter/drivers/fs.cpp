@@ -2,7 +2,7 @@
 #include <arbiter/drivers/fs.hpp>
 #endif
 
-#ifdef UNIX
+#ifndef WINDOWS
 #include <glob.h>
 #include <sys/stat.h>
 #endif
@@ -78,7 +78,7 @@ std::vector<std::string> FsDriver::glob(std::string path, bool) const
 {
     std::vector<std::string> results;
 
-#ifdef UNIX
+#ifndef WINDOWS
     path = expandTilde(path);
 
     glob_t buffer;
@@ -104,7 +104,7 @@ std::vector<std::string> FsDriver::glob(std::string path, bool) const
     }
 
     globfree(&buffer);
-#elif WINDOWS
+#else
 
 #endif
 

@@ -11,9 +11,8 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/third/xml/xml.hpp>
+#include <arbiter/util/crypto.hpp>
 #endif
-
-#include <openssl/hmac.h>
 
 namespace arbiter
 {
@@ -318,28 +317,7 @@ std::string S3Driver::getStringToSign(
 
 std::vector<char> S3Driver::signString(std::string input) const
 {
-    std::vector<char> hash(20, ' ');
-    unsigned int outLength(0);
-
-    HMAC_CTX ctx;
-    HMAC_CTX_init(&ctx);
-
-    HMAC_Init(
-            &ctx,
-            m_auth.hidden().data(),
-            m_auth.hidden().size(),
-            EVP_sha1());
-    HMAC_Update(
-            &ctx,
-            reinterpret_cast<const uint8_t*>(input.data()),
-            input.size());
-    HMAC_Final(
-            &ctx,
-            reinterpret_cast<uint8_t*>(hash.data()),
-            &outLength);
-    HMAC_CTX_cleanup(&ctx);
-
-    return hash;
+    return crypto::hmacSha1(m_auth.hidden(), input);
 }
 
 std::string S3Driver::encodeBase64(std::vector<char> data) const
