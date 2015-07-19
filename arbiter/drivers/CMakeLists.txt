@@ -22,3 +22,4 @@ if (WIN32)
 else()
     add_library(${MODULE} OBJECT ${SOURCES})
 endif()
+
