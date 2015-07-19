@@ -22,7 +22,10 @@ std::vector<std::string> Driver::resolve(std::string path, bool verbose) const
 {
     std::vector<std::string> results;
 
-    if (path.size() > 2 && path.substr(path.size() - 2) == "/*")
+    if (
+            path.size() > 2 &&
+            path.back() == '*' &&
+            (path[path.size() - 2] == '/' || path[path.size() - 2] == '\\'))
     {
         if (verbose)
         {

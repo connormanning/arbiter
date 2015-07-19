@@ -3,6 +3,10 @@
 #include <vector>
 #include <string>
 
+#if defined(_WIN32) || defined(WIN32) || defined(_MSC_VER)
+#define ARBITER_WINDOWS
+#endif
+
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/driver.hpp>
 #include <arbiter/endpoint.hpp>

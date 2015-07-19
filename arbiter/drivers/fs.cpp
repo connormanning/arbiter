@@ -2,9 +2,12 @@
 #include <arbiter/drivers/fs.hpp>
 #endif
 
-#ifndef WINDOWS
+#ifndef ARBITER_WINDOWS
 #include <glob.h>
 #include <sys/stat.h>
+#else
+#include <locale>
+#include <codecvt>
 #endif
 
 #include <cstdlib>
@@ -28,10 +31,12 @@ namespace
     {
         std::string out(in);
 
+#ifndef ARBITER_WINDOWS
         if (!in.empty() && in.front() == '~')
         {
             out = getenv(home.c_str()) + in.substr(1);
         }
+#endif
 
         return out;
     }
@@ -78,7 +83,7 @@ std::vector<std::string> FsDriver::glob(std::string path, bool) const
 {
     std::vector<std::string> results;
 
-#ifndef WINDOWS
+#ifndef ARBITER_WINDOWS
     path = expandTilde(path);
 
     glob_t buffer;
@@ -105,7 +110,23 @@ std::vector<std::string> FsDriver::glob(std::string path, bool) const
 
     globfree(&buffer);
 #else
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    const std::wstring wide(converter.from_bytes(path));
 
+    WIN32_FIND_DATA data;
+    HANDLE hFind(FindFirstFile(wide.c_str(), &data));
+
+    if (hFind != INVALID_HANDLE_VALUE)
+    {
+        do
+        {
+            if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+            {
+                results.push_back(converter.to_bytes(data.cFileName));
+            }
+        }
+        while (FindNextFile(hFind, &data));
+    }
 #endif
 
     return results;

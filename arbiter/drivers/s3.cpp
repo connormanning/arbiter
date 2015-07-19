@@ -271,12 +271,12 @@ std::string S3Driver::getHttpDate() const
 
     time(&rawTime);
 
-#ifndef WINDOWS
+#ifndef ARBITER_WINDOWS
     tm* timeInfoPtr = localtime(&rawTime);
 #else
-	tm timeInfo;
-	localtime_s(&timeInfo, &rawTime);
-	tm* timeInfoPtr(&timeInfo);
+    tm timeInfo;
+    localtime_s(&timeInfo, &rawTime);
+    tm* timeInfoPtr(&timeInfo);
 #endif
 
     strftime(charBuf, 80, "%a, %d %b %Y %H:%M:%S %z", timeInfoPtr);

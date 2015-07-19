@@ -1,4 +1,6 @@
+#ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/util/crypto.hpp>
+#endif
 
 #include <cstdint>
 
@@ -162,14 +164,14 @@ namespace
         // Append to the padding the total message's length in bits and
         // transform.
         ctx->bitlen += ctx->datalen * 8;
-		ctx->data[63] = static_cast<uint8_t>(ctx->bitlen);
-		ctx->data[62] = static_cast<uint8_t>(ctx->bitlen >> 8);
-		ctx->data[61] = static_cast<uint8_t>(ctx->bitlen >> 16);
-		ctx->data[60] = static_cast<uint8_t>(ctx->bitlen >> 24);
-		ctx->data[59] = static_cast<uint8_t>(ctx->bitlen >> 32);
-		ctx->data[58] = static_cast<uint8_t>(ctx->bitlen >> 40);
-		ctx->data[57] = static_cast<uint8_t>(ctx->bitlen >> 48);
-		ctx->data[56] = static_cast<uint8_t>(ctx->bitlen >> 56);
+        ctx->data[63] = static_cast<uint8_t>(ctx->bitlen);
+        ctx->data[62] = static_cast<uint8_t>(ctx->bitlen >> 8);
+        ctx->data[61] = static_cast<uint8_t>(ctx->bitlen >> 16);
+        ctx->data[60] = static_cast<uint8_t>(ctx->bitlen >> 24);
+        ctx->data[59] = static_cast<uint8_t>(ctx->bitlen >> 32);
+        ctx->data[58] = static_cast<uint8_t>(ctx->bitlen >> 40);
+        ctx->data[57] = static_cast<uint8_t>(ctx->bitlen >> 48);
+        ctx->data[56] = static_cast<uint8_t>(ctx->bitlen >> 56);
         sha1_transform(ctx, ctx->data);
 
         // Since this implementation uses little endian byte ordering and MD

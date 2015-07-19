@@ -2,7 +2,7 @@
 #include <arbiter/drivers/http.hpp>
 #endif
 
-#ifdef WINDOWS
+#ifdef ARBITER_WINDOWS
 #undef min
 #undef max
 #endif
@@ -184,7 +184,10 @@ HttpResponse Curl::put(
 
     // Must use this for binary data, otherwise curl will use strlen(), which
     // will likely be incorrect.
-    curl_easy_setopt(m_curl, CURLOPT_INFILESIZE_LARGE, data.size());
+    curl_easy_setopt(
+            m_curl,
+            CURLOPT_INFILESIZE_LARGE,
+            static_cast<curl_off_t>(data.size()));
 
     // Hide Curl's habit of printing things to console even with verbose set
     // to false.
