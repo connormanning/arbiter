@@ -59,10 +59,21 @@ def amalgamate_source(source_top_dir=None,
            target_source_path: output .cpp path
            header_include_path: generated header path relative to target_source_path.
     """
+
+    gitsha = None
+
+    try:
+        f = open(".git/refs/heads/master")
+        gitsha = f.read().rstrip()
+        f.close()
+    except:
+        print("This script must be run from the top level")
+
     print("Amalgamating header...")
     header = AmalgamationFile(source_top_dir)
     header.add_text("/// Arbiter amalgamated header (https://github.com/connormanning/arbiter).")
     header.add_text('/// It is intended to be used with #include "%s"' % header_include_path)
+    header.add_text('\n// Git SHA: ' + gitsha)
     header.add_file("LICENSE", wrap_in_comment=True)
     header.add_text("#pragma once")
     header.add_text("/// If defined, indicates that the source file is amalgamated")
