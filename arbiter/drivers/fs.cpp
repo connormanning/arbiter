@@ -25,40 +25,46 @@ namespace
             std::ofstream::out |
             std::ofstream::trunc);
 
-    const std::string home("HOME");
 
     std::string expandTilde(std::string in)
     {
         std::string out(in);
 
-#ifndef ARBITER_WINDOWS
         if (!in.empty() && in.front() == '~')
         {
-            out = getenv(home.c_str()) + in.substr(1);
-        }
+#ifndef ARBITER_WINDOWS
+            static const std::string home(getenv("HOME"));
+#else
+            static const std::string home(
+                    getenv("USERPROFILE").size() ?
+                        getenv("USERPROFILE") :
+                        getenv("HOMEDRIVE") + getenv("HOMEPATH"));
 #endif
+            out = home + in.substr(1);
+        }
 
         return out;
     }
 }
 
-std::vector<char> FsDriver::getBinary(std::string path) const
+bool FsDriver::get(std::string path, std::vector<char>& data) const
 {
+    bool good(false);
+
     path = expandTilde(path);
     std::ifstream stream(path, std::ios::in | std::ios::binary);
 
-    if (!stream.good())
+    if (stream.good())
     {
-        throw std::runtime_error("Could not read file " + path);
+        stream.seekg(0, std::ios::end);
+        data.resize(static_cast<std::size_t>(stream.tellg()));
+        stream.seekg(0, std::ios::beg);
+        stream.read(data.data(), data.size());
+        stream.close();
+        good = true;
     }
 
-    stream.seekg(0, std::ios::end);
-    std::vector<char> data(static_cast<std::size_t>(stream.tellg()));
-    stream.seekg(0, std::ios::beg);
-    stream.read(data.data(), data.size());
-    stream.close();
-
-    return data;
+    return good;
 }
 
 void FsDriver::put(std::string path, const std::vector<char>& data) const

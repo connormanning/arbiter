@@ -9,15 +9,14 @@ The core API is intended to be as simple as possible.
 ```cpp
 using namespace arbiter;
 
-// Arbiter a;                               // Filesystem and HTTP access.
-Arbiter a(AwsAuth("public", "private"));    // Supply auth for S3 access.
+Arbiter a;
 
 std::string fsPath, httpPath, s3Path;
 std::string fsData, httpData, s3Data;
 std::vector<std::string> fsGlob, s3Glob;
 
 // Read and write data.
-fsPath = "~/fs.txt";  // Tilde expansion is supported on Unix.
+fsPath = "~/fs.txt";  // Tilde expansion is supported on both Unix and Windows.
 a.put(fsPath, "Filesystem contents!");
 fsData = a.get(fsPath);
 
@@ -70,3 +69,8 @@ Once the amalgamated files are integrated with your source tree, simply `#includ
 Arbiter depends on [Curl](http://curl.haxx.se/libcurl/), which comes preinstalled on most UNIX-based machines.  To manually link (for amalgamated usage) on Unix-based operating systems, link with `-lcurl`.  Arbiter also works on Windows, but you'll have to obtain Curl yourself there.
 
 Arbiter requires C++11.
+
+### AWS Authentication
+
+Arbiter will automatically detect AWS credentials if AWS-SDK is installed and configured.  Otherwise, you can populate `~/.aws/credentials` (see [instructions](https://docs.aws.amazon.com/AWSJavaScriptSDK/guide/node-configuring.html)), or use the environment values `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+

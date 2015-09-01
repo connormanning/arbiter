@@ -20,7 +20,9 @@ public:
     virtual std::string type() const = 0;
 
     // Read/write data.
-    virtual std::vector<char> getBinary(std::string path) const = 0;
+    std::unique_ptr<std::vector<char>> tryGetBinary(std::string path) const;
+    std::vector<char> getBinary(std::string path) const;
+
     virtual void put(std::string path, const std::vector<char>& data) const = 0;
 
     // True for filesystem paths, otherwise false.  Derived classes other than
@@ -30,6 +32,7 @@ public:
 
 
     // Convenience overloads.
+    std::unique_ptr<std::string> tryGet(std::string path) const;
     std::string get(std::string path) const;
     void put(std::string path, const std::string& data) const;
 
@@ -38,7 +41,7 @@ public:
             std::string path,
             bool verbose = false) const;
 
-private:
+protected:
     // This operation expects a path ending with the characters "/*", and
     // without any type-specifying information (i.e. "http://", "s3://", or any
     // other "<type>://" information is stripped).
@@ -46,6 +49,8 @@ private:
     {
         throw std::runtime_error("Cannot glob driver for: " + path);
     }
+
+    virtual bool get(std::string path, std::vector<char>& data) const = 0;
 };
 
 typedef std::map<std::string, std::shared_ptr<Driver>> DriverMap;

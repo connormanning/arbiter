@@ -3,13 +3,16 @@
 #endif
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <iostream>
 #include <thread>
 
 #ifndef ARBITER_IS_AMALGAMATION
+#include <arbiter/drivers/fs.hpp>
 #include <arbiter/third/xml/xml.hpp>
 #include <arbiter/util/crypto.hpp>
 #endif
@@ -69,6 +72,105 @@ AwsAuth::AwsAuth(const std::string access, const std::string hidden)
     , m_hidden(hidden)
 { }
 
+std::unique_ptr<AwsAuth> AwsAuth::find(std::string user)
+{
+    std::unique_ptr<AwsAuth> auth;
+
+    if (user.empty())
+    {
+        user = getenv("AWS_PROFILE") ? getenv("AWS_PROFILE") : "default";
+    }
+
+    FsDriver fs;
+    std::unique_ptr<std::string> file(fs.tryGet("~/.aws/credentials"));
+
+    // First, try reading credentials file.
+    if (file)
+    {
+        std::size_t index(0);
+        std::size_t pos(0);
+        std::vector<std::string> lines;
+
+        do
+        {
+            index = file->find('\n', pos);
+            std::string line(file->substr(pos, index - pos));
+
+            line.erase(
+                    std::remove_if(line.begin(), line.end(), ::isspace),
+                    line.end());
+
+            lines.push_back(line);
+
+            pos = index + 1;
+        }
+        while (index != std::string::npos);
+
+        if (lines.size() >= 3)
+        {
+            std::size_t i(0);
+
+            const std::string userFind("[" + user + "]");
+            const std::string accessFind("aws_access_key_id=");
+            const std::string hiddenFind("aws_secret_access_key=");
+
+            while (i < lines.size() - 2 && !auth)
+            {
+                if (lines[i].find(userFind) != std::string::npos)
+                {
+                    const std::string& accessLine(lines[i + 1]);
+                    const std::string& hiddenLine(lines[i + 2]);
+
+                    std::size_t accessPos(accessLine.find(accessFind));
+                    std::size_t hiddenPos(hiddenLine.find(hiddenFind));
+
+                    if (
+                            accessPos != std::string::npos &&
+                            hiddenPos != std::string::npos)
+                    {
+                        const std::string access(
+                                accessLine.substr(
+                                    accessPos + accessFind.size(),
+                                    accessLine.find(';')));
+
+                        const std::string hidden(
+                                hiddenLine.substr(
+                                    hiddenPos + hiddenFind.size(),
+                                    hiddenLine.find(';')));
+
+                        auth.reset(new AwsAuth(access, hidden));
+                    }
+                }
+
+                ++i;
+            }
+        }
+    }
+
+    // Fall back to environment settings.
+    if (!auth)
+    {
+        if (getenv("AWS_ACCESS_KEY_ID") && getenv("AWS_SECRET_ACCESS_KEY"))
+        {
+            auth.reset(
+                    new AwsAuth(
+                        getenv("AWS_ACCESS_KEY_ID"),
+                        getenv("AWS_SECRET_ACCESS_KEY")));
+        }
+        else if (
+                getenv("AMAZON_ACCESS_KEY_ID") &&
+                getenv("AMAZON_SECRET_ACCESS_KEY"))
+        {
+            auth.reset(
+                    new AwsAuth(
+                        getenv("AMAZON_ACCESS_KEY_ID"),
+                        getenv("AMAZON_SECRET_ACCESS_KEY")));
+        }
+    }
+
+    return auth;
+}
+
 std::string AwsAuth::access() const
 {
     return m_access;
@@ -84,14 +186,15 @@ S3Driver::S3Driver(HttpPool& pool, const AwsAuth auth)
     , m_auth(auth)
 { }
 
-std::vector<char> S3Driver::getBinary(const std::string rawPath) const
+bool S3Driver::get(std::string rawPath, std::vector<char>& data) const
 {
-    return get(rawPath, Query());
+    return get(rawPath, Query(), data);
 }
 
-std::vector<char> S3Driver::get(
+bool S3Driver::get(
         const std::string rawPath,
-        const Query& query) const
+        const Query& query,
+        std::vector<char>& data) const
 {
     const Resource resource(rawPath);
 
@@ -104,15 +207,28 @@ std::vector<char> S3Driver::get(
 
     if (res.ok())
     {
-        return res.data();
+        data = res.data();
+        return true;
     }
     else
     {
         // TODO If verbose:
         // std::cout << std::string(res.data().begin(), res.data().end()) <<
             // std::endl;
+        return false;
+    }
+}
+
+std::vector<char> S3Driver::get(std::string rawPath, const Query& query) const
+{
+    std::vector<char> data;
+
+    if (!get(rawPath, query, data))
+    {
         throw std::runtime_error("Couldn't S3 GET " + rawPath);
     }
+
+    return data;
 }
 
 void S3Driver::put(std::string rawPath, const std::vector<char>& data) const

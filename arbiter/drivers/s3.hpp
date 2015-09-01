@@ -17,6 +17,14 @@ class AwsAuth
 public:
     AwsAuth(std::string access, std::string hidden);
 
+    // See:
+    // https://docs.aws.amazon.com/AWSJavaScriptSDK/guide/node-configuring.html
+    //
+    // Searches for methods 2 and 3 of "Setting AWS Credentials":
+    //      - Check for them in ~/.aws/credentials.
+    //      - If not found, try the environment settings.
+    static std::unique_ptr<AwsAuth> find(std::string user);
+
     std::string access() const;
     std::string hidden() const;
 
@@ -33,13 +41,17 @@ public:
     S3Driver(HttpPool& pool, AwsAuth awsAuth);
 
     virtual std::string type() const { return "s3"; }
-    virtual std::vector<char> getBinary(std::string path) const;
     virtual void put(std::string path, const std::vector<char>& data) const;
 
 private:
+    virtual bool get(std::string path, std::vector<char>& data) const;
     virtual std::vector<std::string> glob(std::string path, bool verbose) const;
 
     std::vector<char> get(std::string path, const Query& query) const;
+    bool get(
+            std::string rawPath,
+            const Query& query,
+            std::vector<char>& data) const;
 
     Headers httpGetHeaders(std::string filePath) const;
     Headers httpPutHeaders(std::string filePath) const;

@@ -15,21 +15,19 @@ namespace
     const std::size_t httpRetryCount(8);
 }
 
-Arbiter::Arbiter()
+Arbiter::Arbiter(std::string awsUser)
     : m_drivers()
     , m_pool(concurrentHttpReqs, httpRetryCount)
 {
     m_drivers["fs"] =   std::make_shared<FsDriver>(FsDriver());
     m_drivers["http"] = std::make_shared<HttpDriver>(HttpDriver(m_pool));
-}
 
-Arbiter::Arbiter(AwsAuth awsAuth)
-    : m_drivers()
-    , m_pool(concurrentHttpReqs, httpRetryCount)
-{
-    m_drivers["fs"] =   std::make_shared<FsDriver>(FsDriver());
-    m_drivers["http"] = std::make_shared<HttpDriver>(HttpDriver(m_pool));
-    m_drivers["s3"] =   std::make_shared<S3Driver>(S3Driver(m_pool, awsAuth));
+    std::unique_ptr<AwsAuth> auth(AwsAuth::find(awsUser));
+
+    if (auth)
+    {
+        m_drivers["s3"] = std::make_shared<S3Driver>(S3Driver(m_pool, *auth));
+    }
 }
 
 Arbiter::~Arbiter()

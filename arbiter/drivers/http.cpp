@@ -74,13 +74,20 @@ HttpDriver::HttpDriver(HttpPool& pool)
     : m_pool(pool)
 { }
 
-std::vector<char> HttpDriver::getBinary(const std::string path) const
+bool HttpDriver::get(const std::string path, std::vector<char>& data) const
 {
+    bool good(false);
+
     auto http(m_pool.acquire());
     HttpResponse res(http.get(path));
 
-    if (res.ok()) return res.data();
-    else throw std::runtime_error("Couldn't HTTP GET " + path);
+    if (res.ok())
+    {
+        data = res.data();
+        good = true;
+    }
+
+    return good;
 }
 
 void HttpDriver::put(
