@@ -57,6 +57,8 @@ public:
     virtual std::string type() const { return "http"; }
     virtual void put(std::string path, const std::vector<char>& data) const;
 
+    static std::string sanitize(std::string path);
+
 private:
     virtual bool get(std::string path, std::vector<char>& data) const;
 
