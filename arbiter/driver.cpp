@@ -56,10 +56,7 @@ std::vector<std::string> Driver::resolve(
 {
     std::vector<std::string> results;
 
-    if (
-            path.size() > 2 &&
-            path.back() == '*' &&
-            (path[path.size() - 2] == '/' || path[path.size() - 2] == '\\'))
+    if (path.size() > 1 && path.back() == '*')
     {
         if (verbose)
         {
