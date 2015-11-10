@@ -7,6 +7,33 @@
 namespace arbiter
 {
 
+namespace fs
+{
+    // Returns true if created, false if already existed.
+    bool mkdirp(std::string dir);
+
+    // Returns true if removed, otherwise false.
+    bool remove(std::string filename);
+
+    // Performs tilde expansion to a fully-qualified path, if possible.
+    std::string expandTilde(std::string path);
+
+    // RAII class for local temporary versions of remote files.  No-op if the
+    // original file is already local.
+    class LocalHandle
+    {
+    public:
+        LocalHandle(std::string localPath, bool isRemote);
+        ~LocalHandle();
+
+        std::string localPath() const { return m_localPath; }
+
+    private:
+        const std::string m_localPath;
+        const bool m_isRemote;
+    };
+}
+
 class FsDriver : public Driver
 {
 public:

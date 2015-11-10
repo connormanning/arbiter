@@ -4,6 +4,8 @@
 #include <arbiter/driver.hpp>
 #endif
 
+#include <algorithm>
+
 namespace arbiter
 {
 
@@ -73,6 +75,31 @@ Endpoint Arbiter::getEndpoint(const std::string root) const
 const Driver& Arbiter::getDriver(const std::string path) const
 {
     return *m_drivers.at(parseType(path));
+}
+
+std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
+        const std::string path,
+        const Endpoint& tempEndpoint) const
+{
+    std::unique_ptr<fs::LocalHandle> localHandle;
+
+    if (isRemote(path))
+    {
+        std::string name(path);
+        std::replace(name.begin(), name.end(), '/', '-');
+        std::replace(name.begin(), name.end(), '\\', '-');
+
+        tempEndpoint.putSubpath(name, getBinary(path));
+
+        localHandle.reset(
+                new fs::LocalHandle(tempEndpoint.root() + name, true));
+    }
+    else
+    {
+        localHandle.reset(new fs::LocalHandle(path, false));
+    }
+
+    return localHandle;
 }
 
 std::string Arbiter::parseType(const std::string path) const

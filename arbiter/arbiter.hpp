@@ -62,7 +62,20 @@ public:
     // its type does not exist.
     const Driver& getDriver(std::string path) const;
 
-    static std::string stripType(const std::string path);
+    // Get a self-destructing local file handle to a possibly-remote path.
+    //
+    // If _path_ is a remote path, this will download the file and write it
+    // locally - in which case the file will be removed upon destruction of the
+    // returned LocalHandle.  In this case, the file will be written to the
+    // passed in tempEndpoint.
+    //
+    // If _path_ is already on the local filesystem, it will remain in its
+    // location and the LocalHandle's destructor will no-op.
+    std::unique_ptr<fs::LocalHandle> getLocalHandle(
+            std::string path,
+            const Endpoint& tempEndpoint) const;
+
+    static std::string stripType(std::string path);
 
 private:
     // If no delimiter of "://" is found, returns "fs".  Otherwise, returns
