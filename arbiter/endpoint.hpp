@@ -20,6 +20,8 @@ public:
 
     std::string getSubpath(std::string subpath) const;
     std::vector<char> getSubpathBinary(std::string subpath) const;
+    std::unique_ptr<std::vector<char>> tryGetSubpathBinary(
+            std::string subpath) const;
 
     void putSubpath(std::string subpath, const std::string& data) const;
     void putSubpath(std::string subpath, const std::vector<char>& data) const;
