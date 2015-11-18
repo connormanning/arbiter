@@ -19,6 +19,8 @@ public:
     bool isRemote() const;
 
     std::string getSubpath(std::string subpath) const;
+    std::unique_ptr<std::string> tryGetSubpath(std::string subpath) const;
+
     std::vector<char> getSubpathBinary(std::string subpath) const;
     std::unique_ptr<std::vector<char>> tryGetSubpathBinary(
             std::string subpath) const;
