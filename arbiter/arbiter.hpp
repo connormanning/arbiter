@@ -22,12 +22,14 @@ class Arbiter
 {
 public:
     Arbiter(std::string awsUser = "");
-    ~Arbiter();
 
     // Read/write operations.  Each may throw std::runtime_error if the
     // path is inacessible for the requested operation.
     std::string get(std::string path) const;
     std::vector<char> getBinary(std::string path) const;
+
+    std::unique_ptr<std::string> tryGet(std::string path) const;
+    std::unique_ptr<std::vector<char>> tryGetBinary(std::string path) const;
 
     void put(std::string path, const std::string& data) const;
     void put(std::string path, const std::vector<char>& data) const;

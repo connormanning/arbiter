@@ -32,9 +32,6 @@ Arbiter::Arbiter(std::string awsUser)
     }
 }
 
-Arbiter::~Arbiter()
-{ }
-
 std::string Arbiter::get(const std::string path) const
 {
     return getDriver(path).get(stripType(path));
@@ -43,6 +40,16 @@ std::string Arbiter::get(const std::string path) const
 std::vector<char> Arbiter::getBinary(const std::string path) const
 {
     return getDriver(path).getBinary(stripType(path));
+}
+
+std::unique_ptr<std::string> Arbiter::tryGet(std::string path) const
+{
+    return getDriver(path).tryGet(stripType(path));
+}
+
+std::unique_ptr<std::vector<char>> Arbiter::tryGetBinary(std::string path) const
+{
+    return getDriver(path).tryGetBinary(stripType(path));
 }
 
 void Arbiter::put(const std::string path, const std::string& data) const
