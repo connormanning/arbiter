@@ -32,7 +32,10 @@ namespace
     }
 }
 
-bool FsDriver::get(std::string path, std::vector<char>& data) const
+namespace drivers
+{
+
+bool Fs::get(std::string path, std::vector<char>& data) const
 {
     bool good(false);
 
@@ -52,7 +55,7 @@ bool FsDriver::get(std::string path, std::vector<char>& data) const
     return good;
 }
 
-void FsDriver::put(std::string path, const std::vector<char>& data) const
+void Fs::put(std::string path, const std::vector<char>& data) const
 {
     path = fs::expandTilde(path);
     std::ofstream stream(path, binaryTruncMode);
@@ -70,7 +73,7 @@ void FsDriver::put(std::string path, const std::vector<char>& data) const
     }
 }
 
-std::vector<std::string> FsDriver::glob(std::string path, bool) const
+std::vector<std::string> Fs::glob(std::string path, bool) const
 {
     std::vector<std::string> results;
 
@@ -122,6 +125,8 @@ std::vector<std::string> FsDriver::glob(std::string path, bool) const
 
     return results;
 }
+
+} // namespace drivers
 
 namespace fs
 {

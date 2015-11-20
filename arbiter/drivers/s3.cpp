@@ -26,7 +26,7 @@ namespace
 {
     const std::string baseUrl(".s3.amazonaws.com/");
 
-    std::string getQueryString(const Query& query)
+    std::string getQueryString(const drivers::Query& query)
     {
         std::string result;
 
@@ -54,7 +54,7 @@ namespace
             }
         }
 
-        std::string buildPath(Query query = Query()) const
+        std::string buildPath(drivers::Query query = drivers::Query()) const
         {
             const std::string queryString(getQueryString(query));
             return "http://" + bucket + baseUrl + object + queryString;
@@ -68,6 +68,9 @@ namespace
 
     const std::string badResponse("Unexpected contents in AWS response");
 }
+
+namespace drivers
+{
 
 AwsAuth::AwsAuth(const std::string access, const std::string hidden)
     : m_access(access)
@@ -83,7 +86,7 @@ std::unique_ptr<AwsAuth> AwsAuth::find(std::string user)
         user = getenv("AWS_PROFILE") ? getenv("AWS_PROFILE") : "default";
     }
 
-    FsDriver fs;
+    drivers::Fs fs;
     std::unique_ptr<std::string> file(fs.tryGet("~/.aws/credentials"));
 
     // First, try reading credentials file.
@@ -183,23 +186,23 @@ std::string AwsAuth::hidden() const
     return m_hidden;
 }
 
-S3Driver::S3Driver(HttpPool& pool, const AwsAuth auth)
+S3::S3(HttpPool& pool, const AwsAuth auth)
     : m_pool(pool)
     , m_auth(auth)
 { }
 
-bool S3Driver::get(std::string rawPath, std::vector<char>& data) const
+bool S3::get(std::string rawPath, std::vector<char>& data) const
 {
     return get(rawPath, Query(), data);
 }
 
-bool S3Driver::get(
+bool S3::get(
         std::string rawPath,
         const Query& query,
         std::vector<char>& data,
         const Headers userHeaders) const
 {
-    rawPath = HttpDriver::sanitize(rawPath);
+    rawPath = Http::sanitize(rawPath);
     const Resource resource(rawPath);
 
     const std::string path(resource.buildPath(query));
@@ -222,9 +225,7 @@ bool S3Driver::get(
     }
 }
 
-std::vector<char> S3Driver::getBinary(
-        std::string rawPath,
-        Headers headers) const
+std::vector<char> S3::getBinary(std::string rawPath, Headers headers) const
 {
     std::vector<char> data;
 
@@ -236,13 +237,13 @@ std::vector<char> S3Driver::getBinary(
     return data;
 }
 
-std::string S3Driver::get(std::string rawPath, Headers headers) const
+std::string S3::get(std::string rawPath, Headers headers) const
 {
     std::vector<char> data(getBinary(rawPath, headers));
     return std::string(data.begin(), data.end());
 }
 
-std::vector<char> S3Driver::get(std::string rawPath, const Query& query) const
+std::vector<char> S3::get(std::string rawPath, const Query& query) const
 {
     std::vector<char> data;
 
@@ -254,7 +255,7 @@ std::vector<char> S3Driver::get(std::string rawPath, const Query& query) const
     return data;
 }
 
-void S3Driver::put(std::string rawPath, const std::vector<char>& data) const
+void S3::put(std::string rawPath, const std::vector<char>& data) const
 {
     const Resource resource(rawPath);
 
@@ -269,7 +270,7 @@ void S3Driver::put(std::string rawPath, const std::vector<char>& data) const
     }
 }
 
-std::vector<std::string> S3Driver::glob(std::string path, bool verbose) const
+std::vector<std::string> S3::glob(std::string path, bool verbose) const
 {
     std::vector<std::string> results;
     path.pop_back();
@@ -358,7 +359,7 @@ std::vector<std::string> S3Driver::glob(std::string path, bool verbose) const
     return results;
 }
 
-std::vector<std::string> S3Driver::httpGetHeaders(std::string filePath) const
+std::vector<std::string> S3::httpGetHeaders(std::string filePath) const
 {
     const std::string httpDate(getHttpDate());
     const std::string signedEncodedString(
@@ -378,7 +379,7 @@ std::vector<std::string> S3Driver::httpGetHeaders(std::string filePath) const
     return headers;
 }
 
-std::vector<std::string> S3Driver::httpPutHeaders(std::string filePath) const
+std::vector<std::string> S3::httpPutHeaders(std::string filePath) const
 {
     const std::string httpDate(getHttpDate());
     const std::string signedEncodedString(
@@ -404,7 +405,7 @@ std::vector<std::string> S3Driver::httpPutHeaders(std::string filePath) const
     return headers;
 }
 
-std::string S3Driver::getHttpDate() const
+std::string S3::getHttpDate() const
 {
     time_t rawTime;
     char charBuf[80];
@@ -425,7 +426,7 @@ std::string S3Driver::getHttpDate() const
     return stringBuf;
 }
 
-std::string S3Driver::getSignedEncodedString(
+std::string S3::getSignedEncodedString(
         std::string command,
         std::string file,
         std::string httpDate,
@@ -441,7 +442,7 @@ std::string S3Driver::getSignedEncodedString(
     return encodeBase64(signedData);
 }
 
-std::string S3Driver::getStringToSign(
+std::string S3::getStringToSign(
         std::string command,
         std::string file,
         std::string httpDate,
@@ -455,12 +456,12 @@ std::string S3Driver::getStringToSign(
         "/" + file;
 }
 
-std::vector<char> S3Driver::signString(std::string input) const
+std::vector<char> S3::signString(std::string input) const
 {
     return crypto::hmacSha1(m_auth.hidden(), input);
 }
 
-std::string S3Driver::encodeBase64(std::vector<char> data) const
+std::string S3::encodeBase64(std::vector<char> data) const
 {
     std::vector<uint8_t> input;
     for (std::size_t i(0); i < data.size(); ++i)
@@ -509,5 +510,6 @@ std::string S3Driver::encodeBase64(std::vector<char> data) const
     return output;
 }
 
+} // namespace drivers
 } // namespace arbiter
 

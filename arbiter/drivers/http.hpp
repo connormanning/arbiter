@@ -17,6 +17,7 @@
 namespace arbiter
 {
 
+/** @cond arbiter_internal */
 class HttpResponse
 {
 public:
@@ -42,6 +43,7 @@ private:
     int m_code;
     std::vector<char> m_data;
 };
+/** @endcond */
 
 typedef std::vector<std::string> Headers;
 
@@ -49,22 +51,33 @@ typedef std::vector<std::string> Headers;
 
 class HttpPool;
 
-class HttpDriver : public Driver
+namespace drivers
+{
+
+/** @brief HTTP driver. */
+class Http : public Driver
 {
 public:
-    HttpDriver(HttpPool& pool);
+    Http(HttpPool& pool);
 
-    virtual std::string type() const { return "http"; }
-    virtual void put(std::string path, const std::vector<char>& data) const;
+    virtual std::string type() const override { return "http"; }
+    virtual void put(
+            std::string path,
+            const std::vector<char>& data) const override;
 
     static std::string sanitize(std::string path);
 
 private:
-    virtual bool get(std::string path, std::vector<char>& data) const;
+    virtual bool get(
+            std::string path,
+            std::vector<char>& data) const override;
 
     HttpPool& m_pool;
 };
 
+} // namespace drivers
+
+/** @cond arbiter_internal */
 class Curl
 {
     // Only HttpPool may create.
@@ -137,6 +150,7 @@ private:
     std::mutex m_mutex;
     std::condition_variable m_cv;
 };
+/** @endcond */
 
 } // namespace arbiter
 

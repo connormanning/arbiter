@@ -7,6 +7,8 @@
 namespace arbiter
 {
 
+class Arbiter;
+
 namespace fs
 {
     // Returns true if created, false if already existed.
@@ -18,35 +20,64 @@ namespace fs
     // Performs tilde expansion to a fully-qualified path, if possible.
     std::string expandTilde(std::string path);
 
-    // RAII class for local temporary versions of remote files.  No-op if the
-    // original file is already local.
+    /** @brief A scoped local filehandle for a possibly remote path.
+     *
+     * This is an RAII style pseudo-filehandle.  It manages the scope of a
+     * local temporary version of a file, where that file may have been copied
+     * from a remote storage location.
+     *
+     * See Arbiter::getLocalHandle for details about construction.
+     */
     class LocalHandle
     {
+        friend class arbiter::Arbiter;
+
     public:
-        LocalHandle(std::string localPath, bool isRemote);
+        /** @brief Deletes the local path if the data was copied from a remote
+         * source.
+         *
+         * This is a no-op if the path was already local and not copied.
+         */
         ~LocalHandle();
 
+        /** @brief Get the path of the locally stored file.
+         *
+         * @return A local filesystem path containing the data requested in
+         * Arbiter::getLocalHandle.
+         */
         std::string localPath() const { return m_localPath; }
 
     private:
+        LocalHandle(std::string localPath, bool isRemote);
+
         const std::string m_localPath;
         const bool m_isRemote;
     };
 }
 
-class FsDriver : public Driver
+namespace drivers
+{
+
+/** @brief Local filesystem driver. */
+class Fs : public Driver
 {
 public:
-    virtual std::string type() const { return "fs"; }
-    virtual void put(std::string path, const std::vector<char>& data) const;
+    virtual std::string type() const override { return "fs"; }
+    virtual void put(
+            std::string path,
+            const std::vector<char>& data) const override;
 
-    virtual std::vector<std::string> glob(std::string path, bool verbose) const;
+    virtual std::vector<std::string> glob(
+            std::string path,
+            bool verbose) const override;
 
-    virtual bool isRemote() const { return false; }
+    virtual bool isRemote() const override { return false; }
 
 protected:
-    virtual bool get(std::string path, std::vector<char>& data) const;
+    virtual bool get(std::string path, std::vector<char>& data) const override;
 };
+
+} // namespace drivers
 
 } // namespace arbiter
 

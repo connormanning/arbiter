@@ -17,19 +17,33 @@ namespace
     const std::size_t httpRetryCount(8);
 }
 
+Arbiter::Arbiter()
+    : m_drivers()
+    , m_pool(concurrentHttpReqs, httpRetryCount)
+{
+    m_drivers["fs"] =   std::make_shared<drivers::Fs>();
+    m_drivers["http"] = std::make_shared<drivers::Http>(m_pool);
+
+    auto auth(drivers::AwsAuth::find(""));
+    if (auth) m_drivers["s3"] = std::make_shared<drivers::S3>(m_pool, *auth);
+}
+
 Arbiter::Arbiter(std::string awsUser)
     : m_drivers()
     , m_pool(concurrentHttpReqs, httpRetryCount)
 {
-    m_drivers["fs"] =   std::make_shared<FsDriver>();
-    m_drivers["http"] = std::make_shared<HttpDriver>(m_pool);
+    m_drivers["fs"] =   std::make_shared<drivers::Fs>();
+    m_drivers["http"] = std::make_shared<drivers::Http>(m_pool);
 
-    std::unique_ptr<AwsAuth> auth(AwsAuth::find(awsUser));
+    auto auth(drivers::AwsAuth::find(awsUser));
+    if (auth) m_drivers["s3"] = std::make_shared<drivers::S3>(m_pool, *auth);
+    else throw ArbiterError("AWS credentials not found for " + awsUser);
+}
 
-    if (auth)
-    {
-        m_drivers["s3"] = std::make_shared<S3Driver>(m_pool, *auth);
-    }
+void Arbiter::addDriver(const std::string type, std::shared_ptr<Driver> driver)
+{
+    if (!driver) throw ArbiterError("Cannot add empty driver for " + type);
+    m_drivers[type] = driver;
 }
 
 std::string Arbiter::get(const std::string path) const
@@ -99,6 +113,11 @@ std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
 
     if (isRemote(path))
     {
+        if (tempEndpoint.isRemote())
+        {
+            throw ArbiterError("Temporary endpoint must be local.");
+        }
+
         std::string name(path);
         std::replace(name.begin(), name.end(), '/', '-');
         std::replace(name.begin(), name.end(), '\\', '-');
@@ -110,7 +129,7 @@ std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
     }
     else
     {
-        localHandle.reset(new fs::LocalHandle(path, false));
+        localHandle.reset(new fs::LocalHandle(stripType(path), false));
     }
 
     return localHandle;

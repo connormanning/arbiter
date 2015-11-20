@@ -98,12 +98,12 @@ namespace
 
 namespace arbiter
 {
+namespace drivers
+{
 
-HttpDriver::HttpDriver(HttpPool& pool)
-    : m_pool(pool)
-{ }
+Http::Http(HttpPool& pool) : m_pool(pool) { }
 
-bool HttpDriver::get(std::string path, std::vector<char>& data) const
+bool Http::get(std::string path, std::vector<char>& data) const
 {
     bool good(false);
 
@@ -119,9 +119,7 @@ bool HttpDriver::get(std::string path, std::vector<char>& data) const
     return good;
 }
 
-void HttpDriver::put(
-        std::string path,
-        const std::vector<char>& data) const
+void Http::put(std::string path, const std::vector<char>& data) const
 {
     auto http(m_pool.acquire());
 
@@ -131,7 +129,7 @@ void HttpDriver::put(
     }
 }
 
-std::string HttpDriver::sanitize(std::string path)
+std::string Http::sanitize(std::string path)
 {
     std::string result;
 
@@ -151,6 +149,8 @@ std::string HttpDriver::sanitize(std::string path)
 
     return result;
 }
+
+} // namespace drivers
 
 Curl::Curl()
     : m_curl(0)
@@ -201,7 +201,7 @@ HttpResponse Curl::get(std::string path, std::vector<std::string> headers)
     int httpCode(0);
     std::vector<char> data;
 
-    path = HttpDriver::sanitize(path);
+    path = drivers::Http::sanitize(path);
     init(path, headers);
 
     // Register callback function and date pointer to consume the result.
@@ -224,7 +224,7 @@ HttpResponse Curl::put(
         const std::vector<char>& data,
         std::vector<std::string> headers)
 {
-    path = HttpDriver::sanitize(path);
+    path = drivers::Http::sanitize(path);
     init(path, headers);
 
     int httpCode(0);

@@ -12,6 +12,10 @@
 namespace arbiter
 {
 
+namespace drivers
+{
+
+/** @brief AWS authentication information. */
 class AwsAuth
 {
 public:
@@ -35,20 +39,25 @@ private:
 
 typedef std::map<std::string, std::string> Query;
 
-class S3Driver : public Driver
+/** @brief Amazon %S3 driver. */
+class S3 : public Driver
 {
 public:
-    S3Driver(HttpPool& pool, AwsAuth awsAuth);
+    S3(HttpPool& pool, AwsAuth awsAuth);
 
-    virtual std::string type() const { return "s3"; }
-    virtual void put(std::string path, const std::vector<char>& data) const;
+    virtual std::string type() const override { return "s3"; }
+    virtual void put(
+            std::string path,
+            const std::vector<char>& data) const override;
 
     std::string get(std::string path, Headers headers) const;
     std::vector<char> getBinary(std::string path, Headers headers) const;
 
 private:
-    virtual bool get(std::string path, std::vector<char>& data) const;
-    virtual std::vector<std::string> glob(std::string path, bool verbose) const;
+    virtual bool get(std::string path, std::vector<char>& data) const override;
+    virtual std::vector<std::string> glob(
+            std::string path,
+            bool verbose) const override;
 
     std::vector<char> get(std::string path, const Query& query) const;
     bool get(
@@ -81,5 +90,6 @@ private:
     AwsAuth m_auth;
 };
 
+} // namespace drivers
 } // namespace arbiter
 
