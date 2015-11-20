@@ -1,4 +1,5 @@
 #ifndef ARBITER_IS_AMALGAMATION
+#include <arbiter/arbiter.hpp>
 #include <arbiter/drivers/s3.hpp>
 #endif
 
@@ -229,7 +230,7 @@ std::vector<char> S3Driver::getBinary(
 
     if (!get(Arbiter::stripType(rawPath), Query(), data, headers))
     {
-        throw std::runtime_error("Couldn't S3 GET " + rawPath);
+        throw ArbiterError("Couldn't S3 GET " + rawPath);
     }
 
     return data;
@@ -247,7 +248,7 @@ std::vector<char> S3Driver::get(std::string rawPath, const Query& query) const
 
     if (!get(rawPath, query, data))
     {
-        throw std::runtime_error("Couldn't S3 GET " + rawPath);
+        throw ArbiterError("Couldn't S3 GET " + rawPath);
     }
 
     return data;
@@ -264,7 +265,7 @@ void S3Driver::put(std::string rawPath, const std::vector<char>& data) const
 
     if (!http.put(path, data, headers).ok())
     {
-        throw std::runtime_error("Couldn't S3 PUT to " + rawPath);
+        throw ArbiterError("Couldn't S3 PUT to " + rawPath);
     }
 }
 
@@ -294,8 +295,14 @@ std::vector<std::string> S3Driver::glob(std::string path, bool verbose) const
 
         Xml::xml_document<> xml;
 
-        // May throw Xml::parse_error.
-        xml.parse<0>(data.data());
+        try
+        {
+            xml.parse<0>(data.data());
+        }
+        catch (Xml::parse_error)
+        {
+            throw ArbiterError("Could not parse S3 response.");
+        }
 
         if (XmlNode* topNode = xml.first_node("ListBucketResult"))
         {
@@ -330,18 +337,18 @@ std::vector<std::string> S3Driver::glob(std::string path, bool verbose) const
                     }
                     else
                     {
-                        throw std::runtime_error(badResponse);
+                        throw ArbiterError(badResponse);
                     }
                 }
             }
             else
             {
-                throw std::runtime_error(badResponse);
+                throw ArbiterError(badResponse);
             }
         }
         else
         {
-            throw std::runtime_error(badResponse);
+            throw ArbiterError(badResponse);
         }
 
         xml.clear();

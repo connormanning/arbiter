@@ -1,6 +1,7 @@
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/endpoint.hpp>
 
+#include <arbiter/arbiter.hpp>
 #include <arbiter/driver.hpp>
 #endif
 
@@ -11,7 +12,7 @@ namespace
 {
     std::string postfixSlash(std::string path)
     {
-        if (path.empty()) throw std::runtime_error("Invalid root path");
+        if (path.empty()) throw ArbiterError("Invalid root path");
         if (path.back() != '/') path.push_back('/');
         return path;
     }

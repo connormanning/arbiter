@@ -10,24 +10,14 @@ namespace arbiter
 std::unique_ptr<std::vector<char>> Driver::tryGetBinary(std::string path) const
 {
     std::unique_ptr<std::vector<char>> data(new std::vector<char>());
-
-    if (!get(path, *data))
-    {
-        data.reset();
-    }
-
+    if (!get(path, *data)) data.reset();
     return data;
 }
 
 std::vector<char> Driver::getBinary(std::string path) const
 {
     std::vector<char> data;
-
-    if (!get(path, data))
-    {
-        throw std::runtime_error("Could not read file " + path);
-    }
-
+    if (!get(path, data)) throw ArbiterError("Could not read file " + path);
     return data;
 }
 
@@ -80,6 +70,11 @@ std::vector<std::string> Driver::resolve(
     }
 
     return results;
+}
+
+std::vector<std::string> Driver::glob(std::string path, bool verbose) const
+{
+    throw ArbiterError("Cannot glob driver for: " + path);
 }
 
 } // namespace arbiter

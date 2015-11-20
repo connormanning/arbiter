@@ -45,11 +45,7 @@ protected:
     // This operation expects a path ending with the characters "/*", and
     // without any type-specifying information (i.e. "http://", "s3://", or any
     // other "<type>://" information is stripped).
-    virtual std::vector<std::string> glob(std::string path, bool verbose) const
-    {
-        throw std::runtime_error("Cannot glob driver for: " + path);
-    }
-
+    virtual std::vector<std::string> glob(std::string path, bool verbose) const;
     virtual bool get(std::string path, std::vector<char>& data) const = 0;
 };
 

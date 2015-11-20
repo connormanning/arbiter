@@ -85,7 +85,7 @@ const Driver& Arbiter::getDriver(const std::string path) const
 
     if (!m_drivers.count(type))
     {
-        throw std::runtime_error("No driver for " + path);
+        throw ArbiterError("No driver for " + path);
     }
 
     return *m_drivers.at(type);

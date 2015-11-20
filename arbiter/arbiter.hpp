@@ -18,13 +18,19 @@
 namespace arbiter
 {
 
+class ArbiterError : public std::runtime_error
+{
+public:
+    ArbiterError(std::string msg) : std::runtime_error(msg) { }
+};
+
 class Arbiter
 {
 public:
     Arbiter(std::string awsUser = "");
 
-    // Read/write operations.  Each may throw std::runtime_error if the
-    // path is inacessible for the requested operation.
+    // Read/write operations.  Each may throw an ArbiterError if the path is
+    // inacessible for the requested operation.
     std::string get(std::string path) const;
     std::vector<char> getBinary(std::string path) const;
 
@@ -43,7 +49,7 @@ public:
     //
     // Globbed resolution is non-recursive.
     //
-    // Will throw std::runtime_error if the selected driver does not support
+    // Will throw ArbiterError if the selected driver does not support
     // globbing (e.g. HTTP).
     //
     // If _verbose_ is true, the driver may print status information during
@@ -60,7 +66,7 @@ public:
     // this delimiter exists - otherwise the path is assumed to refer to the
     // local filesystem, which is guaranteed to have a driver.
     //
-    // Will throw std::out_of_range if the delimiter exists but a driver for
+    // Will throw ArbiterError if the delimiter exists but a driver for
     // its type does not exist.
     const Driver& getDriver(std::string path) const;
 

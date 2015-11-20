@@ -1,4 +1,5 @@
 #ifndef ARBITER_IS_AMALGAMATION
+#include <arbiter/arbiter.hpp>
 #include <arbiter/drivers/http.hpp>
 #endif
 
@@ -126,7 +127,7 @@ void HttpDriver::put(
 
     if (!http.put(path, data).ok())
     {
-        throw std::runtime_error("Couldn't HTTP PUT to " + path);
+        throw ArbiterError("Couldn't HTTP PUT to " + path);
     }
 }
 

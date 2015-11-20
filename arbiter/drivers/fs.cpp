@@ -1,4 +1,5 @@
 #ifndef ARBITER_IS_AMALGAMATION
+#include <arbiter/arbiter.hpp>
 #include <arbiter/drivers/fs.hpp>
 #endif
 
@@ -27,7 +28,7 @@ namespace
 
     void noHome()
     {
-        throw std::runtime_error("No home directory found");
+        throw ArbiterError("No home directory found");
     }
 }
 
@@ -58,14 +59,14 @@ void FsDriver::put(std::string path, const std::vector<char>& data) const
 
     if (!stream.good())
     {
-        throw std::runtime_error("Could not open " + path + " for writing");
+        throw ArbiterError("Could not open " + path + " for writing");
     }
 
     stream.write(data.data(), data.size());
 
     if (!stream.good())
     {
-        throw std::runtime_error("Error occurred while writing " + path);
+        throw ArbiterError("Error occurred while writing " + path);
     }
 }
 
@@ -94,7 +95,7 @@ std::vector<std::string> FsDriver::glob(std::string path, bool) const
         }
         else
         {
-            throw std::runtime_error("Error globbing - POSIX stat failed");
+            throw ArbiterError("Error globbing - POSIX stat failed");
         }
     }
 
@@ -133,7 +134,7 @@ bool mkdirp(std::string dir)
     const bool err(::mkdir(dir.c_str(), S_IRWXU | S_IRGRP | S_IROTH));
     return (!err || errno == EEXIST);
 #else
-    throw std::runtime_error("Windows mkdirp not done yet.");
+    throw ArbiterError("Windows mkdirp not done yet.");
 #endif
 }
 
@@ -144,7 +145,7 @@ bool remove(std::string filename)
 #ifndef ARBITER_WINDOWS
     return ::remove(filename.c_str()) == 0;
 #else
-    throw std::runtime_error("Windows remove not done yet.");
+    throw ArbiterError("Windows remove not done yet.");
 #endif
 }
 
