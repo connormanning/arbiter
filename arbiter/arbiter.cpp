@@ -21,14 +21,14 @@ Arbiter::Arbiter(std::string awsUser)
     : m_drivers()
     , m_pool(concurrentHttpReqs, httpRetryCount)
 {
-    m_drivers["fs"] =   std::make_shared<FsDriver>(FsDriver());
-    m_drivers["http"] = std::make_shared<HttpDriver>(HttpDriver(m_pool));
+    m_drivers["fs"] =   std::make_shared<FsDriver>();
+    m_drivers["http"] = std::make_shared<HttpDriver>(m_pool);
 
     std::unique_ptr<AwsAuth> auth(AwsAuth::find(awsUser));
 
     if (auth)
     {
-        m_drivers["s3"] = std::make_shared<S3Driver>(S3Driver(m_pool, *auth));
+        m_drivers["s3"] = std::make_shared<S3Driver>(m_pool, *auth);
     }
 }
 
@@ -74,7 +74,14 @@ Endpoint Arbiter::getEndpoint(const std::string root) const
 
 const Driver& Arbiter::getDriver(const std::string path) const
 {
-    return *m_drivers.at(parseType(path));
+    const auto type(parseType(path));
+
+    if (!m_drivers.count(type))
+    {
+        throw std::runtime_error("No driver for " + path);
+    }
+
+    return *m_drivers.at(type);
 }
 
 std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
