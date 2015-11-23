@@ -129,7 +129,8 @@ std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
     }
     else
     {
-        localHandle.reset(new fs::LocalHandle(stripType(path), false));
+        localHandle.reset(
+                new fs::LocalHandle(fs::expandTilde(stripType(path)), false));
     }
 
     return localHandle;

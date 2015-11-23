@@ -42,8 +42,8 @@ namespace fs
 
         /** @brief Get the path of the locally stored file.
          *
-         * @return A local filesystem path containing the data requested in
-         * Arbiter::getLocalHandle.
+         * @return A local filesystem absolute path containing the data
+         * requested in Arbiter::getLocalHandle.
          */
         std::string localPath() const { return m_localPath; }
 

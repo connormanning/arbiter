@@ -20,7 +20,7 @@ namespace
 
 Endpoint::Endpoint(const Driver& driver, const std::string root)
     : m_driver(driver)
-    , m_root(postfixSlash(root))
+    , m_root(fs::expandTilde(postfixSlash(root)))
 { }
 
 std::string Endpoint::root() const
