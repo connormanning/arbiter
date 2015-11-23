@@ -57,7 +57,7 @@ public:
      *
      * This operation will throw ArbiterError if @p driver is empty.
      *
-     * @warning This operation is not thread-safe.
+     * @note This operation is not thread-safe.
      */
     void addDriver(std::string type, std::shared_ptr<Driver> driver);
 
@@ -94,11 +94,11 @@ public:
      * @code
      * // Returns all files in `~/data`.  A directory `~/data/dir/` and its
      * // contents would not be returned since this is non-recursive.
-     * a.resolve("~/data/\*");
+     * a.resolve("~\data\*");
      *
-     * // Returns all files matching `prefix-*` in bucket `my-bucket`.  A
-     * psuedo-directory `s3://my-bucket/prefix-123/hello.txt` would not be
-     * returned, but object `my-bucket/prefix-456` would.
+     * // Returns all files matching `prefix-*` in bucket `my-bucket`.  An
+     * // object `s3://my-bucket/prefix-123/hello.txt` would not be returned,
+     * // but object `s3://my-bucket/prefix-456.txt` would.
      * a.resolve("s3://my-bucket/prefix-*");
      * @endcode
      *
