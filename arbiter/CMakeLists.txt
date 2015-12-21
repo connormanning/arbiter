@@ -2,6 +2,7 @@ set(MODULE src)
 set(BASE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_subdirectory(drivers)
+add_subdirectory(third)
 add_subdirectory(util)
 
 set(
