@@ -103,6 +103,11 @@ namespace drivers
 
 Http::Http(HttpPool& pool) : m_pool(pool) { }
 
+std::unique_ptr<Http> Http::create(HttpPool& pool, const Json::Value&)
+{
+    return std::unique_ptr<Http>(new Http(pool));
+}
+
 bool Http::get(std::string path, std::vector<char>& data) const
 {
     bool good(false);

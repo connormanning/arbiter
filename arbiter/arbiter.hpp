@@ -13,6 +13,7 @@
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/drivers/http.hpp>
 #include <arbiter/drivers/s3.hpp>
+#include <arbiter/third/json/json.hpp>
 #endif
 
 namespace arbiter
@@ -40,13 +41,13 @@ public:
 class Arbiter
 {
 public:
-    /** Will try to locate AWS credentials for the default user, silently
-     * omitting the S3 driver if they cannot be found.
+    /** Construct a basic Arbiter with only drivers the don't require
+     * external configuration parameters.
      */
     Arbiter();
 
-    /** Throws Arbiter error if credentials for @p awsUser are not found. */
-    Arbiter(std::string awsUser);
+    /** @brief Construct an Arbiter with driver configurations. */
+    Arbiter(const Json::Value& json);
 
     /** @brief Add a custom driver for the supplied type.
      *
@@ -59,7 +60,7 @@ public:
      *
      * @note This operation is not thread-safe.
      */
-    void addDriver(std::string type, std::shared_ptr<Driver> driver);
+    void addDriver(std::string type, std::unique_ptr<Driver> driver);
 
     /** Get data or throw if inaccessible. */
     std::string get(std::string path) const;
@@ -160,6 +161,9 @@ public:
     static std::string stripType(std::string path);
 
 private:
+    // Registers all available default Driver instances.
+    void init(const Json::Value& json);
+
     // If no delimiter of "://" is found, returns "fs".  Otherwise, returns
     // the substring prior to but not including this delimiter.
     std::string parseType(const std::string path) const;

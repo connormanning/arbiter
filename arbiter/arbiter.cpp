@@ -21,29 +21,34 @@ Arbiter::Arbiter()
     : m_drivers()
     , m_pool(concurrentHttpReqs, httpRetryCount)
 {
-    m_drivers["fs"] =   std::make_shared<drivers::Fs>();
-    m_drivers["http"] = std::make_shared<drivers::Http>(m_pool);
-
-    auto auth(drivers::AwsAuth::find(""));
-    if (auth) m_drivers["s3"] = std::make_shared<drivers::S3>(m_pool, *auth);
+    init(Json::Value());
 }
 
-Arbiter::Arbiter(std::string awsUser)
+Arbiter::Arbiter(const Json::Value& json)
     : m_drivers()
     , m_pool(concurrentHttpReqs, httpRetryCount)
 {
-    m_drivers["fs"] =   std::make_shared<drivers::Fs>();
-    m_drivers["http"] = std::make_shared<drivers::Http>(m_pool);
-
-    auto auth(drivers::AwsAuth::find(awsUser));
-    if (auth) m_drivers["s3"] = std::make_shared<drivers::S3>(m_pool, *auth);
-    else throw ArbiterError("AWS credentials not found for " + awsUser);
+    init(json);
 }
 
-void Arbiter::addDriver(const std::string type, std::shared_ptr<Driver> driver)
+void Arbiter::init(const Json::Value& json)
+{
+    using namespace drivers;
+
+    auto fs(Fs::create(m_pool, json["fs"]));
+    if (fs) m_drivers["fs"] = std::move(fs);
+
+    auto http(Http::create(m_pool, json["http"]));
+    if (http) m_drivers["http"] = std::move(http);
+
+    auto s3(S3::create(m_pool, json["s3"]));
+    if (s3) m_drivers["s3"] = std::move(s3);
+}
+
+void Arbiter::addDriver(const std::string type, std::unique_ptr<Driver> driver)
 {
     if (!driver) throw ArbiterError("Cannot add empty driver for " + type);
-    m_drivers[type] = driver;
+    m_drivers[type] = std::move(driver);
 }
 
 std::string Arbiter::get(const std::string path) const

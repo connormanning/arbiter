@@ -2,6 +2,7 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/driver.hpp>
+#include <arbiter/third/json/json.hpp>
 #endif
 
 namespace arbiter
@@ -62,6 +63,8 @@ namespace drivers
 class Fs : public Driver
 {
 public:
+    static std::unique_ptr<Fs> create(HttpPool& pool, const Json::Value& json);
+
     virtual std::string type() const override { return "fs"; }
     virtual void put(
             std::string path,

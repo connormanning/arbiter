@@ -35,6 +35,11 @@ namespace
 namespace drivers
 {
 
+std::unique_ptr<Fs> Fs::create(HttpPool&, const Json::Value&)
+{
+    return std::unique_ptr<Fs>(new Fs());
+}
+
 bool Fs::get(std::string path, std::vector<char>& data) const
 {
     bool good(false);
