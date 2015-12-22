@@ -59,6 +59,9 @@ class Http : public Driver
 {
 public:
     Http(HttpPool& pool);
+    static std::unique_ptr<Http> create(
+            HttpPool& pool,
+            const Json::Value& json);
 
     virtual std::string type() const override { return "http"; }
     virtual void put(

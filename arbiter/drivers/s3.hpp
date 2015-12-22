@@ -27,7 +27,7 @@ public:
     // Searches for methods 2 and 3 of "Setting AWS Credentials":
     //      - Check for them in ~/.aws/credentials.
     //      - If not found, try the environment settings.
-    static std::unique_ptr<AwsAuth> find(std::string user);
+    static std::unique_ptr<AwsAuth> find(std::string user = "");
 
     std::string access() const;
     std::string hidden() const;
@@ -44,13 +44,21 @@ class S3 : public Driver
 {
 public:
     S3(HttpPool& pool, AwsAuth awsAuth);
+    static std::unique_ptr<S3> create(HttpPool& pool, const Json::Value& json);
 
     virtual std::string type() const override { return "s3"; }
     virtual void put(
             std::string path,
             const std::vector<char>& data) const override;
 
+    /** A GET method allowing user-defined headers. Accessible only via the S3
+     * driver directly, and not through the Arbiter.
+     */
     std::string get(std::string path, Headers headers) const;
+
+    /** A GET method allowing user-defined headers. Accessible only via the S3
+     * driver directly, and not through the Arbiter.
+     */
     std::vector<char> getBinary(std::string path, Headers headers) const;
 
 private:
@@ -59,8 +67,7 @@ private:
             std::string path,
             bool verbose) const override;
 
-    std::vector<char> get(std::string path, const Query& query) const;
-    bool get(
+    bool buildRequestAndGet(
             std::string rawPath,
             const Query& query,
             std::vector<char>& data,

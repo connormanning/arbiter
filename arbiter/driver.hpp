@@ -9,6 +9,8 @@
 namespace arbiter
 {
 
+class HttpPool;
+
 /** @brief Base class for interacting with a storage type.
  *
  * A Driver handles reading, writing, and possibly globbing from a storage
@@ -96,7 +98,7 @@ protected:
     virtual bool get(std::string path, std::vector<char>& data) const = 0;
 };
 
-typedef std::map<std::string, std::shared_ptr<Driver>> DriverMap;
+typedef std::map<std::string, std::unique_ptr<Driver>> DriverMap;
 
 } // namespace arbiter
 
