@@ -91,6 +91,10 @@ public:
             std::string path,
             const std::vector<char>& data,
             Headers headers);
+    HttpResponse post(
+            std::string path,
+            const std::vector<char>& data,
+            Headers headers);
 
 private:
     Curl();
@@ -120,6 +124,11 @@ public:
             std::string path,
             const std::vector<char>& data,
             Headers headers = Headers());
+
+    HttpResponse post(
+            std::string path,
+            const std::vector<char>& data,
+            Headers headers);
 
 private:
     HttpPool& m_pool;

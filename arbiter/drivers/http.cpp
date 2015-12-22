@@ -62,7 +62,7 @@ namespace
     }
 
     const bool followRedirect(true);
-    const bool verbose(false);
+    const bool verbose(true);
 
     const auto baseSleepTime(std::chrono::milliseconds(1));
     const auto maxSleepTime (std::chrono::milliseconds(4096));
@@ -260,6 +260,50 @@ HttpResponse Curl::put(
     return HttpResponse(httpCode);
 }
 
+HttpResponse Curl::post(
+        std::string path,
+        const std::vector<char>& data,
+        std::vector<std::string> headers)
+{
+    path = drivers::Http::sanitize(path);
+    init(path, headers);
+
+    int httpCode(0);
+
+    std::unique_ptr<PutData> putData(new PutData(data));
+
+    // Register callback function and data pointer to create the request.
+    curl_easy_setopt(m_curl, CURLOPT_READFUNCTION, putCb);
+    curl_easy_setopt(m_curl, CURLOPT_READDATA, putData.get());
+
+    // Insert all headers into the request.
+    curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
+
+    // Specify that this is a POST request.
+    curl_easy_setopt(m_curl, CURLOPT_POST, 1L);
+
+    // Must use this for binary data, otherwise curl will use strlen(), which
+    // will likely be incorrect.
+    curl_easy_setopt(
+            m_curl,
+            CURLOPT_INFILESIZE_LARGE,
+            static_cast<curl_off_t>(data.size()));
+
+    // Hide Curl's habit of printing things to console even with verbose set
+    // to false.
+    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, eatLogging);
+
+    curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
+
+    // Run the command.
+    curl_easy_perform(m_curl);
+    curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
+
+    curl_easy_reset(m_curl);
+    return HttpResponse(httpCode);
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////
 
 HttpResource::HttpResource(
@@ -298,6 +342,19 @@ HttpResponse HttpResource::put(
     auto f([this, path, &data, headers]()->HttpResponse
     {
         return m_curl.put(path, data, headers);
+    });
+
+    return exec(f);
+}
+
+HttpResponse HttpResource::post(
+        std::string path,
+        const std::vector<char>& data,
+        Headers headers)
+{
+    auto f([this, path, &data, headers]()->HttpResponse
+    {
+        return m_curl.post(path, data, headers);
     });
 
     return exec(f);
