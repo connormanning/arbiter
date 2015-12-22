@@ -13,6 +13,7 @@
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/drivers/http.hpp>
 #include <arbiter/drivers/s3.hpp>
+#include <arbiter/drivers/dropbox.hpp>
 #endif
 
 namespace arbiter
@@ -158,6 +159,8 @@ public:
 
     /** Strip the type and delimiter `://`, if they exist. */
     static std::string stripType(std::string path);
+
+    HttpPool& pool() { return m_pool; }
 
 private:
     // If no delimiter of "://" is found, returns "fs".  Otherwise, returns
