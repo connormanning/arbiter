@@ -13,6 +13,7 @@
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/drivers/http.hpp>
 #include <arbiter/drivers/s3.hpp>
+#include <arbiter/drivers/dropbox.hpp>
 #include <arbiter/third/json/json.hpp>
 #endif
 
@@ -159,6 +160,8 @@ public:
 
     /** Strip the type and delimiter `://`, if they exist. */
     static std::string stripType(std::string path);
+
+    HttpPool& pool() { return m_pool; }
 
 private:
     // Registers all available default Driver instances.
