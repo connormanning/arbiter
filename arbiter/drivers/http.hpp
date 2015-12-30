@@ -31,17 +31,27 @@ public:
         , m_data(data)
     { }
 
+    HttpResponse(int code, std::vector<char> data, std::vector<std::string> headers)
+        : m_code(code)
+        , m_data(data)
+        , m_headers(headers)
+    { }
+
     ~HttpResponse() { }
 
     bool ok() const     { return m_code / 100 == 2; }
     bool retry() const  { return m_code / 100 == 5; }   // Only server errors.
+    bool client_error() const  { return m_code / 100 == 4; }
+    bool server_error() const  { return m_code / 100 == 5; }
     int code() const    { return m_code; }
 
     std::vector<char> data() const { return m_data; }
+    std::vector<std::string> headers() const { return m_headers; }
 
 private:
     int m_code;
     std::vector<char> m_data;
+    std::vector<std::string> m_headers;
 };
 /** @endcond */
 

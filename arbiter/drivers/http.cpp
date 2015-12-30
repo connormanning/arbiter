@@ -56,6 +56,20 @@ namespace
         return fullBytes;
     }
 
+    size_t headerCb(const char *buffer,
+                    std::size_t size,
+                    std::size_t nitems,
+                    std::vector<std::string>* out)
+    {
+        const std::size_t fullBytes(size * nitems);
+        std::string h(buffer, fullBytes);
+        h.erase(std::remove(h.begin(), h.end(), '\n'), h.end());
+        h.erase(std::remove(h.begin(), h.end(), '\r'), h.end());
+        if (h.size())
+            out->push_back(h);
+        return fullBytes;
+    }
+
     size_t eatLogging(void *out, size_t size, size_t num, void *in)
     {
         return size * num;
@@ -212,10 +226,11 @@ HttpResponse Curl::get(std::string path, std::vector<std::string> headers)
     // Register callback function and date pointer to consume the result.
     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
     curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &data);
+    curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
     // Insert all headers into the request.
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
-
+    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, headerCb);
     // Run the command.
     curl_easy_perform(m_curl);
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
@@ -276,13 +291,21 @@ HttpResponse Curl::post(
     int httpCode(0);
 
     std::unique_ptr<PutData> putData(new PutData(data));
+    std::vector<char> writeData;
+    std::vector<std::string> headerData;
 
     // Register callback function and data pointer to create the request.
     curl_easy_setopt(m_curl, CURLOPT_READFUNCTION, putCb);
     curl_easy_setopt(m_curl, CURLOPT_READDATA, putData.get());
+    //
+    // Register callback function and date pointer to consume the result.
+    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
+    curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &writeData);
 
     // Insert all headers into the request.
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, headerCb);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &headerData);
 
     // Specify that this is a POST request.
     curl_easy_setopt(m_curl, CURLOPT_POST, 1L);
@@ -296,7 +319,7 @@ HttpResponse Curl::post(
 
     // Hide Curl's habit of printing things to console even with verbose set
     // to false.
-    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, eatLogging);
+//     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, eatLogging);
 
     curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
@@ -305,7 +328,8 @@ HttpResponse Curl::post(
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     curl_easy_reset(m_curl);
-    return HttpResponse(httpCode);
+    HttpResponse response(httpCode, writeData, headerData);
+    return response;
 }
 
 

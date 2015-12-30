@@ -42,8 +42,6 @@ public:
             std::string path,
             const std::vector<char>& data) const override;
 
-//     std::string get(std::string path, Headers headers) const;
-//     std::vector<char> getBinary(std::string path, Headers headers) const;
 
 private:
     virtual bool get(std::string path, std::vector<char>& data) const override;
@@ -51,33 +49,7 @@ private:
             std::string path,
             bool verbose) const override;
 
-//     std::vector<char> get(std::string path, const Query& query) const;
-//     bool get(
-//             std::string rawPath,
-//             const Query& query,
-//             std::vector<char>& data,
-//             Headers = Headers()) const;
-//
     Headers httpGetHeaders(std::string filePath) const;
-//     Headers httpPutHeaders(std::string filePath) const;
-//
-//     std::string getHttpDate() const;
-//
-//     std::string getSignedEncodedString(
-//             std::string command,
-//             std::string file,
-//             std::string httpDate,
-//             std::string contentType = "") const;
-//
-//     std::string getStringToSign(
-//             std::string command,
-//             std::string file,
-//             std::string httpDate,
-//             std::string contentType) const;
-//
-//     std::vector<char> signString(std::string input) const;
-//     std::string encodeBase64(std::vector<char> input) const;
-//
     HttpPool& m_pool;
     DropboxAuth m_auth;
 };
