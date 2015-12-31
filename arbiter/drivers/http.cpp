@@ -59,14 +59,26 @@ namespace
     size_t headerCb(const char *buffer,
                     std::size_t size,
                     std::size_t nitems,
-                    std::vector<std::string>* out)
+                    arbiter::HeaderMap* out)
     {
         const std::size_t fullBytes(size * nitems);
         std::string h(buffer, fullBytes);
         h.erase(std::remove(h.begin(), h.end(), '\n'), h.end());
         h.erase(std::remove(h.begin(), h.end(), '\r'), h.end());
-        if (h.size())
-            out->push_back(h);
+
+        // We're done if there was nothing
+        if (!h.size())
+            return fullBytes;
+
+        const std::size_t split(h.find_first_of(":"));
+        // no colon means it isn't a header with data
+        if (!split)
+            return fullBytes;
+
+        std::string key = h.substr(0, split);
+        std::string data = h.substr(split+1 /* skip the first space */, h.size());
+
+        out->insert(std::make_pair(key, data));
         return fullBytes;
     }
 
@@ -76,7 +88,6 @@ namespace
     }
 
     const bool followRedirect(true);
-    const bool verbose(true);
 
     const auto baseSleepTime(std::chrono::milliseconds(1));
     const auto maxSleepTime (std::chrono::milliseconds(4096));
@@ -174,6 +185,7 @@ std::string Http::sanitize(std::string path)
 Curl::Curl()
     : m_curl(0)
     , m_headers(0)
+    , m_verbose(false)
     , m_data()
 {
     m_curl = curl_easy_init();
@@ -205,7 +217,6 @@ void Curl::init(std::string path, const std::vector<std::string>& headers)
     curl_easy_setopt(m_curl, CURLOPT_TIMEOUT, 120);
 
     // Configuration options.
-    if (verbose)        curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
     if (followRedirect) curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1L);
 
     // Insert supplied headers.
@@ -220,13 +231,15 @@ HttpResponse Curl::get(std::string path, std::vector<std::string> headers)
     int httpCode(0);
     std::vector<char> data;
 
+    if (verbose())
+        curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
+
     path = drivers::Http::sanitize(path);
     init(path, headers);
 
     // Register callback function and date pointer to consume the result.
     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
     curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &data);
-    curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
     // Insert all headers into the request.
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
@@ -246,6 +259,8 @@ HttpResponse Curl::put(
 {
     path = drivers::Http::sanitize(path);
     init(path, headers);
+    if (verbose())
+        curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
     int httpCode(0);
 
@@ -287,12 +302,14 @@ HttpResponse Curl::post(
 {
     path = drivers::Http::sanitize(path);
     init(path, headers);
+    if (verbose())
+        curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
     int httpCode(0);
 
     std::unique_ptr<PutData> putData(new PutData(data));
     std::vector<char> writeData;
-    std::vector<std::string> headerData;
+    HeaderMap headerData;
 
     // Register callback function and data pointer to create the request.
     curl_easy_setopt(m_curl, CURLOPT_READFUNCTION, putCb);
@@ -316,12 +333,6 @@ HttpResponse Curl::post(
             m_curl,
             CURLOPT_INFILESIZE_LARGE,
             static_cast<curl_off_t>(data.size()));
-
-    // Hide Curl's habit of printing things to console even with verbose set
-    // to false.
-//     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, eatLogging);
-
-    curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
     // Run the command.
     curl_easy_perform(m_curl);

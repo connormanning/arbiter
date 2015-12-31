@@ -17,56 +17,20 @@
 #include <arbiter/drivers/dropbox.hpp>
 #include <arbiter/third/xml/xml.hpp>
 #include <arbiter/util/crypto.hpp>
+#include <arbiter/third/json/json.hpp>
 #endif
+
+struct iequals
+{
+    bool operator()( char lhs, char rhs ) const
+    {
+        return ::tolower( static_cast<unsigned char>( lhs ) )
+            == ::tolower( static_cast<unsigned char>( rhs ) );
+    }
+};
 
 namespace arbiter
 {
-
-namespace
-{
-    const std::string baseUrl("https://content.dropboxapi.com/2/files/");
-
-    std::string getQueryString(const drivers::Query& query)
-    {
-        std::string result;
-
-        bool first(true);
-        for (const auto& q : query)
-        {
-            result += (first ? "?" : "&") + q.first + "=" + q.second;
-            first = false;
-        }
-
-        return result;
-    }
-
-    struct Resource
-    {
-        Resource(std::string fullPath)
-        {
-            const std::size_t split(fullPath.find("/"));
-
-            bucket = fullPath.substr(0, split);
-
-            if (split != std::string::npos)
-            {
-                object = fullPath.substr(split + 1);
-            }
-        }
-
-        std::string buildPath(drivers::Query query = drivers::Query()) const
-        {
-            const std::string queryString(getQueryString(query));
-            return "http://" + bucket + baseUrl + object + queryString;
-        }
-
-        std::string bucket;
-        std::string object;
-    };
-
-    typedef Xml::xml_node<> XmlNode;
-
-}
 
 namespace drivers
 {
@@ -93,54 +57,82 @@ Dropbox::Dropbox(HttpPool& pool, const DropboxAuth auth)
 
 bool checkData(HttpResponse res)
 {
-    // get the Dropbox dropbox-api-result header
+    // get the Dropbox header
+    auto it = res.headers().find("original-content-length");
 
+    // if the header isn't there, we can't check
+    if (it == res.headers().end())
+        return false;
 
-    // Check that res.data().size() == original size
+    std::string j(it->second);
+    long size = stol(j, 0, 10);
+
+    // if the size doesn't match, we're no good
+    if (size != res.data().size())
+        return false;
 
     return true;
 }
-std::vector<std::string> Dropbox::httpGetHeaders(std::string filePath) const
+std::vector<std::string> Dropbox::httpGetHeaders(std::string content_type) const
 {
     const std::string authHeader(
             "Authorization: Bearer " + m_auth.token() );
-    const std::string content( "Content-Type: " );
+    const std::string content( "Content-Type: " + content_type );
     std::vector<std::string> headers;
     headers.push_back(authHeader);
     headers.push_back(content);
     headers.push_back("Transfer-Encoding: chunked");
+    headers.push_back("Expect: 100-continue");
     return headers;
 }
+
+
+std::string ReplaceAll(std::string str, const std::string& from, const std::string& to) {
+    size_t start_pos = 0;
+    while((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length(); // Handles case where 'to' is a substring of 'from'
+    }
+    return str;
+}
+
+
 bool Dropbox::get(std::string rawPath, std::vector<char>& data) const
 {
     rawPath = Http::sanitize(rawPath);
-    Headers headers(httpGetHeaders(rawPath));
+
+    //don't pass a content type
+    Headers headers(httpGetHeaders(""));
+
+    const std::string baseUrl("https://content.dropboxapi.com/2/files/");
     std::string endpoint = baseUrl + "download";
-//
+
     auto http(m_pool.acquire());
 
+    Json::Value filename;
+    Json::FastWriter writer;
+    filename["path"] = std::string("/"+ rawPath);
 
-    std::ostringstream filename;
-    filename <<  "{\"path\": \"/" << rawPath << "\"}";
-    headers.push_back("Dropbox-API-Arg: " + filename.str());
+    std::string f = writer.write(filename) ;
+    f.erase(std::remove(f.begin(), f.end(), '\n'), f.end());
+    headers.push_back("Dropbox-API-Arg: " + f);
 
     std::vector<char> postData;
     HttpResponse res(http.post(endpoint, postData, headers));
-//     for(auto i: res.headers())
-//     {
-//         std::cout << "header: '" << i << "'" << std::endl;
-//     }
 
     if (res.ok())
     {
         data = res.data();
-        checkData(res);
+        if (!checkData(res))
+            throw ArbiterError("Data size check failed!");
         return true;
     }
     else if (res.client_error() || res.server_error())
     {
-        std::ostringstream oss;
+        // res.data() can have \0 in it
         std::string message = std::string(res.data().data(), res.data().size());
+
+        std::ostringstream oss;
         oss << "Server responded with '" << message << "'";
         throw ArbiterError(oss.str());
     }
@@ -162,111 +154,130 @@ void Dropbox::put(std::string rawPath, const std::vector<char>& data) const
 //     }
 }
 
-std::vector<std::string> Dropbox::glob(std::string path, bool verbose) const
+std::string sanitizeJson(Json::Value v)
+{
+    Json::FastWriter writer;
+    std::string f = writer.write(v) ;
+    f.erase(std::remove(f.begin(), f.end(), '\n'), f.end());
+    return f;
+
+}
+
+std::string Dropbox::continueFileInfo(std::string cursor) const
+{
+    Headers headers(httpGetHeaders("application/json"));
+
+    std::string endpoint = "https://api.dropboxapi.com/2/files/list_folder/continue";
+
+    auto http(m_pool.acquire());
+
+    Json::Value request;
+    request["cursor"] = cursor;
+    std::string f = sanitizeJson(request);
+
+    std::vector<char> postData(f.begin(), f.end());
+    HttpResponse res(http.post(endpoint, postData, headers));
+    std::string output = std::string(res.data().data(), res.data().size());
+    if (res.ok())
+    {
+        std::string output = std::string(res.data().data(), res.data().size());
+        return output;
+    }
+    else if (res.client_error() || res.server_error())
+    {
+        // res.data() can have \0 in it
+        std::string message = std::string(res.data().data(), res.data().size());
+
+        std::ostringstream oss;
+        oss << "Server responded with '" << message << "'";
+        throw ArbiterError(oss.str());
+    }
+
+    return std::string("");
+}
+std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
 {
     std::vector<std::string> results;
-    std::string rawPath("project_1/extrabytes.las");
+    rawPath = rawPath.substr(0, rawPath.size() -2 );
     rawPath = Http::sanitize(rawPath);
 
-    Headers headers(httpGetHeaders(rawPath));
-    std::string endpoint = "https://api.dropboxapi.com/2-beta-2/files/get_metadata";
-//
-    auto http(m_pool.acquire());
-    std::string asdf = "{\"path\": \"/project_1/extrabytes.las\"}";
-    HttpResponse res(http.post(endpoint, std::vector<char>(asdf.begin(), asdf.end()), headers));
-//     if (res.ok())
-//     {
-//         data = res.data();
-//         std::string output = std::string(data.begin(), data.end());
-//         return true;
-//     }
-//     else
-//     {
-//         return false;
-//     }
-//     path.pop_back();
-//
-//     // https://docs.aws.amazon.com/AmazonDropbox/latest/API/RESTBucketGET.html
-//     const Resource resource(path);
-//     const std::string& bucket(resource.bucket);
-//     const std::string& object(resource.object);
-//     const std::string prefix(resource.object.empty() ? "" : resource.object);
-//
-//     Query query;
-//
-//     if (prefix.size()) query["prefix"] = prefix;
-//
-//     bool more(false);
-//
-//     do
-//     {
-//         if (verbose) std::cout << "." << std::flush;
-//
-//         auto data = get(resource.bucket + "/", query);
-//         data.push_back('\0');
-//
-//         Xml::xml_document<> xml;
-//
-//         try
-//         {
-//             xml.parse<0>(data.data());
-//         }
-//         catch (Xml::parse_error)
-//         {
-//             throw ArbiterError("Could not parse Dropbox response.");
-//         }
-//
-//         if (XmlNode* topNode = xml.first_node("ListBucketResult"))
-//         {
-//             if (XmlNode* truncNode = topNode->first_node("IsTruncated"))
-//             {
-//                 std::string t(truncNode->value());
-//                 std::transform(t.begin(), t.end(), t.begin(), tolower);
-//
-//                 more = (t == "true");
-//             }
-//
-//             if (XmlNode* conNode = topNode->first_node("Contents"))
-//             {
-//                 for ( ; conNode; conNode = conNode->next_sibling())
-//                 {
-//                     if (XmlNode* keyNode = conNode->first_node("Key"))
-//                     {
-//                         std::string key(keyNode->value());
-//
-//                         // The prefix may contain slashes (i.e. is a sub-dir)
-//                         // but we only include the top level after that.
-//                         if (key.find('/', prefix.size()) == std::string::npos)
-//                         {
-//                             results.push_back("s3://" + bucket + "/" + key);
-//
-//                             if (more)
-//                             {
-//                                 query["marker"] =
-//                                     object + key.substr(prefix.size());
-//                             }
-//                         }
-//                     }
-//                     else
-//                     {
-//                         throw ArbiterError(badResponse);
-//                     }
-//                 }
-//             }
-//             else
-//             {
-//                 throw ArbiterError(badResponse);
-//             }
-//         }
-//         else
-//         {
-//             throw ArbiterError(badResponse);
-//         }
-//
-//         xml.clear();
-//     }
-//     while (more);
-//
+    std::string endpoint = "https://api.dropboxapi.com/2/files/list_folder";
+
+    auto listPath = [endpoint, this , verbose](std::string path) -> std::string
+    {
+        auto http(this->m_pool.acquire());
+        http.verbose(verbose);
+        Headers headers(httpGetHeaders("application/json"));
+
+        Json::Value request;
+        request["path"] = std::string("/"+ path);
+        request["recursive"] = true;
+        request["include_media_info"] = false;
+        request["include_deleted"] = false;
+
+        std::string f = sanitizeJson(request);
+
+        std::vector<char> postData(f.begin(), f.end());
+        HttpResponse res(http.post(endpoint, postData, headers));
+        std::string listing;
+        if (res.ok())
+        {
+            listing = std::string(res.data().data(), res.data().size());
+        }
+        else if (res.client_error() || res.server_error())
+        {
+            // res.data() can have \0 in it
+            std::string message = std::string(res.data().data(), res.data().size());
+
+            std::ostringstream oss;
+            oss << "Server responded with '" << message << "'";
+            throw ArbiterError(oss.str());
+        }
+        return listing;
+    };
+
+    bool bMore(false);
+    auto processPath = [&results, &bMore](std::string json)
+    {
+
+        Json::Value root;
+        Json::Reader reader;
+        reader.parse(json, root, false);
+
+        Json::Value entries = root["entries"];
+        if (entries.isNull())
+            throw ArbiterError("Returned JSON from Dropbox was NULL!");
+        if (!entries.isArray())
+            throw ArbiterError("Returned JSON from Dropbox was not an array!");
+        bMore = root["has_more"].asBool();
+
+        for(int i = 0; i < entries.size(); ++i)
+        {
+            Json::Value& v = entries[i];
+            std::string tag = v[".tag"].asString();
+
+            std::string file("file");
+            std::string folder("folder");
+            if (std::equal( file.begin(), file.end(), tag.begin(), iequals() ))
+            {
+                results.push_back(v["path_lower"].asString());
+            }
+        }
+
+    };
+
+    std::string listing = listPath(rawPath);
+    processPath(listing);
+    if (bMore)
+    {
+        do
+        {
+            listing = continueFileInfo("");
+            processPath(listing);
+
+        }
+        while (bMore);
+    }
     return results;
 }
 } // namespace drivers

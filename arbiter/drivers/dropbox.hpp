@@ -49,6 +49,7 @@ private:
             std::string path,
             bool verbose) const override;
 
+    std::string continueFileInfo(std::string cursor) const;
     Headers httpGetHeaders(std::string filePath) const;
     HttpPool& m_pool;
     DropboxAuth m_auth;
