@@ -4,12 +4,8 @@
 
 #include <algorithm>
 #include <cctype>
-#include <chrono>
 #include <cstdlib>
-#include <cstring>
 #include <functional>
-#include <iostream>
-#include <thread>
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/arbiter.hpp>
@@ -20,122 +16,94 @@
 #include <arbiter/third/json/json.hpp>
 #endif
 
-struct iequals
-{
-    bool operator()( char lhs, char rhs ) const
-    {
-        return ::tolower( static_cast<unsigned char>( lhs ) )
-            == ::tolower( static_cast<unsigned char>( rhs ) );
-    }
-};
-
 namespace arbiter
 {
 
+namespace
+{
+    const std::string getUrl("https://content.dropboxapi.com/2/files/download");
+    const std::string listUrl("https://api.dropboxapi.com/2/files/list_folder");
+    const std::string continueListUrl(listUrl + "/continue");
+
+    const auto ins([](unsigned char lhs, unsigned char rhs)
+    {
+        return std::tolower(lhs) == std::tolower(rhs);
+    });
+
+    std::string toSanitizedString(const Json::Value& v)
+    {
+        Json::FastWriter writer;
+        std::string f(writer.write(v));
+        f.erase(std::remove(f.begin(), f.end(), '\n'), f.end());
+        return f;
+    }
+}
+
 namespace drivers
 {
-
-DropboxAuth::DropboxAuth(const std::string token)
-    : m_token(token)
-{ }
-
-std::unique_ptr<DropboxAuth> DropboxAuth::find(std::string token)
-{
-    std::unique_ptr<DropboxAuth> auth(new DropboxAuth(token));
-    return auth;
-}
-
-std::string DropboxAuth::token() const
-{
-    return m_token;
-}
 
 Dropbox::Dropbox(HttpPool& pool, const DropboxAuth auth)
     : m_pool(pool)
     , m_auth(auth)
 { }
 
-bool checkData(HttpResponse res)
+std::unique_ptr<Dropbox> Dropbox::create(
+        HttpPool& pool,
+        const Json::Value& json)
 {
-    // get the Dropbox header
-    auto it = res.headers().find("original-content-length");
+    std::unique_ptr<Dropbox> dropbox;
 
-    // if the header isn't there, we can't check
-    if (it == res.headers().end())
-        return false;
+    if (json.isMember("token"))
+    {
+        dropbox.reset(new Dropbox(pool, DropboxAuth(json["token"].asString())));
+    }
 
-    std::string j(it->second);
-    long size = stol(j, 0, 10);
-
-    // if the size doesn't match, we're no good
-    if (size != res.data().size())
-        return false;
-
-    return true;
+    return dropbox;
 }
-std::vector<std::string> Dropbox::httpGetHeaders(std::string content_type) const
+
+Headers Dropbox::httpGetHeaders(const std::string contentType) const
 {
-    const std::string authHeader(
-            "Authorization: Bearer " + m_auth.token() );
-    const std::string content( "Content-Type: " + content_type );
-    std::vector<std::string> headers;
-    headers.push_back(authHeader);
-    headers.push_back(content);
-    headers.push_back("Transfer-Encoding: chunked");
-    headers.push_back("Expect: 100-continue");
+    Headers headers;
+
+    headers["Authorization"] = "Bearer " + m_auth.token();
+    headers["Transfer-Encoding"] = "chunked";
+    headers["Expect"] = "100-continue";
+    headers["Content-Type"] = contentType;
+
     return headers;
 }
 
-
-std::string ReplaceAll(std::string str, const std::string& from, const std::string& to) {
-    size_t start_pos = 0;
-    while((start_pos = str.find(from, start_pos)) != std::string::npos) {
-        str.replace(start_pos, from.length(), to);
-        start_pos += to.length(); // Handles case where 'to' is a substring of 'from'
-    }
-    return str;
-}
-
-
-bool Dropbox::get(std::string rawPath, std::vector<char>& data) const
+bool Dropbox::get(const std::string rawPath, std::vector<char>& data) const
 {
-    rawPath = Http::sanitize(rawPath);
-
-    //don't pass a content type
-    Headers headers(httpGetHeaders(""));
-
-    const std::string baseUrl("https://content.dropboxapi.com/2/files/");
-    std::string endpoint = baseUrl + "download";
-
+    const std::string path(Http::sanitize(rawPath));
+    Headers headers(httpGetHeaders());
     auto http(m_pool.acquire());
 
-    Json::Value filename;
-    Json::FastWriter writer;
-    filename["path"] = std::string("/"+ rawPath);
-
-    std::string f = writer.write(filename) ;
-    f.erase(std::remove(f.begin(), f.end(), '\n'), f.end());
-    headers.push_back("Dropbox-API-Arg: " + f);
+    Json::Value json;
+    json["path"] = std::string("/" + path);
+    headers["Dropbox-API-Arg"] = toSanitizedString(json);
 
     std::vector<char> postData;
-    HttpResponse res(http.post(endpoint, postData, headers));
+    HttpResponse res(http.post(getUrl, postData, headers));
 
     if (res.ok())
     {
-        data = res.data();
-        if (!checkData(res))
-            throw ArbiterError("Data size check failed!");
-        return true;
-    }
-    else if (res.client_error() || res.server_error())
-    {
-        // res.data() can have \0 in it
-        std::string message = std::string(res.data().data(), res.data().size());
+        if (!res.headers().count("original-content-length")) return false;
 
-        std::ostringstream oss;
-        oss << "Server responded with '" << message << "'";
-        throw ArbiterError(oss.str());
+        data = res.data();
+
+        const std::size_t size(
+                std::stol(res.headers().at("original-content-length")));
+
+        if (size == res.data().size()) return true;
+        else throw ArbiterError("Data size check failed");
     }
+    else if (res.clientError() || res.serverError())
+    {
+        std::string message(std::string(res.data().data(), res.data().size()));
+        throw ArbiterError("Server responded with '" + message + "'");
+    }
+
     return false;
 }
 
@@ -154,102 +122,81 @@ void Dropbox::put(std::string rawPath, const std::vector<char>& data) const
 //     }
 }
 
-std::string sanitizeJson(Json::Value v)
-{
-    Json::FastWriter writer;
-    std::string f = writer.write(v) ;
-    f.erase(std::remove(f.begin(), f.end(), '\n'), f.end());
-    return f;
-
-}
-
 std::string Dropbox::continueFileInfo(std::string cursor) const
 {
     Headers headers(httpGetHeaders("application/json"));
 
-    std::string endpoint = "https://api.dropboxapi.com/2/files/list_folder/continue";
-
     auto http(m_pool.acquire());
 
-    Json::Value request;
-    request["cursor"] = cursor;
-    std::string f = sanitizeJson(request);
+    Json::Value json;
+    json["cursor"] = cursor;
+    std::string f = toSanitizedString(json);
 
     std::vector<char> postData(f.begin(), f.end());
-    HttpResponse res(http.post(endpoint, postData, headers));
-    std::string output = std::string(res.data().data(), res.data().size());
+    HttpResponse res(http.post(continueListUrl, postData, headers));
+
     if (res.ok())
     {
-        std::string output = std::string(res.data().data(), res.data().size());
-        return output;
+        return std::string(res.data().data(), res.data().size());
     }
-    else if (res.client_error() || res.server_error())
+    else if (res.clientError() || res.serverError())
     {
-        // res.data() can have \0 in it
-        std::string message = std::string(res.data().data(), res.data().size());
-
-        std::ostringstream oss;
-        oss << "Server responded with '" << message << "'";
-        throw ArbiterError(oss.str());
+        std::string message(std::string(res.data().data(), res.data().size()));
+        throw ArbiterError("Server responded with '" + message + "'");
     }
 
     return std::string("");
 }
+
 std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
 {
     std::vector<std::string> results;
-    rawPath = rawPath.substr(0, rawPath.size() -2 );
-    rawPath = Http::sanitize(rawPath);
 
-    std::string endpoint = "https://api.dropboxapi.com/2/files/list_folder";
+    const std::string path(
+            Http::sanitize(rawPath.substr(0, rawPath.size() - 2)));
 
-    auto listPath = [endpoint, this , verbose](std::string path) -> std::string
+    auto listPath = [this](std::string path)->std::string
     {
-        auto http(this->m_pool.acquire());
-        http.verbose(verbose);
+        auto http(m_pool.acquire());
         Headers headers(httpGetHeaders("application/json"));
 
         Json::Value request;
-        request["path"] = std::string("/"+ path);
+        request["path"] = std::string("/" + path);
         request["recursive"] = true;
         request["include_media_info"] = false;
         request["include_deleted"] = false;
 
-        std::string f = sanitizeJson(request);
+        std::string f = toSanitizedString(request);
 
         std::vector<char> postData(f.begin(), f.end());
-        HttpResponse res(http.post(endpoint, postData, headers));
+        HttpResponse res(http.post(listUrl, postData, headers));
         std::string listing;
         if (res.ok())
         {
             listing = std::string(res.data().data(), res.data().size());
         }
-        else if (res.client_error() || res.server_error())
+        else if (res.clientError() || res.serverError())
         {
-            // res.data() can have \0 in it
-            std::string message = std::string(res.data().data(), res.data().size());
-
-            std::ostringstream oss;
-            oss << "Server responded with '" << message << "'";
-            throw ArbiterError(oss.str());
+            std::string message(std::string(res.data().data(), res.data().size()));
+            throw ArbiterError("Server responded with '" + message + "'");
         }
+
         return listing;
     };
 
-    bool bMore(false);
-    auto processPath = [&results, &bMore](std::string json)
+    bool more(false);
+    auto processPath = [&results, &more](std::string json)
     {
-
         Json::Value root;
         Json::Reader reader;
         reader.parse(json, root, false);
 
         Json::Value entries = root["entries"];
         if (entries.isNull())
-            throw ArbiterError("Returned JSON from Dropbox was NULL!");
+            throw ArbiterError("Returned JSON from Dropbox was NULL");
         if (!entries.isArray())
-            throw ArbiterError("Returned JSON from Dropbox was not an array!");
-        bMore = root["has_more"].asBool();
+            throw ArbiterError("Returned JSON from Dropbox was not an array");
+        more = root["has_more"].asBool();
 
         for(int i = 0; i < entries.size(); ++i)
         {
@@ -258,28 +205,28 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
 
             std::string file("file");
             std::string folder("folder");
-            if (std::equal( file.begin(), file.end(), tag.begin(), iequals() ))
+
+            if (std::equal(file.begin(), file.end(), tag.begin(), ins))
             {
                 results.push_back(v["path_lower"].asString());
             }
         }
-
     };
 
-    std::string listing = listPath(rawPath);
-    processPath(listing);
-    if (bMore)
+    processPath(listPath(path));
+
+    if (more)
     {
         do
         {
-            listing = continueFileInfo("");
-            processPath(listing);
-
+            processPath(continueFileInfo(""));
         }
-        while (bMore);
+        while (more);
     }
+
     return results;
 }
+
 } // namespace drivers
 } // namespace arbiter
 

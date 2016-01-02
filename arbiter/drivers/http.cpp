@@ -56,29 +56,28 @@ namespace
         return fullBytes;
     }
 
-    size_t headerCb(const char *buffer,
-                    std::size_t size,
-                    std::size_t nitems,
-                    arbiter::HeaderMap* out)
+    std::size_t headerCb(
+            const char *buffer,
+            std::size_t size,
+            std::size_t num,
+            arbiter::Headers* out)
     {
-        const std::size_t fullBytes(size * nitems);
-        std::string h(buffer, fullBytes);
-        h.erase(std::remove(h.begin(), h.end(), '\n'), h.end());
-        h.erase(std::remove(h.begin(), h.end(), '\r'), h.end());
+        const std::size_t fullBytes(size * num);
 
-        // We're done if there was nothing
-        if (!h.size())
-            return fullBytes;
+        std::string data(buffer, fullBytes);
+        data.erase(std::remove(data.begin(), data.end(), '\n'), data.end());
+        data.erase(std::remove(data.begin(), data.end(), '\r'), data.end());
 
-        const std::size_t split(h.find_first_of(":"));
-        // no colon means it isn't a header with data
-        if (!split)
-            return fullBytes;
+        const std::size_t split(data.find_first_of(":"));
 
-        std::string key = h.substr(0, split);
-        std::string data = h.substr(split+1 /* skip the first space */, h.size());
+        // No colon means it isn't a header with data.
+        if (split == std::string::npos) return fullBytes;
 
-        out->insert(std::make_pair(key, data));
+        const std::string key(data.substr(0, split));
+        const std::string val(data.substr(split + 1, data.size()));
+
+        (*out)[key] = val;
+
         return fullBytes;
     }
 
@@ -198,7 +197,7 @@ Curl::~Curl()
     m_headers = 0;
 }
 
-void Curl::init(std::string path, const std::vector<std::string>& headers)
+void Curl::init(std::string path, const Headers& headers)
 {
     // Reset our curl instance and header list.
     curl_slist_free_all(m_headers);
@@ -220,19 +219,20 @@ void Curl::init(std::string path, const std::vector<std::string>& headers)
     if (followRedirect) curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1L);
 
     // Insert supplied headers.
-    for (std::size_t i(0); i < headers.size(); ++i)
+    for (const auto& h : headers)
     {
-        m_headers = curl_slist_append(m_headers, headers[i].c_str());
+        m_headers = curl_slist_append(
+                m_headers,
+                (h.first + ": " + h.second).c_str());
     }
 }
 
-HttpResponse Curl::get(std::string path, std::vector<std::string> headers)
+HttpResponse Curl::get(std::string path, Headers headers)
 {
     int httpCode(0);
     std::vector<char> data;
 
-    if (verbose())
-        curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
+    if (m_verbose) curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
     path = drivers::Http::sanitize(path);
     init(path, headers);
@@ -243,7 +243,7 @@ HttpResponse Curl::get(std::string path, std::vector<std::string> headers)
 
     // Insert all headers into the request.
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
-    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, headerCb);
+
     // Run the command.
     curl_easy_perform(m_curl);
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
@@ -255,12 +255,12 @@ HttpResponse Curl::get(std::string path, std::vector<std::string> headers)
 HttpResponse Curl::put(
         std::string path,
         const std::vector<char>& data,
-        std::vector<std::string> headers)
+        Headers headers)
 {
     path = drivers::Http::sanitize(path);
     init(path, headers);
-    if (verbose())
-        curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
+
+    if (m_verbose) curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
     int httpCode(0);
 
@@ -298,31 +298,32 @@ HttpResponse Curl::put(
 HttpResponse Curl::post(
         std::string path,
         const std::vector<char>& data,
-        std::vector<std::string> headers)
+        Headers headers)
 {
     path = drivers::Http::sanitize(path);
     init(path, headers);
-    if (verbose())
-        curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
+    if (m_verbose) curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
     int httpCode(0);
 
     std::unique_ptr<PutData> putData(new PutData(data));
     std::vector<char> writeData;
-    HeaderMap headerData;
 
     // Register callback function and data pointer to create the request.
     curl_easy_setopt(m_curl, CURLOPT_READFUNCTION, putCb);
     curl_easy_setopt(m_curl, CURLOPT_READDATA, putData.get());
-    //
-    // Register callback function and date pointer to consume the result.
+
+    // Register callback function and data pointer to consume the result.
     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
     curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &writeData);
 
     // Insert all headers into the request.
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
+
+    // Set up callback and data pointer for received headers.
+    Headers receivedHeaders;
     curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, headerCb);
-    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &headerData);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &receivedHeaders);
 
     // Specify that this is a POST request.
     curl_easy_setopt(m_curl, CURLOPT_POST, 1L);
@@ -339,7 +340,7 @@ HttpResponse Curl::post(
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     curl_easy_reset(m_curl);
-    HttpResponse response(httpCode, writeData, headerData);
+    HttpResponse response(httpCode, writeData, receivedHeaders);
     return response;
 }
 
@@ -409,7 +410,7 @@ HttpResponse HttpResource::exec(std::function<HttpResponse()> f)
     {
         res = f();
     }
-    while (res.retry() && tries++ < m_retry);
+    while (res.serverError() && tries++ < m_retry);
 
     return res;
 }

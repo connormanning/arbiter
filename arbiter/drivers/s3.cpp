@@ -226,7 +226,7 @@ bool S3::buildRequestAndGet(
     const std::string path(resource.buildPath(query));
 
     Headers headers(httpGetHeaders(rawPath));
-    headers.insert(headers.end(), userHeaders.begin(), userHeaders.end());
+    for (const auto& h : userHeaders) headers[h.first] = h.second;
 
     auto http(m_pool.acquire());
 
@@ -352,49 +352,41 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
     return results;
 }
 
-std::vector<std::string> S3::httpGetHeaders(std::string filePath) const
+Headers S3::httpGetHeaders(std::string filePath) const
 {
     const std::string httpDate(getHttpDate());
-    const std::string signedEncodedString(
+    const std::string signedEncoded(
             getSignedEncodedString(
                 "GET",
                 filePath,
                 httpDate));
 
-    const std::string dateHeader("Date: " + httpDate);
-    const std::string authHeader(
-            "Authorization: AWS " +
-            m_auth.access() + ":" +
-            signedEncodedString);
-    std::vector<std::string> headers;
-    headers.push_back(dateHeader);
-    headers.push_back(authHeader);
+    Headers headers;
+
+    headers["Date"] = httpDate;
+    headers["Authorization"] = "AWS " + m_auth.access() + ":" + signedEncoded;
+
     return headers;
 }
 
-std::vector<std::string> S3::httpPutHeaders(std::string filePath) const
+Headers S3::httpPutHeaders(std::string filePath) const
 {
     const std::string httpDate(getHttpDate());
-    const std::string signedEncodedString(
+    const std::string signedEncoded(
             getSignedEncodedString(
                 "PUT",
                 filePath,
                 httpDate,
                 "application/octet-stream"));
 
-    const std::string typeHeader("Content-Type: application/octet-stream");
-    const std::string dateHeader("Date: " + httpDate);
-    const std::string authHeader(
-            "Authorization: AWS " +
-            m_auth.access() + ":" +
-            signedEncodedString);
+    Headers headers;
 
-    std::vector<std::string> headers;
-    headers.push_back(typeHeader);
-    headers.push_back(dateHeader);
-    headers.push_back(authHeader);
-    headers.push_back("Transfer-Encoding:");
-    headers.push_back("Expect:");
+    headers["Content-Type"] = "application/octet-stream";
+    headers["Date"] = httpDate;
+    headers["Authorization"] = "AWS " + m_auth.access() + ":" + signedEncoded;
+    headers["Transfer-Encoding"] = "";
+    headers["Expect"] = "";
+
     return headers;
 }
 

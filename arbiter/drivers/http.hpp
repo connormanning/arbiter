@@ -17,8 +17,8 @@
 namespace arbiter
 {
 
-typedef std::vector<std::string> Headers;
-typedef std::map<std::string, std::string> HeaderMap;
+typedef std::map<std::string, std::string> Headers;
+
 /** @cond arbiter_internal */
 class HttpResponse
 {
@@ -33,7 +33,10 @@ public:
         , m_data(data)
     { }
 
-    HttpResponse(int code, std::vector<char> const& data, HeaderMap const& headers)
+    HttpResponse(
+            int code,
+            const std::vector<char>& data,
+            const Headers& headers)
         : m_code(code)
         , m_data(data)
         , m_headers(headers)
@@ -41,23 +44,20 @@ public:
 
     ~HttpResponse() { }
 
-    bool ok() const     { return m_code / 100 == 2; }
-    bool retry() const  { return m_code / 100 == 5; }   // Only server errors.
-    bool client_error() const  { return m_code / 100 == 4; }
-    bool server_error() const  { return m_code / 100 == 5; }
-    int code() const    { return m_code; }
+    bool ok() const             { return m_code / 100 == 2; }
+    bool clientError() const    { return m_code / 100 == 4; }
+    bool serverError() const    { return m_code / 100 == 5; }
+    int code() const            { return m_code; }
 
     std::vector<char> data() const { return m_data; }
-    HeaderMap const& headers() const { return m_headers; }
+    const Headers& headers() const { return m_headers; }
 
 private:
     int m_code;
     std::vector<char> m_data;
-    HeaderMap m_headers;
+    Headers m_headers;
 };
 /** @endcond */
-
-typedef std::vector<std::string> Headers;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -111,9 +111,6 @@ public:
             const std::vector<char>& data,
             Headers headers);
 
-    void verbose(bool v) {  m_verbose = v; }
-    bool verbose() {  return m_verbose; }
-
 private:
     Curl();
 
@@ -148,9 +145,6 @@ public:
             std::string path,
             const std::vector<char>& data,
             Headers headers);
-
-    void verbose(bool v) {  m_curl.verbose(v); }
-    bool verbose() {  return m_curl.verbose(); }
 
 private:
     HttpPool& m_pool;

@@ -19,11 +19,8 @@ namespace drivers
 class DropboxAuth
 {
 public:
-    DropboxAuth(std::string token);
-
-    static std::unique_ptr<DropboxAuth> find(std::string user);
-
-    std::string token() const;
+    explicit DropboxAuth(std::string token) : m_token(token) { }
+    std::string token() const { return m_token; }
 
 private:
     std::string m_token;
@@ -36,12 +33,14 @@ class Dropbox : public Driver
 {
 public:
     Dropbox(HttpPool& pool, DropboxAuth auth);
+    static std::unique_ptr<Dropbox> create(
+            HttpPool& pool,
+            const Json::Value& json);
 
     virtual std::string type() const override { return "dropbox"; }
     virtual void put(
             std::string path,
             const std::vector<char>& data) const override;
-
 
 private:
     virtual bool get(std::string path, std::vector<char>& data) const override;
@@ -50,7 +49,8 @@ private:
             bool verbose) const override;
 
     std::string continueFileInfo(std::string cursor) const;
-    Headers httpGetHeaders(std::string filePath) const;
+    Headers httpGetHeaders(std::string contentType = "") const;
+
     HttpPool& m_pool;
     DropboxAuth m_auth;
 };

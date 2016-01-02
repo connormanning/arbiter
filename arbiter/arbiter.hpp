@@ -161,8 +161,6 @@ public:
     /** Strip the type and delimiter `://`, if they exist. */
     static std::string stripType(std::string path);
 
-    HttpPool& pool() { return m_pool; }
-
 private:
     // Registers all available default Driver instances.
     void init(const Json::Value& json);
