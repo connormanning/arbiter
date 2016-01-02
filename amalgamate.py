@@ -87,6 +87,7 @@ def amalgamate_source(source_top_dir=None,
     header.add_file("arbiter/third/xml/xml.hpp")
     header.add_file("arbiter/util/crypto.hpp")
     header.add_file("arbiter/drivers/s3.hpp")
+    header.add_file("arbiter/drivers/dropbox.hpp")
     header.add_file("arbiter/endpoint.hpp")
     header.add_file("arbiter/arbiter.hpp")
 
@@ -114,6 +115,7 @@ def amalgamate_source(source_top_dir=None,
     source.add_file("arbiter/drivers/fs.cpp")
     source.add_file("arbiter/drivers/http.cpp")
     source.add_file("arbiter/drivers/s3.cpp")
+    source.add_file("arbiter/drivers/dropbox.cpp")
     source.add_file("arbiter/util/crypto.cpp")
 
     print("Writing amalgamated source to %r" % target_source_path)

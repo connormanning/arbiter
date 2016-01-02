@@ -3,6 +3,7 @@ set(BASE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(
     SOURCES
+    "${BASE}/dropbox.cpp"
     "${BASE}/fs.cpp"
     "${BASE}/http.cpp"
     "${BASE}/s3.cpp"
@@ -10,6 +11,7 @@ set(
 
 set(
     HEADERS
+    "${BASE}/dropbox.hpp"
     "${BASE}/fs.hpp"
     "${BASE}/http.hpp"
     "${BASE}/s3.hpp"

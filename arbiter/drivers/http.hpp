@@ -17,6 +17,8 @@
 namespace arbiter
 {
 
+typedef std::vector<std::string> Headers;
+typedef std::map<std::string, std::string> HeaderMap;
 /** @cond arbiter_internal */
 class HttpResponse
 {
@@ -31,17 +33,27 @@ public:
         , m_data(data)
     { }
 
+    HttpResponse(int code, std::vector<char> const& data, HeaderMap const& headers)
+        : m_code(code)
+        , m_data(data)
+        , m_headers(headers)
+    { }
+
     ~HttpResponse() { }
 
     bool ok() const     { return m_code / 100 == 2; }
     bool retry() const  { return m_code / 100 == 5; }   // Only server errors.
+    bool client_error() const  { return m_code / 100 == 4; }
+    bool server_error() const  { return m_code / 100 == 5; }
     int code() const    { return m_code; }
 
     std::vector<char> data() const { return m_data; }
+    HeaderMap const& headers() const { return m_headers; }
 
 private:
     int m_code;
     std::vector<char> m_data;
+    HeaderMap m_headers;
 };
 /** @endcond */
 
@@ -94,6 +106,13 @@ public:
             std::string path,
             const std::vector<char>& data,
             Headers headers);
+    HttpResponse post(
+            std::string path,
+            const std::vector<char>& data,
+            Headers headers);
+
+    void verbose(bool v) {  m_verbose = v; }
+    bool verbose() {  return m_verbose; }
 
 private:
     Curl();
@@ -105,6 +124,7 @@ private:
 
     CURL* m_curl;
     curl_slist* m_headers;
+    bool m_verbose;
 
     std::vector<char> m_data;
 };
@@ -124,11 +144,20 @@ public:
             const std::vector<char>& data,
             Headers headers = Headers());
 
+    HttpResponse post(
+            std::string path,
+            const std::vector<char>& data,
+            Headers headers);
+
+    void verbose(bool v) {  m_curl.verbose(v); }
+    bool verbose() {  return m_curl.verbose(); }
+
 private:
     HttpPool& m_pool;
     Curl& m_curl;
     std::size_t m_id;
     std::size_t m_retry;
+    bool m_verbose;
 
     HttpResponse exec(std::function<HttpResponse()> f);
 };

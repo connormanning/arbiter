@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 2.8.8)
 
 project(arbiter)
 
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads REQUIRED)
+find_package(Curl REQUIRED)
+
 MESSAGE(${CMAKE_CXX_COMPILER_ID})
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
         ${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
@@ -32,7 +36,7 @@ add_library(arbiter SHARED ${OBJS})
 if (WIN32)
     target_link_libraries(arbiter)
 else ()
-    target_link_libraries(arbiter curl pthread)
+    target_link_libraries(arbiter ${CURL_LIBRARIES} )
 endif()
 
 install(TARGETS arbiter DESTINATION lib)
