@@ -21,12 +21,15 @@ class AwsAuth
 public:
     AwsAuth(std::string access, std::string hidden);
 
-    // See:
-    // https://docs.aws.amazon.com/AWSJavaScriptSDK/guide/node-configuring.html
-    //
-    // Searches for methods 2 and 3 of "Setting AWS Credentials":
-    //      - Check for them in ~/.aws/credentials.
-    //      - If not found, try the environment settings.
+    /** @brief Search for credentials in some common locations.
+     *
+     * See:
+     * https://docs.aws.amazon.com/AWSJavaScriptSDK/guide/node-configuring.html
+     *
+     * Uses methods 2 and 3 of "Setting AWS Credentials":
+     *      - Check for them in `~/.aws/credentials`.
+     *      - If not found, try the environment settings.
+     */
     static std::unique_ptr<AwsAuth> find(std::string user = "");
 
     std::string access() const;
@@ -37,13 +40,17 @@ private:
     std::string m_hidden;
 };
 
-typedef std::map<std::string, std::string> Query;
-
 /** @brief Amazon %S3 driver. */
 class S3 : public Driver
 {
 public:
     S3(HttpPool& pool, AwsAuth awsAuth);
+
+    /** Try to construct an S3 Driver.  Searches @p json primarily for the keys
+     * `access` and `hidden` to construct an AwsAuth.  If not found, common
+     * filesystem locations and then the environment will be searched (see
+     * AwsAuth::find).
+     */
     static std::unique_ptr<S3> create(HttpPool& pool, const Json::Value& json);
 
     virtual std::string type() const override { return "s3"; }

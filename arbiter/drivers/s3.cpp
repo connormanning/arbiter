@@ -26,7 +26,7 @@ namespace
 {
     const std::string baseUrl(".s3.amazonaws.com/");
 
-    std::string getQueryString(const drivers::Query& query)
+    std::string getQueryString(const Query& query)
     {
         std::string result;
 
@@ -54,7 +54,7 @@ namespace
             }
         }
 
-        std::string buildPath(drivers::Query query = drivers::Query()) const
+        std::string buildPath(Query query = Query()) const
         {
             const std::string queryString(getQueryString(query));
             return "http://" + bucket + baseUrl + object + queryString;

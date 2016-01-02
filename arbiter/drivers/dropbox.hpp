@@ -15,7 +15,7 @@ namespace arbiter
 namespace drivers
 {
 
-/** @brief Dropbox authentication information. */
+/** @brief %Dropbox authentication information. */
 class DropboxAuth
 {
 public:
@@ -26,13 +26,15 @@ private:
     std::string m_token;
 };
 
-typedef std::map<std::string, std::string> Query;
-
-/** @brief Dropbox driver. */
+/** @brief %Dropbox driver. */
 class Dropbox : public Driver
 {
 public:
     Dropbox(HttpPool& pool, DropboxAuth auth);
+
+    /** Try to construct a %Dropbox Driver.  Searches @p json for the key
+     * `token` to construct a DropboxAuth.
+     */
     static std::unique_ptr<Dropbox> create(
             HttpPool& pool,
             const Json::Value& json);

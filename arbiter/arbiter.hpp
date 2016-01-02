@@ -161,6 +161,11 @@ public:
     /** Strip the type and delimiter `://`, if they exist. */
     static std::string stripType(std::string path);
 
+    /** Fetch the common HTTP pool, which may be useful when dynamically
+     * constructing adding a Driver via Arbiter::addDriver.
+     */
+    HttpPool& httpPool() { return m_pool; }
+
 private:
     // Registers all available default Driver instances.
     void init(const Json::Value& json);

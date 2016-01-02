@@ -1,10 +1,10 @@
 # Arbiter
 
-Arbiter provides simple/fast/thread-safe C++ access to filesystem, HTTP, and S3 resources in a uniform way.
+Arbiter provides simple/fast/thread-safe C++ access to filesystem, HTTP, S3, and Dropbox resources in a uniform way.  It is designed to be extendible, so other resource types may also be abstracted.
 
 ## API sample
 
-The core API is intended to be as simple as possible.
+Full docs live [here](http://arbitercpp.com/classarbiter_1_1_arbiter.html).  The core API is intended to be as simple as possible.
 
 ```cpp
 using namespace arbiter;
@@ -24,6 +24,7 @@ httpPath = "http://some-server.com/http.txt";
 a.put(httpPath, "HTTP contents!");
 httpData = a.get(httpPath);
 
+// S3 credentials can be inferred from the environment or well-known FS paths.
 s3Path = "s3://some-bucket/s3.txt";
 a.put(s3Path, "S3 contents!");
 s3Data = a.get(s3Path);
@@ -31,6 +32,22 @@ s3Data = a.get(s3Path);
 // Resolve globbed directory paths.
 fsGlob = a.resolve("~/data/*");
 s3Glob = a.resolve("s3://some-bucket/some-dir/*");
+```
+
+Some drivers accept (or might require) explicit values for configuration.
+
+```cpp
+using namespace arbiter;
+
+Json::Value config;
+config["dropbox"]["token"] = "My dropbox token";
+config["s3"]["access"] = "My access key";
+config["s3"]["hidden"] = "My secret key";
+
+Arbiter a(config);
+
+// Now dropbox and S3 paths are accessible.
+auto data = a.get("dropbox://my-file.txt");
 ```
 
 ## Using Arbiter in your project
@@ -69,8 +86,4 @@ Once the amalgamated files are integrated with your source tree, simply `#includ
 Arbiter depends on [Curl](http://curl.haxx.se/libcurl/), which comes preinstalled on most UNIX-based machines.  To manually link (for amalgamated usage) on Unix-based operating systems, link with `-lcurl`.  Arbiter also works on Windows, but you'll have to obtain Curl yourself there.
 
 Arbiter requires C++11.
-
-### AWS Authentication
-
-Arbiter will automatically detect AWS credentials if AWS-SDK is installed and configured.  Otherwise, you can populate `~/.aws/credentials` (see [instructions](https://docs.aws.amazon.com/AWSJavaScriptSDK/guide/node-configuring.html)), or use the environment values `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
 
