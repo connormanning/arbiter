@@ -181,10 +181,10 @@ std::string Http::sanitize(std::string path)
 
 } // namespace drivers
 
-Curl::Curl()
+Curl::Curl(bool verbose)
     : m_curl(0)
     , m_headers(0)
-    , m_verbose(false)
+    , m_verbose(verbose)
     , m_data()
 {
     m_curl = curl_easy_init();
@@ -417,7 +417,7 @@ HttpResponse HttpResource::exec(std::function<HttpResponse()> f)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-HttpPool::HttpPool(std::size_t concurrent, std::size_t retry)
+HttpPool::HttpPool(std::size_t concurrent, std::size_t retry, bool verbose)
     : m_curls(concurrent)
     , m_available(concurrent)
     , m_retry(retry)
@@ -427,7 +427,7 @@ HttpPool::HttpPool(std::size_t concurrent, std::size_t retry)
     for (std::size_t i(0); i < concurrent; ++i)
     {
         m_available[i] = i;
-        m_curls[i].reset(new Curl());
+        m_curls[i].reset(new Curl(verbose));
     }
 }
 

@@ -113,7 +113,7 @@ public:
             Headers headers);
 
 private:
-    Curl();
+    Curl(bool verbose);
 
     void init(std::string path, const Headers& headers);
 
@@ -122,7 +122,7 @@ private:
 
     CURL* m_curl;
     curl_slist* m_headers;
-    bool m_verbose;
+    const bool m_verbose;
 
     std::vector<char> m_data;
 };
@@ -152,7 +152,6 @@ private:
     Curl& m_curl;
     std::size_t m_id;
     std::size_t m_retry;
-    bool m_verbose;
 
     HttpResponse exec(std::function<HttpResponse()> f);
 };
@@ -163,7 +162,7 @@ class HttpPool
     friend class HttpResource;
 
 public:
-    HttpPool(std::size_t concurrent, std::size_t retry);
+    HttpPool(std::size_t concurrent, std::size_t retry, bool verbose = false);
 
     HttpResource acquire();
 

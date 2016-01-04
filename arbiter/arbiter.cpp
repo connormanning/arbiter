@@ -26,7 +26,11 @@ Arbiter::Arbiter()
 
 Arbiter::Arbiter(const Json::Value& json)
     : m_drivers()
-    , m_pool(concurrentHttpReqs, httpRetryCount)
+    , m_pool(
+            concurrentHttpReqs,
+            httpRetryCount,
+            json.isMember("arbiter") ?
+                json["arbiter"]["verbose"].asBool() : false)
 {
     init(json);
 }

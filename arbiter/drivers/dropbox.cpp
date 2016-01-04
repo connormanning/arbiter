@@ -100,7 +100,7 @@ bool Dropbox::get(const std::string rawPath, std::vector<char>& data) const
     }
     else if (res.clientError() || res.serverError())
     {
-        std::string message(std::string(res.data().data(), res.data().size()));
+        std::string message(res.data().data(), res.data().size());
         throw ArbiterError("Server responded with '" + message + "'");
     }
 
@@ -141,7 +141,7 @@ std::string Dropbox::continueFileInfo(std::string cursor) const
     }
     else if (res.clientError() || res.serverError())
     {
-        std::string message(std::string(res.data().data(), res.data().size()));
+        std::string message(res.data().data(), res.data().size());
         throw ArbiterError("Server responded with '" + message + "'");
     }
 
@@ -177,7 +177,7 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
         }
         else if (res.clientError() || res.serverError())
         {
-            std::string message(std::string(res.data().data(), res.data().size()));
+            std::string message(res.data().data(), res.data().size());
             throw ArbiterError("Server responded with '" + message + "'");
         }
 
@@ -186,8 +186,10 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
 
     bool more(false);
     std::string cursor("");
-    auto processPath = [&results, &more, &cursor](std::string json)
+    auto processPath = [verbose, &results, &more, &cursor](std::string json)
     {
+        if (verbose) std::cout << '.';
+
         Json::Value root;
         Json::Reader reader;
         reader.parse(json, root, false);
@@ -210,7 +212,8 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
 
             if (std::equal(file.begin(), file.end(), tag.begin(), ins))
             {
-                results.push_back(v["path_lower"].asString());
+                // Results already begin with a slash.
+                results.push_back("dropbox:/" + v["path_lower"].asString());
             }
         }
     };
