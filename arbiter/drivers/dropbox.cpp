@@ -185,7 +185,8 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
     };
 
     bool more(false);
-    auto processPath = [&results, &more](std::string json)
+    std::string cursor("");
+    auto processPath = [&results, &more, &cursor](std::string json)
     {
         Json::Value root;
         Json::Reader reader;
@@ -197,6 +198,7 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
         if (!entries.isArray())
             throw ArbiterError("Returned JSON from Dropbox was not an array");
         more = root["has_more"].asBool();
+        cursor = root["cursor"].asString();
 
         for(int i = 0; i < entries.size(); ++i)
         {
@@ -214,12 +216,11 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
     };
 
     processPath(listPath(path));
-
     if (more)
     {
         do
         {
-            processPath(continueFileInfo(""));
+            processPath(continueFileInfo(cursor));
         }
         while (more);
     }
