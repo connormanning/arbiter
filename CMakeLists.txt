@@ -13,6 +13,7 @@ if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
     add_definitions(${CMAKE_CXX_FLAGS} "-std=c++11")
     add_definitions(${CMAKE_CXX_FLAGS} "-Wno-deprecated-declarations")
     add_definitions(${CMAKE_CXX_FLAGS} "-Wall")
+    add_definitions(${CMAKE_CXX_FLAGS} "-Werror")
     add_definitions(${CMAKE_CXX_FLAGS} "-pedantic")
     add_definitions(${CMAKE_CXX_FLAGS} "-pthread")
     add_definitions(${CMAKE_CXX_FLAGS} "-fexceptions")

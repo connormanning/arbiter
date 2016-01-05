@@ -206,9 +206,9 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
         more = json["has_more"].asBool();
         cursor = json["cursor"].asString();
 
-        for (int i = 0; i < entries.size(); ++i)
+        for (std::size_t i(0); i < entries.size(); ++i)
         {
-            const Json::Value& v(entries[i]);
+            const Json::Value& v(entries[static_cast<Json::ArrayIndex>(i)]);
             const std::string tag(v[".tag"].asString());
 
             // Only insert files.
