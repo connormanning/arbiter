@@ -56,7 +56,7 @@ std::unique_ptr<Dropbox> Dropbox::create(
 {
     std::unique_ptr<Dropbox> dropbox;
 
-    if (json.isMember("token"))
+    if (!json.isNull() && json.isMember("token"))
     {
         dropbox.reset(new Dropbox(pool, DropboxAuth(json["token"].asString())));
     }

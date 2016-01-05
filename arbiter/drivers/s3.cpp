@@ -195,12 +195,12 @@ std::unique_ptr<S3> S3::create(HttpPool& pool, const Json::Value& json)
 {
     std::unique_ptr<S3> s3;
 
-    if (json.isMember("access") & json.isMember("hidden"))
+    if (!json.isNull() && json.isMember("access") & json.isMember("hidden"))
     {
         AwsAuth auth(json["access"].asString(), json["hidden"].asString());
         s3.reset(new S3(pool, auth));
     }
-    else
+    else if (!json.isNull())
     {
         auto auth(AwsAuth::find(json["user"].asString()));
         if (auth) s3.reset(new S3(pool, *auth));
