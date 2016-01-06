@@ -56,10 +56,13 @@ public:
      */
     void putSubpath(std::string subpath, const std::vector<char>& data) const;
 
+    /** Get the full path corresponding to this subpath.  The path will not
+     * be prefixed with the driver type or the `://` delimiter.
+     */
+    std::string fullPath(const std::string& subpath) const;
+
 private:
     Endpoint(const Driver& driver, std::string root);
-
-    std::string fullPath(const std::string& subpath) const;
 
     const Driver& m_driver;
     std::string m_root;

@@ -166,13 +166,14 @@ public:
      */
     HttpPool& httpPool() { return m_pool; }
 
+    /** If no delimiter of "://" is found, returns "fs".  Otherwise, returns
+     * the substring prior to but not including this delimiter.
+     */
+    std::string getType(const std::string path) const;
+
 private:
     // Registers all available default Driver instances.
     void init(const Json::Value& json);
-
-    // If no delimiter of "://" is found, returns "fs".  Otherwise, returns
-    // the substring prior to but not including this delimiter.
-    std::string parseType(const std::string path) const;
 
     DriverMap m_drivers;
     HttpPool m_pool;
