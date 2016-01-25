@@ -91,6 +91,8 @@ namespace
     const auto baseSleepTime(std::chrono::milliseconds(1));
     const auto maxSleepTime (std::chrono::milliseconds(4096));
 
+    const std::size_t defaultHttpTimeout(60 * 5);
+
     const std::map<char, std::string> sanitizers
     {
         { ' ', "%20" },
@@ -181,10 +183,11 @@ std::string Http::sanitize(std::string path)
 
 } // namespace drivers
 
-Curl::Curl(bool verbose)
+Curl::Curl(bool verbose, std::size_t timeout)
     : m_curl(0)
     , m_headers(0)
     , m_verbose(verbose)
+    , m_timeout(timeout)
     , m_data()
 {
     m_curl = curl_easy_init();
@@ -213,7 +216,7 @@ void Curl::init(std::string path, const Headers& headers)
     curl_easy_setopt(m_curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 
     // Don't wait forever.
-    curl_easy_setopt(m_curl, CURLOPT_TIMEOUT, 120);
+    curl_easy_setopt(m_curl, CURLOPT_TIMEOUT, m_timeout);
 
     // Configuration options.
     if (followRedirect) curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -417,17 +420,28 @@ HttpResponse HttpResource::exec(std::function<HttpResponse()> f)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-HttpPool::HttpPool(std::size_t concurrent, std::size_t retry, bool verbose)
+HttpPool::HttpPool(
+        const std::size_t concurrent,
+        const std::size_t retry,
+        const Json::Value& json)
     : m_curls(concurrent)
     , m_available(concurrent)
     , m_retry(retry)
     , m_mutex()
     , m_cv()
 {
+    const bool verbose(
+            json.isMember("arbiter") ?
+                json["arbiter"]["verbose"].asBool() : false);
+
+    const std::size_t timeout(
+            json.isMember("http") && json["http"]["timeout"].asUInt64() ?
+                json["http"]["timeout"].asUInt64() : defaultHttpTimeout);
+
     for (std::size_t i(0); i < concurrent; ++i)
     {
         m_available[i] = i;
-        m_curls[i].reset(new Curl(verbose));
+        m_curls[i].reset(new Curl(verbose, timeout));
     }
 }
 
