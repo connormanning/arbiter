@@ -98,8 +98,17 @@ bool Dropbox::get(const std::string rawPath, std::vector<char>& data) const
         const std::size_t size(
                 std::stol(res.headers().at("original-content-length")));
 
-        if (size == res.data().size()) return true;
-        else throw ArbiterError("Data size check failed");
+        if (size == res.data().size())
+        {
+            return true;
+        }
+        else
+        {
+            std::ostringstream oss;
+            oss << "Data size check failed. State size was '" << size
+                << "' and downloaded size was '" << res.data().size() << "'";
+            throw ArbiterError(oss.str());
+        }
     }
     else
     {
