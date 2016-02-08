@@ -17,7 +17,6 @@
 namespace arbiter
 {
 
-typedef std::map<std::string, std::string> Headers;
 typedef std::map<std::string, std::string> Query;
 
 /** @cond arbiter_internal */

@@ -27,7 +27,7 @@ private:
 };
 
 /** @brief %Dropbox driver. */
-class Dropbox : public Driver
+class Dropbox : public CustomHeaderDriver
 {
 public:
     Dropbox(HttpPool& pool, DropboxAuth auth);
@@ -44,15 +44,13 @@ public:
             std::string path,
             const std::vector<char>& data) const override;
 
-    /** A GET method allowing user-defined headers. Accessible only via the
-     * Dropbox driver directly, and not through the Arbiter.
-     */
-    std::string get(std::string path, Headers headers) const;
+    /** Inherited from CustomHeaderDriver. */
+    virtual std::string get(std::string path, Headers headers) const override;
 
-    /** A GET method allowing user-defined headers. Accessible only via the
-     * Dropbox driver directly, and not through the Arbiter.
-     */
-    std::vector<char> getBinary(std::string path, Headers headers) const;
+    /** Inherited from CustomHeaderDriver. */
+    virtual std::vector<char> getBinary(
+            std::string path,
+            Headers headers) const override;
 
 private:
     virtual bool get(std::string path, std::vector<char>& data) const override;
