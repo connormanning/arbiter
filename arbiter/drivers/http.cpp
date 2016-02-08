@@ -247,12 +247,17 @@ HttpResponse Curl::get(std::string path, Headers headers)
     // Insert all headers into the request.
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
 
+    // Set up callback and data pointer for received headers.
+    Headers receivedHeaders;
+    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, headerCb);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &receivedHeaders);
+
     // Run the command.
     curl_easy_perform(m_curl);
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     curl_easy_reset(m_curl);
-    return HttpResponse(httpCode, data);
+    return HttpResponse(httpCode, data, receivedHeaders);
 }
 
 HttpResponse Curl::put(
