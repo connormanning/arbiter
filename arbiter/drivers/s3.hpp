@@ -41,7 +41,7 @@ private:
 };
 
 /** @brief Amazon %S3 driver. */
-class S3 : public Driver
+class S3 : public CustomHeaderDriver
 {
 public:
     S3(HttpPool& pool, AwsAuth awsAuth);
@@ -58,15 +58,13 @@ public:
             std::string path,
             const std::vector<char>& data) const override;
 
-    /** A GET method allowing user-defined headers. Accessible only via the S3
-     * driver directly, and not through the Arbiter.
-     */
-    std::string get(std::string path, Headers headers) const;
+    /** Inherited from CustomHeaderDriver. */
+    virtual std::string get(std::string path, Headers headers) const override;
 
-    /** A GET method allowing user-defined headers. Accessible only via the S3
-     * driver directly, and not through the Arbiter.
-     */
-    std::vector<char> getBinary(std::string path, Headers headers) const;
+    /** Inherited from CustomHeaderDriver. */
+    virtual std::vector<char> getBinary(
+            std::string path,
+            Headers headers) const override;
 
 private:
     virtual bool get(std::string path, std::vector<char>& data) const override;

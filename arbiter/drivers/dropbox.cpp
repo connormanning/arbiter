@@ -21,7 +21,15 @@ namespace arbiter
 
 namespace
 {
-    const std::string getUrl("https://content.dropboxapi.com/2/files/download");
+    const std::string baseGetUrl("https://content.dropboxapi.com/");
+    const std::string getUrlV1(baseGetUrl + "1/files/auto/");
+    const std::string getUrlV2(baseGetUrl + "2/files/download");
+
+    // We still need to use API V1 for GET requests since V2 is poorly
+    // documented and doesn't correctly support the Range header.  Hopefully
+    // we can switch to V2 at some point.
+    const bool legacy(true);
+
     const std::string listUrl("https://api.dropboxapi.com/2/files/list_folder");
     const std::string continueListUrl(listUrl + "/continue");
 
@@ -64,39 +72,79 @@ std::unique_ptr<Dropbox> Dropbox::create(
     return dropbox;
 }
 
-Headers Dropbox::httpGetHeaders(const std::string contentType) const
+Headers Dropbox::httpGetHeaders() const
+{
+    Headers headers;
+
+    headers["Authorization"] = "Bearer " + m_auth.token();
+
+    if (!legacy)
+    {
+        headers["Transfer-Encoding"] = "";
+        headers["Expect"] = "";
+    }
+
+    return headers;
+}
+
+Headers Dropbox::httpPostHeaders() const
 {
     Headers headers;
 
     headers["Authorization"] = "Bearer " + m_auth.token();
     headers["Transfer-Encoding"] = "chunked";
     headers["Expect"] = "100-continue";
-    headers["Content-Type"] = contentType;
+    headers["Content-Type"] = "application/json";
 
     return headers;
 }
 
 bool Dropbox::get(const std::string rawPath, std::vector<char>& data) const
 {
+    return buildRequestAndGet(rawPath, data);
+}
+
+bool Dropbox::buildRequestAndGet(
+        const std::string rawPath,
+        std::vector<char>& data,
+        const Headers userHeaders) const
+{
     const std::string path(Http::sanitize(rawPath));
+
     Headers headers(httpGetHeaders());
+
+    if (!legacy)
+    {
+        Json::Value json;
+        json["path"] = std::string("/" + path);
+        headers["Dropbox-API-Arg"] = toSanitizedString(json);
+    }
+
+    headers.insert(userHeaders.begin(), userHeaders.end());
+
     auto http(m_pool.acquire());
 
-    Json::Value json;
-    json["path"] = std::string("/" + path);
-    headers["Dropbox-API-Arg"] = toSanitizedString(json);
-
-    std::vector<char> postData;
-    HttpResponse res(http.post(getUrl, postData, headers));
+    HttpResponse res(
+            legacy ?
+                http.get(getUrlV1 + path, headers) :
+                http.get(getUrlV2, headers));
 
     if (res.ok())
     {
-        if (!res.headers().count("original-content-length")) return false;
-
-        data = res.data();
+        if (
+                (legacy && !res.headers().count("Content-Length")) ||
+                (!legacy && !res.headers().count("original-content-length")))
+        {
+            return false;
+        }
 
         const std::size_t size(
-                std::stol(res.headers().at("original-content-length")));
+                std::stol(
+                    legacy ?
+                        res.headers().at("Content-Length") :
+                        res.headers().at("original-content-length")));
+
+        data = res.data();
 
         if (size == res.data().size())
         {
@@ -113,7 +161,9 @@ bool Dropbox::get(const std::string rawPath, std::vector<char>& data) const
     else
     {
         std::string message(res.data().data(), res.data().size());
-        throw ArbiterError("Server responded with '" + message + "'");
+        throw ArbiterError(
+                "Server response: " + std::to_string(res.code()) + " - '" +
+                message + "'");
     }
 
     return false;
@@ -126,7 +176,7 @@ void Dropbox::put(std::string rawPath, const std::vector<char>& data) const
 
 std::string Dropbox::continueFileInfo(std::string cursor) const
 {
-    Headers headers(httpGetHeaders("application/json"));
+    Headers headers(httpPostHeaders());
 
     auto http(m_pool.acquire());
 
@@ -144,7 +194,9 @@ std::string Dropbox::continueFileInfo(std::string cursor) const
     else
     {
         std::string message(res.data().data(), res.data().size());
-        throw ArbiterError("Server responded with '" + message + "'");
+        throw ArbiterError(
+                "Server response: " + std::to_string(res.code()) + " - '" +
+                message + "'");
     }
 
     return std::string("");
@@ -160,7 +212,7 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
     auto listPath = [this](std::string path)->std::string
     {
         auto http(m_pool.acquire());
-        Headers headers(httpGetHeaders("application/json"));
+        Headers headers(httpPostHeaders());
 
         Json::Value request;
         request["path"] = std::string("/" + path);
@@ -184,7 +236,9 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
         else
         {
             std::string message(res.data().data(), res.data().size());
-            throw ArbiterError("Server responded with '" + message + "'");
+            throw ArbiterError(
+                    "Server response: " + std::to_string(res.code()) + " - '" +
+                    message + "'");
         }
     };
 
@@ -241,6 +295,30 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
     }
 
     return results;
+}
+
+
+
+// These functions allow a caller to directly pass additional headers into
+// their GET request.  This is only applicable when using the Dropbox driver
+// directly, as these are not available through the Arbiter.
+
+std::vector<char> Dropbox::getBinary(std::string rawPath, Headers headers) const
+{
+    std::vector<char> data;
+    const std::string stripped(Arbiter::stripType(rawPath));
+    if (!buildRequestAndGet(stripped, data, headers))
+    {
+        throw ArbiterError("Couldn't Dropbox GET " + rawPath);
+    }
+
+    return data;
+}
+
+std::string Dropbox::get(std::string rawPath, Headers headers) const
+{
+    std::vector<char> data(getBinary(rawPath, headers));
+    return std::string(data.begin(), data.end());
 }
 
 } // namespace drivers
