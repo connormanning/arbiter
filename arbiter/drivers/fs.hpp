@@ -65,7 +65,7 @@ class Fs : public Driver
 public:
     static std::unique_ptr<Fs> create(HttpPool& pool, const Json::Value& json);
 
-    virtual std::string type() const override { return "fs"; }
+    virtual std::string type() const override { return "file"; }
     virtual void put(
             std::string path,
             const std::vector<char>& data) const override;
