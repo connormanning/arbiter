@@ -61,6 +61,9 @@ public:
      */
     std::string fullPath(const std::string& subpath) const;
 
+    /** Get a further nested subpath relative to this Endpoint's root. */
+    Endpoint getSubEndpoint(std::string subpath) const;
+
 private:
     Endpoint(const Driver& driver, std::string root);
 

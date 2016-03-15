@@ -79,5 +79,10 @@ std::string Endpoint::fullPath(const std::string& subpath) const
     return m_root + subpath;
 }
 
+Endpoint Endpoint::getSubEndpoint(std::string subpath) const
+{
+    return Endpoint(m_driver, m_root + subpath);
+}
+
 } // namespace arbiter
 
