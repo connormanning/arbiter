@@ -16,11 +16,8 @@ set(
     "${BASE}/sha256.hpp"
 )
 
+add_library(${MODULE} OBJECT ${SOURCES} ${HEADERS})
+
 install(FILES ${HEADERS} DESTINATION include/arbiter/${MODULE})
 
-if (WIN32)
-    add_library(${MODULE} OBJECT ${SOURCES} ${HEADERS})
-else()
-    add_library(${MODULE} OBJECT ${SOURCES})
-endif()
 

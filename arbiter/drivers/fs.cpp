@@ -8,16 +8,9 @@
 #include <sys/stat.h>
 #else
 
-#ifndef UNICODE
-#define UNICODE
-#endif
-
-#ifndef _UNICODE
-#define _UNICODE
-#endif
-
 #include <locale>
 #include <codecvt>
+#include <windows.h>
 #endif
 
 #include <cstdlib>
@@ -138,7 +131,7 @@ std::vector<std::string> Fs::glob(std::string path, bool) const
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     const std::wstring wide(converter.from_bytes(path));
 
-    WIN32_FIND_DATA data{};
+    LPWIN32_FIND_DATAW data{};
     HANDLE hFind(FindFirstFileW(wide.c_str(), data));
 
     if (hFind != INVALID_HANDLE_VALUE)
@@ -238,9 +231,10 @@ std::string getTempPath()
     if (const char* t = getenv("TEMPDIR"))  return t;
     if (result.empty()) return "/tmp";
 #else
-    throw ArbiterError("Windows getTempPath not done yet.");
+	char charPath[MAX_PATH];
+	if (GetTempPath(MAX_PATH, charPath))
+		result = charPath;
 #endif
-
     return result;
 }
 
