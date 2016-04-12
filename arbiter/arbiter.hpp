@@ -102,6 +102,11 @@ public:
      */
     bool isRemote(std::string path) const;
 
+    /** Returns true if this path is on the local filesystem, or false if it is
+     * remote.
+     */
+    bool isLocal(std::string path) const;
+
     /** @brief Resolve a possibly globbed path.
      *
      * If @p path ends with `*`, then this operation will attempt to
