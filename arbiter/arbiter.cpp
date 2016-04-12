@@ -141,6 +141,7 @@ std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
         std::string name(path);
         std::replace(name.begin(), name.end(), '/', '-');
         std::replace(name.begin(), name.end(), '\\', '-');
+        std::replace(name.begin(), name.end(), ':', '_');
 
         tempEndpoint.putSubpath(name, getBinary(path));
 
