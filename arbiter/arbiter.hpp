@@ -8,13 +8,24 @@
 #endif
 
 #ifndef ARBITER_IS_AMALGAMATION
+
 #include <arbiter/driver.hpp>
 #include <arbiter/endpoint.hpp>
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/drivers/http.hpp>
 #include <arbiter/drivers/s3.hpp>
 #include <arbiter/drivers/dropbox.hpp>
+
+#ifndef ARBITER_EXTERNAL_JSON
 #include <arbiter/third/json/json.hpp>
+#endif
+
+#endif
+
+
+
+#ifdef ARBITER_EXTERNAL_JSON
+#include <json/json.h>
 #endif
 
 namespace arbiter
