@@ -52,7 +52,9 @@ class AmalgamationFile:
 
 def amalgamate_source(source_top_dir=None,
                        target_source_path=None,
-                       header_include_path=None):
+                       header_include_path=None,
+                       include_json=True,
+                       include_xml=True):
     """Produces amalgamated source.
        Parameters:
            source_top_dir: top-directory
@@ -69,6 +71,17 @@ def amalgamate_source(source_top_dir=None,
     except:
         print("This script must be run from the top level")
 
+    if include_json:
+        print("Bundling JSON with amalgamation")
+    else:
+        print("NOT bundling JSON with amalgamation")
+
+    if include_xml:
+        print("Bundling RapidXML with amalgamation")
+    else:
+        print("NOT bundling RapidXML with amalgamation")
+
+
     print("Amalgamating header...")
     header = AmalgamationFile(source_top_dir)
     header.add_text("/// Arbiter amalgamated header (https://github.com/connormanning/arbiter).")
@@ -79,12 +92,22 @@ def amalgamate_source(source_top_dir=None,
     header.add_text("/// If defined, indicates that the source file is amalgamated")
     header.add_text("/// to prevent private header inclusion.")
     header.add_text("#define ARBITER_IS_AMALGAMATION")
-    header.add_file("arbiter/third/json/json.hpp")
+
+    if not include_json:
+        header.add_text("#define ARBITER_EXTERNAL_JSON")
+    if not include_xml:
+        header.add_text("#define ARBITER_EXTERNAL_XML")
+
+    if include_json:
+        header.add_file("arbiter/third/json/json.hpp")
     header.add_file("arbiter/driver.hpp")
     header.add_file("arbiter/drivers/fs.hpp")
     header.add_file("arbiter/drivers/http.hpp")
-    header.add_file("arbiter/third/xml/rapidxml.hpp")
-    header.add_file("arbiter/third/xml/xml.hpp")
+
+    if include_xml:
+        header.add_file("arbiter/third/xml/rapidxml.hpp")
+        header.add_file("arbiter/third/xml/xml.hpp")
+
     header.add_file("arbiter/util/crypto.hpp")
     header.add_file("arbiter/drivers/s3.hpp")
     header.add_file("arbiter/drivers/dropbox.hpp")
@@ -111,7 +134,10 @@ def amalgamate_source(source_top_dir=None,
     source.add_file("arbiter/arbiter.cpp")
     source.add_file("arbiter/driver.cpp")
     source.add_file("arbiter/endpoint.cpp")
-    source.add_file("arbiter/third/json/jsoncpp.cpp")
+
+    if include_json:
+        source.add_file("arbiter/third/json/jsoncpp.cpp")
+
     source.add_file("arbiter/drivers/fs.cpp")
     source.add_file("arbiter/drivers/http.cpp")
     source.add_file("arbiter/drivers/s3.cpp")
@@ -134,12 +160,16 @@ Generate a single amalgamated source and header file from the sources.
         help="""Header include path. Used to include the header from the amalgamated source file. [Default: %default]""")
     parser.add_option("-t", "--top-dir", dest="top_dir", action="store", default=os.getcwd(),
         help="""Source top-directory. [Default: %default]""")
+    parser.add_option("-j", "--no-include-json", dest="include_json", action="store_false", default=True)
+    parser.add_option("-x", "--no-include-xml", dest="include_xml", action="store_false", default=True)
     parser.enable_interspersed_args()
     options, args = parser.parse_args()
 
     msg = amalgamate_source(source_top_dir=options.top_dir,
                              target_source_path=options.target_source_path,
-                             header_include_path=options.header_include_path)
+                             header_include_path=options.header_include_path,
+                             include_json=options.include_json,
+                             include_xml=options.include_xml)
     if msg:
         sys.stderr.write(msg + "\n")
         sys.exit(1)

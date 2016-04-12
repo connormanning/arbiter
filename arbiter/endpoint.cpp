@@ -38,6 +38,11 @@ bool Endpoint::isRemote() const
     return m_driver.isRemote();
 }
 
+bool Endpoint::isLocal() const
+{
+    return !isRemote();
+}
+
 std::string Endpoint::getSubpath(const std::string subpath) const
 {
     return m_driver.get(fullPath(subpath));
@@ -77,6 +82,11 @@ void Endpoint::putSubpath(
 std::string Endpoint::fullPath(const std::string& subpath) const
 {
     return m_root + subpath;
+}
+
+Endpoint Endpoint::getSubEndpoint(std::string subpath) const
+{
+    return Endpoint(m_driver, m_root + subpath);
 }
 
 } // namespace arbiter

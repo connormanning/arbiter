@@ -2,7 +2,18 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/driver.hpp>
+
+#ifndef ARBITER_EXTERNAL_JSON
 #include <arbiter/third/json/json.hpp>
+#endif
+
+#endif
+
+
+
+
+#ifdef ARBITER_EXTERNAL_JSON
+#include <json/json.h>
 #endif
 
 namespace arbiter
@@ -10,16 +21,26 @@ namespace arbiter
 
 class Arbiter;
 
+/**
+ * \addtogroup fs
+ * @{
+ */
+
+/** Filesystem utilities. */
 namespace fs
 {
-    // Returns true if created, false if already existed.
+    /** @brief Returns true if created, false if already existed. */
     bool mkdirp(std::string dir);
 
-    // Returns true if removed, otherwise false.
+    /** @brief Returns true if removed, otherwise false. */
     bool remove(std::string filename);
 
-    // Performs tilde expansion to a fully-qualified path, if possible.
+    /** @brief Performs tilde expansion to a fully-qualified path, if possible.
+     */
     std::string expandTilde(std::string path);
+
+    /** @brief Get temporary path from environment. */
+    std::string getTempPath();
 
     /** @brief A scoped local filehandle for a possibly remote path.
      *
@@ -48,13 +69,26 @@ namespace fs
          */
         std::string localPath() const { return m_localPath; }
 
+        /** @brief Release the managed local path and return the path from
+         * LocalHandle::localPath.
+         *
+         * After this call, destruction of the LocalHandle will not erase the
+         * temporary file that may have been created.
+         */
+        std::string release()
+        {
+            m_erase = false;
+            return localPath();
+        }
+
     private:
         LocalHandle(std::string localPath, bool isRemote);
 
         const std::string m_localPath;
-        const bool m_isRemote;
+        bool m_erase;
     };
 }
+/** @} */
 
 namespace drivers
 {
@@ -65,7 +99,11 @@ class Fs : public Driver
 public:
     static std::unique_ptr<Fs> create(HttpPool& pool, const Json::Value& json);
 
-    virtual std::string type() const override { return "fs"; }
+    virtual std::string type() const override { return "file"; }
+
+    virtual std::unique_ptr<std::size_t> tryGetSize(
+            std::string path) const override;
+
     virtual void put(
             std::string path,
             const std::vector<char>& data) const override;

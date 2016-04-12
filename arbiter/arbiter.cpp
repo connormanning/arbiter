@@ -5,6 +5,7 @@
 #endif
 
 #include <algorithm>
+#include <cstdlib>
 
 namespace arbiter
 {
@@ -35,8 +36,8 @@ void Arbiter::init(const Json::Value& json)
 {
     using namespace drivers;
 
-    auto fs(Fs::create(m_pool, json["fs"]));
-    if (fs) m_drivers["fs"] = std::move(fs);
+    auto fs(Fs::create(m_pool, json["file"]));
+    if (fs) m_drivers["file"] = std::move(fs);
 
     auto http(Http::create(m_pool, json["http"]));
     if (http) m_drivers["http"] = std::move(http);
@@ -74,6 +75,16 @@ std::unique_ptr<std::vector<char>> Arbiter::tryGetBinary(std::string path) const
     return getDriver(path).tryGetBinary(stripType(path));
 }
 
+std::size_t Arbiter::getSize(const std::string path) const
+{
+    return getDriver(path).getSize(stripType(path));
+}
+
+std::unique_ptr<std::size_t> Arbiter::tryGetSize(const std::string path) const
+{
+    return getDriver(path).tryGetSize(stripType(path));
+}
+
 void Arbiter::put(const std::string path, const std::string& data) const
 {
     return getDriver(path).put(stripType(path), data);
@@ -84,9 +95,25 @@ void Arbiter::put(const std::string path, const std::vector<char>& data) const
     return getDriver(path).put(stripType(path), data);
 }
 
+void Arbiter::copy(const std::string from, const std::string to) const
+{
+    const Endpoint outEndpoint(getEndpoint(to));
+    const auto paths(resolve(from));
+
+    for (const auto& path : paths)
+    {
+        outEndpoint.putSubpath(getTerminus(path), getBinary(path));
+    }
+}
+
 bool Arbiter::isRemote(const std::string path) const
 {
     return getDriver(path).isRemote();
+}
+
+bool Arbiter::isLocal(const std::string path) const
+{
+    return !isRemote(path);
 }
 
 std::vector<std::string> Arbiter::resolve(
@@ -129,6 +156,7 @@ std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
         std::string name(path);
         std::replace(name.begin(), name.end(), '/', '-');
         std::replace(name.begin(), name.end(), '\\', '-');
+        std::replace(name.begin(), name.end(), ':', '_');
 
         tempEndpoint.putSubpath(name, getBinary(path));
 
@@ -144,9 +172,17 @@ std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
     return localHandle;
 }
 
-std::string Arbiter::getType(const std::string path) const
+std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
+        const std::string path,
+        std::string tempPath) const
 {
-    std::string type("fs");
+    if (tempPath.empty()) tempPath = fs::getTempPath();
+    return getLocalHandle(path, getEndpoint(tempPath));
+}
+
+std::string Arbiter::getType(const std::string path)
+{
+    std::string type("file");
     const std::size_t pos(path.find(delimiter));
 
     if (pos != std::string::npos)
@@ -165,6 +201,34 @@ std::string Arbiter::stripType(const std::string raw)
     if (pos != std::string::npos)
     {
         result = raw.substr(pos + delimiter.size());
+    }
+
+    return result;
+}
+
+std::string Arbiter::getTerminus(const std::string fullPath)
+{
+    std::string result(fullPath);
+
+    std::string stripped(stripType(fullPath));
+
+    for (std::size_t i(0); i < 2; ++i)
+    {
+        // Pop trailing asterisk, or double-trailing-asterisks for both non- and
+        // recursive globs.
+        if (!stripped.empty() && stripped.back() == '*') stripped.pop_back();
+    }
+
+    // Pop trailing slash, in which case the result is the innermost directory.
+    if (!stripped.empty() && stripped.back() == '/') stripped.pop_back();
+
+    // Now do the real slash searching.
+    const std::size_t pos(stripped.rfind('/'));
+
+    if (pos != std::string::npos)
+    {
+        const std::string sub(stripped.substr(pos));
+        if (!sub.empty()) result = sub;
     }
 
     return result;

@@ -209,6 +209,33 @@ std::unique_ptr<S3> S3::create(HttpPool& pool, const Json::Value& json)
     return s3;
 }
 
+std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
+{
+    std::unique_ptr<std::size_t> size;
+
+    rawPath = Http::sanitize(rawPath);
+    const Resource resource(rawPath);
+
+    const std::string path(resource.buildPath());
+
+    Headers headers(httpGetHeaders(rawPath));
+
+    auto http(m_pool.acquire());
+
+    HttpResponse res(http.head(path, headers));
+
+    if (res.ok())
+    {
+        if (res.headers().count("Content-Length"))
+        {
+            const std::string& str(res.headers().at("Content-Length"));
+            size.reset(new std::size_t(std::stoul(str)));
+        }
+    }
+
+    return size;
+}
+
 bool S3::get(std::string rawPath, std::vector<char>& data) const
 {
     return buildRequestAndGet(rawPath, Query(), data);
@@ -263,6 +290,9 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
     std::vector<std::string> results;
     path.pop_back();
 
+    const bool recursive(path.back() == '*');
+    if (recursive) path.pop_back();
+
     // https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGET.html
     const Resource resource(path);
     const std::string& bucket(resource.bucket);
@@ -315,18 +345,22 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
                     if (XmlNode* keyNode = conNode->first_node("Key"))
                     {
                         std::string key(keyNode->value());
+                        const bool isSubdir(
+                                key.find('/', prefix.size()) !=
+                                std::string::npos);
 
                         // The prefix may contain slashes (i.e. is a sub-dir)
-                        // but we only include the top level after that.
-                        if (key.find('/', prefix.size()) == std::string::npos)
+                        // but we only want to traverse into subdirectories
+                        // beyond the prefix if recursive is true.
+                        if ( recursive || !isSubdir)
                         {
                             results.push_back("s3://" + bucket + "/" + key);
+                        }
 
-                            if (more)
-                            {
-                                query["marker"] =
-                                    object + key.substr(prefix.size());
-                            }
+                        if (more)
+                        {
+                            query["marker"] =
+                                object + key.substr(prefix.size());
                         }
                     }
                     else

@@ -21,7 +21,7 @@ std::vector<char> Driver::getBinary(std::string path) const
     return data;
 }
 
-std::unique_ptr<std::string> Driver::tryGet(std::string path) const
+std::unique_ptr<std::string> Driver::tryGet(const std::string path) const
 {
     std::unique_ptr<std::string> result;
     std::unique_ptr<std::vector<char>> data(tryGetBinary(path));
@@ -33,6 +33,12 @@ std::string Driver::get(const std::string path) const
 {
     const std::vector<char> data(getBinary(path));
     return std::string(data.begin(), data.end());
+}
+
+std::size_t Driver::getSize(const std::string path) const
+{
+    if (auto size = tryGetSize(path)) return *size;
+    else throw ArbiterError("Could not get size of " + path);
 }
 
 void Driver::put(std::string path, const std::string& data) const

@@ -40,6 +40,23 @@ std::unique_ptr<Fs> Fs::create(HttpPool&, const Json::Value&)
     return std::unique_ptr<Fs>(new Fs());
 }
 
+std::unique_ptr<std::size_t> Fs::tryGetSize(std::string path) const
+{
+    std::unique_ptr<std::size_t> size;
+
+    path = fs::expandTilde(path);
+
+    std::ifstream stream(path, std::ios::in | std::ios::binary);
+
+    if (stream.good())
+    {
+        stream.seekg(0, std::ios::end);
+        size.reset(new std::size_t(stream.tellg()));
+    }
+
+    return size;
+}
+
 bool Fs::get(std::string path, std::vector<char>& data) const
 {
     bool good(false);
@@ -191,14 +208,31 @@ std::string expandTilde(std::string in)
     return out;
 }
 
+std::string getTempPath()
+{
+    std::string result;
+
+#ifndef ARBITER_WINDOWS
+    result = getenv("TMPDIR");
+    if (result.empty()) result = getenv("TMP");
+    if (result.empty()) result = getenv("TEMP");
+    if (result.empty()) result = getenv("TEMPDIR");
+    if (result.empty()) result = "/tmp";
+#else
+    throw ArbiterError("Windows getTempPath not done yet.");
+#endif
+
+    return result;
+}
+
 LocalHandle::LocalHandle(const std::string localPath, const bool isRemote)
     : m_localPath(expandTilde(localPath))
-    , m_isRemote(isRemote)
+    , m_erase(isRemote)
 { }
 
 LocalHandle::~LocalHandle()
 {
-    if (m_isRemote) fs::remove(fs::expandTilde(m_localPath));
+    if (m_erase) fs::remove(fs::expandTilde(m_localPath));
 }
 
 } // namespace fs

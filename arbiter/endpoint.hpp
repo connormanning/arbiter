@@ -35,6 +35,9 @@ public:
     /** Passthrough to Driver::isRemote. */
     bool isRemote() const;
 
+    /** Negation of Endpoint::isRemote. */
+    bool isLocal() const;
+
     /** Passthrough to Driver::get. */
     std::string getSubpath(std::string subpath) const;
 
@@ -60,6 +63,9 @@ public:
      * be prefixed with the driver type or the `://` delimiter.
      */
     std::string fullPath(const std::string& subpath) const;
+
+    /** Get a further nested subpath relative to this Endpoint's root. */
+    Endpoint getSubEndpoint(std::string subpath) const;
 
 private:
     Endpoint(const Driver& driver, std::string root);

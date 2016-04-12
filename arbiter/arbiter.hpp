@@ -8,13 +8,24 @@
 #endif
 
 #ifndef ARBITER_IS_AMALGAMATION
+
 #include <arbiter/driver.hpp>
 #include <arbiter/endpoint.hpp>
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/drivers/http.hpp>
 #include <arbiter/drivers/s3.hpp>
 #include <arbiter/drivers/dropbox.hpp>
+
+#ifndef ARBITER_EXTERNAL_JSON
 #include <arbiter/third/json/json.hpp>
+#endif
+
+#endif
+
+
+
+#ifdef ARBITER_EXTERNAL_JSON
+#include <json/json.h>
 #endif
 
 namespace arbiter
@@ -75,16 +86,32 @@ public:
     /** Get data in binary form if accessible. */
     std::unique_ptr<std::vector<char>> tryGetBinary(std::string path) const;
 
+    /** Get file size in bytes or throw if inaccessible. */
+    std::size_t getSize(std::string path) const;
+
+    /** Get file size in bytes if accessible. */
+    std::unique_ptr<std::size_t> tryGetSize(std::string path) const;
+
     /** Write data to path. */
     void put(std::string path, const std::string& data) const;
 
     /** Write data to path. */
     void put(std::string path, const std::vector<char>& data) const;
 
+    /** Copy data from @p from to @p to.  @p from will be resolved with
+     * Arbiter::resolve prior to the copy, so globbed directories are supported.
+     */
+    void copy(std::string from, std::string to) const;
+
     /** Returns true if this path is a remote path, or false if it is on the
      * local filesystem.
      */
     bool isRemote(std::string path) const;
+
+    /** Returns true if this path is on the local filesystem, or false if it is
+     * remote.
+     */
+    bool isLocal(std::string path) const;
 
     /** @brief Resolve a possibly globbed path.
      *
@@ -130,7 +157,7 @@ public:
      * driver is returned.  If the delimiter exists but a corresponding driver
      * type is not found, ArbiterError is thrown.
      *
-     * Optionally, filesystem paths may be explicitly prefixed with `fs://`.
+     * Optionally, filesystem paths may be explicitly prefixed with `file://`.
      */
     const Driver& getDriver(std::string path) const;
 
@@ -158,18 +185,39 @@ public:
             std::string path,
             const Endpoint& tempEndpoint) const;
 
+    /** @brief Get a fs::LocalHandle to a possibly remote file.
+     *
+     * If @p tempPath is not specified, the environment will be searched for a
+     * temporary location.
+     */
+    std::unique_ptr<fs::LocalHandle> getLocalHandle(
+            std::string path,
+            std::string tempPath = "") const;
+
+    /** If no delimiter of "://" is found, returns "file".  Otherwise, returns
+     * the substring prior to but not including this delimiter.
+     */
+    static std::string getType(const std::string path);
+
     /** Strip the type and delimiter `://`, if they exist. */
     static std::string stripType(std::string path);
+
+    /** Returns the portion of @p fullPath following the last instance of the
+     * character `/`, if any instances exist aside from possibly the delimiter
+     * `://`.  If there are no other instances of `/`, then @p fullPath itself
+     * will be returned.
+     *
+     * If @p fullPath ends with a trailing `/` or a glob indication (i.e. is a
+     * directory), these trailing characters will be stripped prior to the
+     * logic above, thus the innermost directory in the full path will be
+     * returned.
+     */
+    static std::string getTerminus(const std::string fullPath);
 
     /** Fetch the common HTTP pool, which may be useful when dynamically
      * constructing adding a Driver via Arbiter::addDriver.
      */
     HttpPool& httpPool() { return m_pool; }
-
-    /** If no delimiter of "://" is found, returns "fs".  Otherwise, returns
-     * the substring prior to but not including this delimiter.
-     */
-    std::string getType(const std::string path) const;
 
 private:
     // Registers all available default Driver instances.

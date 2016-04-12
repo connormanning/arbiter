@@ -9,6 +9,8 @@
 namespace arbiter
 {
 
+typedef std::map<std::string, std::string> Headers;
+
 class HttpPool;
 
 /** @brief Base class for interacting with a storage type.
@@ -19,7 +21,8 @@ class HttpPool;
  *
  * Derived classes must override Driver::type,
  * Driver::put(std::string, const std::vector<char>&) const, and
- * Driver::get(std::string, std::vector<char>&) const - and may optionally
+ * Driver::get(std::string, std::vector<char>&) const,
+ * Driver::size(std::string) const - and may optionally
  * override Driver::glob if possible.
  */
 class Driver
@@ -63,6 +66,12 @@ public:
     /** Get string data. */
     std::string get(std::string path) const;
 
+    /** Get the file size in bytes, if available. */
+    virtual std::unique_ptr<std::size_t> tryGetSize(std::string path) const = 0;
+
+    /** Get the file size in bytes, or throw if it does not exist. */
+    std::size_t getSize(std::string path) const;
+
     /** Write string data. */
     void put(std::string path, const std::string& data) const;
 
@@ -96,6 +105,24 @@ protected:
      * @param[out] data Empty vector in which to write resulting data.
      */
     virtual bool get(std::string path, std::vector<char>& data) const = 0;
+};
+
+class CustomHeaderDriver : public Driver
+{
+    using Driver::get;
+
+public:
+    /** A GET method allowing user-defined headers. Accessible only via the
+     * Arbiter::getDriver directly, and not through the Arbiter.
+     */
+    virtual std::string get(std::string path, Headers headers) const = 0;
+
+    /** A GET method allowing user-defined headers. Accessible only via the
+     * Arbiter::getDriver directly, and not through the Arbiter.
+     */
+    virtual std::vector<char> getBinary(
+            std::string path,
+            Headers headers) const = 0;
 };
 
 typedef std::map<std::string, std::unique_ptr<Driver>> DriverMap;

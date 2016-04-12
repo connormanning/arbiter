@@ -88,9 +88,6 @@ namespace
 
     const bool followRedirect(true);
 
-    const auto baseSleepTime(std::chrono::milliseconds(1));
-    const auto maxSleepTime (std::chrono::milliseconds(4096));
-
     const std::size_t defaultHttpTimeout(60 * 5);
 
     const std::map<char, std::string> sanitizers
@@ -132,6 +129,25 @@ Http::Http(HttpPool& pool) : m_pool(pool) { }
 std::unique_ptr<Http> Http::create(HttpPool& pool, const Json::Value&)
 {
     return std::unique_ptr<Http>(new Http(pool));
+}
+
+std::unique_ptr<std::size_t> Http::tryGetSize(std::string path) const
+{
+    std::unique_ptr<std::size_t> size;
+
+    auto http(m_pool.acquire());
+    HttpResponse res(http.head(path));
+
+    if (res.ok())
+    {
+        if (res.headers().count("Content-Length"))
+        {
+            const std::string& str(res.headers().at("Content-Length"));
+            size.reset(new std::size_t(std::stoul(str)));
+        }
+    }
+
+    return size;
 }
 
 bool Http::get(std::string path, std::vector<char>& data) const
@@ -247,12 +263,50 @@ HttpResponse Curl::get(std::string path, Headers headers)
     // Insert all headers into the request.
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
 
+    // Set up callback and data pointer for received headers.
+    Headers receivedHeaders;
+    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, headerCb);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &receivedHeaders);
+
     // Run the command.
     curl_easy_perform(m_curl);
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     curl_easy_reset(m_curl);
-    return HttpResponse(httpCode, data);
+    return HttpResponse(httpCode, data, receivedHeaders);
+}
+
+HttpResponse Curl::head(std::string path, Headers headers)
+{
+    int httpCode(0);
+    std::vector<char> data;
+
+    if (m_verbose) curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
+
+    path = drivers::Http::sanitize(path);
+    init(path, headers);
+
+    // Register callback function and date pointer to consume the result.
+    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
+    curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &data);
+
+    // Insert all headers into the request.
+    curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
+
+    // Set up callback and data pointer for received headers.
+    Headers receivedHeaders;
+    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, headerCb);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &receivedHeaders);
+
+    // Specify a HEAD request.
+    curl_easy_setopt(m_curl, CURLOPT_NOBODY, 1L);
+
+    // Run the command.
+    curl_easy_perform(m_curl);
+    curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
+
+    curl_easy_reset(m_curl);
+    return HttpResponse(httpCode, data, receivedHeaders);
 }
 
 HttpResponse Curl::put(
@@ -347,7 +401,6 @@ HttpResponse Curl::post(
     return response;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 
 HttpResource::HttpResource(
@@ -366,13 +419,21 @@ HttpResource::~HttpResource()
     m_pool.release(m_id);
 }
 
-HttpResponse HttpResource::get(
-        const std::string path,
-        const Headers headers)
+HttpResponse HttpResource::get(const std::string path, const Headers headers)
 {
     auto f([this, path, headers]()->HttpResponse
     {
         return m_curl.get(path, headers);
+    });
+
+    return exec(f);
+}
+
+HttpResponse HttpResource::head( const std::string path, const Headers headers)
+{
+    auto f([this, path, headers]()->HttpResponse
+    {
+        return m_curl.head(path, headers);
     });
 
     return exec(f);
