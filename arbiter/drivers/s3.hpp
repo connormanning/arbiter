@@ -54,6 +54,10 @@ public:
     static std::unique_ptr<S3> create(HttpPool& pool, const Json::Value& json);
 
     virtual std::string type() const override { return "s3"; }
+
+    virtual std::unique_ptr<std::size_t> tryGetSize(
+            std::string path) const override;
+
     virtual void put(
             std::string path,
             const std::vector<char>& data) const override;

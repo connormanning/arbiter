@@ -21,7 +21,8 @@ class HttpPool;
  *
  * Derived classes must override Driver::type,
  * Driver::put(std::string, const std::vector<char>&) const, and
- * Driver::get(std::string, std::vector<char>&) const - and may optionally
+ * Driver::get(std::string, std::vector<char>&) const,
+ * Driver::size(std::string) const - and may optionally
  * override Driver::glob if possible.
  */
 class Driver
@@ -64,6 +65,12 @@ public:
 
     /** Get string data. */
     std::string get(std::string path) const;
+
+    /** Get the file size in bytes, if available. */
+    virtual std::unique_ptr<std::size_t> tryGetSize(std::string path) const = 0;
+
+    /** Get the file size in bytes, or throw if it does not exist. */
+    std::size_t getSize(std::string path) const;
 
     /** Write string data. */
     void put(std::string path, const std::string& data) const;

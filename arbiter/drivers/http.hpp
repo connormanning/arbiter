@@ -76,6 +76,10 @@ public:
             const Json::Value& json);
 
     virtual std::string type() const override { return "http"; }
+
+    virtual std::unique_ptr<std::size_t> tryGetSize(
+            std::string path) const override;
+
     virtual void put(
             std::string path,
             const std::vector<char>& data) const override;
@@ -102,6 +106,7 @@ public:
     ~Curl();
 
     HttpResponse get(std::string path, Headers headers);
+    HttpResponse head(std::string path, Headers headers);
     HttpResponse put(
             std::string path,
             const std::vector<char>& data,
@@ -134,6 +139,10 @@ public:
     ~HttpResource();
 
     HttpResponse get(
+            std::string path,
+            Headers headers = Headers());
+
+    HttpResponse head(
             std::string path,
             Headers headers = Headers());
 

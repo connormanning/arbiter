@@ -86,6 +86,12 @@ public:
     /** Get data in binary form if accessible. */
     std::unique_ptr<std::vector<char>> tryGetBinary(std::string path) const;
 
+    /** Get file size in bytes or throw if inaccessible. */
+    std::size_t getSize(std::string path) const;
+
+    /** Get file size in bytes if accessible. */
+    std::unique_ptr<std::size_t> tryGetSize(std::string path) const;
+
     /** Write data to path. */
     void put(std::string path, const std::string& data) const;
 

@@ -40,6 +40,23 @@ std::unique_ptr<Fs> Fs::create(HttpPool&, const Json::Value&)
     return std::unique_ptr<Fs>(new Fs());
 }
 
+std::unique_ptr<std::size_t> Fs::tryGetSize(std::string path) const
+{
+    std::unique_ptr<std::size_t> size;
+
+    path = fs::expandTilde(path);
+
+    std::ifstream stream(path, std::ios::in | std::ios::binary);
+
+    if (stream.good())
+    {
+        stream.seekg(0, std::ios::end);
+        size.reset(new std::size_t(stream.tellg()));
+    }
+
+    return size;
+}
+
 bool Fs::get(std::string path, std::vector<char>& data) const
 {
     bool good(false);
