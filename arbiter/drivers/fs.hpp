@@ -10,15 +10,22 @@ namespace arbiter
 
 class Arbiter;
 
+/**
+ * \addtogroup fs
+ * @{
+ */
+
+/** Filesystem utilities. */
 namespace fs
 {
-    // Returns true if created, false if already existed.
+    /** @brief Returns true if created, false if already existed. */
     bool mkdirp(std::string dir);
 
-    // Returns true if removed, otherwise false.
+    /** @brief Returns true if removed, otherwise false. */
     bool remove(std::string filename);
 
-    // Performs tilde expansion to a fully-qualified path, if possible.
+    /** @brief Performs tilde expansion to a fully-qualified path, if possible.
+     */
     std::string expandTilde(std::string path);
 
     /** @brief A scoped local filehandle for a possibly remote path.
@@ -55,6 +62,7 @@ namespace fs
         const bool m_isRemote;
     };
 }
+/** @} */
 
 namespace drivers
 {
@@ -65,7 +73,7 @@ class Fs : public Driver
 public:
     static std::unique_ptr<Fs> create(HttpPool& pool, const Json::Value& json);
 
-    virtual std::string type() const override { return "fs"; }
+    virtual std::string type() const override { return "file"; }
     virtual void put(
             std::string path,
             const std::vector<char>& data) const override;
