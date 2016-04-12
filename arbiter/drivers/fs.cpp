@@ -191,14 +191,31 @@ std::string expandTilde(std::string in)
     return out;
 }
 
+std::string getTempPath()
+{
+    std::string result;
+
+#ifndef ARBITER_WINDOWS
+    result = getenv("TMPDIR");
+    if (result.empty()) result = getenv("TMP");
+    if (result.empty()) result = getenv("TEMP");
+    if (result.empty()) result = getenv("TEMPDIR");
+    if (result.empty()) result = "/tmp";
+#else
+    throw std::runtime_error("Windows getTempPath not done yet.");
+#endif
+
+    return result;
+}
+
 LocalHandle::LocalHandle(const std::string localPath, const bool isRemote)
     : m_localPath(expandTilde(localPath))
-    , m_isRemote(isRemote)
+    , m_erase(isRemote)
 { }
 
 LocalHandle::~LocalHandle()
 {
-    if (m_isRemote) fs::remove(fs::expandTilde(m_localPath));
+    if (m_erase) fs::remove(fs::expandTilde(m_localPath));
 }
 
 } // namespace fs

@@ -73,7 +73,9 @@ license you like.
 
 
 
+#ifndef ARBITER_IS_AMALGAMATION
 #include "json/json.hpp"
+#endif
 
 #ifndef JSON_IS_AMALGAMATION
 #error "Compile with -I PATH_TO_JSON_DIRECTORY"
