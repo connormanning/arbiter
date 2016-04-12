@@ -202,7 +202,7 @@ std::string getTempPath()
     if (result.empty()) result = getenv("TEMPDIR");
     if (result.empty()) result = "/tmp";
 #else
-    throw std::runtime_error("Windows getTempPath not done yet.");
+    throw ArbiterError("Windows getTempPath not done yet.");
 #endif
 
     return result;
