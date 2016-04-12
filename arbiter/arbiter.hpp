@@ -174,6 +174,15 @@ public:
             std::string path,
             const Endpoint& tempEndpoint) const;
 
+    /** @brief Get a fs::LocalHandle to a possibly remote file.
+     *
+     * If @p tempPath is not specified, the environment will be searched for a
+     * temporary location.
+     */
+    std::unique_ptr<fs::LocalHandle> getLocalHandle(
+            std::string path,
+            std::string tempPath = "") const;
+
     /** If no delimiter of "://" is found, returns "file".  Otherwise, returns
      * the substring prior to but not including this delimiter.
      */

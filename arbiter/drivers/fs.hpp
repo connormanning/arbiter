@@ -39,6 +39,9 @@ namespace fs
      */
     std::string expandTilde(std::string path);
 
+    /** @brief Get temporary path from environment. */
+    std::string getTempPath();
+
     /** @brief A scoped local filehandle for a possibly remote path.
      *
      * This is an RAII style pseudo-filehandle.  It manages the scope of a
@@ -66,11 +69,23 @@ namespace fs
          */
         std::string localPath() const { return m_localPath; }
 
+        /** @brief Release the managed local path and return the path from
+         * LocalHandle::localPath.
+         *
+         * After this call, destruction of the LocalHandle will not erase the
+         * temporary file that may have been created.
+         */
+        std::string release()
+        {
+            m_erase = false;
+            return localPath();
+        }
+
     private:
         LocalHandle(std::string localPath, bool isRemote);
 
         const std::string m_localPath;
-        const bool m_isRemote;
+        bool m_erase;
     };
 }
 /** @} */

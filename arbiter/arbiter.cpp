@@ -5,6 +5,7 @@
 #endif
 
 #include <algorithm>
+#include <cstdlib>
 
 namespace arbiter
 {
@@ -153,6 +154,14 @@ std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
     }
 
     return localHandle;
+}
+
+std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
+        const std::string path,
+        std::string tempPath) const
+{
+    if (tempPath.empty()) tempPath = fs::getTempPath();
+    return getLocalHandle(path, getEndpoint(tempPath));
 }
 
 std::string Arbiter::getType(const std::string path)
