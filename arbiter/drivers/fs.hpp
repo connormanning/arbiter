@@ -10,15 +10,22 @@ namespace arbiter
 
 class Arbiter;
 
+/**
+ * \addtogroup fs
+ * @{
+ */
+
+/** Filesystem utilities. */
 namespace fs
 {
-    // Returns true if created, false if already existed.
+    /** @brief Returns true if created, false if already existed. */
     bool mkdirp(std::string dir);
 
-    // Returns true if removed, otherwise false.
+    /** @brief Returns true if removed, otherwise false. */
     bool remove(std::string filename);
 
-    // Performs tilde expansion to a fully-qualified path, if possible.
+    /** @brief Performs tilde expansion to a fully-qualified path, if possible.
+     */
     std::string expandTilde(std::string path);
 
     /** @brief A scoped local filehandle for a possibly remote path.
@@ -55,6 +62,7 @@ namespace fs
         const bool m_isRemote;
     };
 }
+/** @} */
 
 namespace drivers
 {
