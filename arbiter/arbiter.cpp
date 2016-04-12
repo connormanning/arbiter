@@ -101,6 +101,11 @@ bool Arbiter::isRemote(const std::string path) const
     return getDriver(path).isRemote();
 }
 
+bool Arbiter::isLocal(const std::string path) const
+{
+    return !isRemote(path);
+}
+
 std::vector<std::string> Arbiter::resolve(
         const std::string path,
         const bool verbose) const
@@ -141,6 +146,7 @@ std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
         std::string name(path);
         std::replace(name.begin(), name.end(), '/', '-');
         std::replace(name.begin(), name.end(), '\\', '-');
+        std::replace(name.begin(), name.end(), ':', '_');
 
         tempEndpoint.putSubpath(name, getBinary(path));
 

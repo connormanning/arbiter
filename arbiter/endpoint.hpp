@@ -35,6 +35,9 @@ public:
     /** Passthrough to Driver::isRemote. */
     bool isRemote() const;
 
+    /** Negation of Endpoint::isRemote. */
+    bool isLocal() const;
+
     /** Passthrough to Driver::get. */
     std::string getSubpath(std::string subpath) const;
 

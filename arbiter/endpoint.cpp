@@ -38,6 +38,11 @@ bool Endpoint::isRemote() const
     return m_driver.isRemote();
 }
 
+bool Endpoint::isLocal() const
+{
+    return !isRemote();
+}
+
 std::string Endpoint::getSubpath(const std::string subpath) const
 {
     return m_driver.get(fullPath(subpath));
