@@ -2,7 +2,18 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/driver.hpp>
+
+#ifndef ARBITER_EXTERNAL_JSON
 #include <arbiter/third/json/json.hpp>
+#endif
+
+#endif
+
+
+
+
+#ifdef ARBITER_EXTERNAL_JSON
+#include <json/json.h>
 #endif
 
 namespace arbiter

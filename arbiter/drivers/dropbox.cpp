@@ -13,7 +13,17 @@
 #include <arbiter/drivers/dropbox.hpp>
 #include <arbiter/third/xml/xml.hpp>
 #include <arbiter/util/crypto.hpp>
+
+#ifndef ARBITER_EXTERNAL_JSON
 #include <arbiter/third/json/json.hpp>
+#endif
+
+#endif
+
+
+
+#ifdef ARBITER_EXTERNAL_JSON
+#include <json/json.h>
 #endif
 
 namespace arbiter
