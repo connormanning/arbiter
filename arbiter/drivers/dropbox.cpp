@@ -189,8 +189,16 @@ bool Dropbox::buildRequestAndGet(
 
         data = res.data();
 
-        if (size == res.data().size()) return true;
-        else throw ArbiterError("Data size check failed");
+        if (size == res.data().size())
+        {
+            return true;
+        }
+        else
+        {
+            throw ArbiterError(
+                    "Data size check failed - got " + std::to_string(size) +
+                    " of " + std::to_string(res.data().size()) + " bytes.");
+        }
     }
     else
     {
