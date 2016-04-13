@@ -75,6 +75,16 @@ std::unique_ptr<std::vector<char>> Arbiter::tryGetBinary(std::string path) const
     return getDriver(path).tryGetBinary(stripType(path));
 }
 
+std::size_t Arbiter::getSize(const std::string path) const
+{
+    return getDriver(path).getSize(stripType(path));
+}
+
+std::unique_ptr<std::size_t> Arbiter::tryGetSize(const std::string path) const
+{
+    return getDriver(path).tryGetSize(stripType(path));
+}
+
 void Arbiter::put(const std::string path, const std::string& data) const
 {
     return getDriver(path).put(stripType(path), data);

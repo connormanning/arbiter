@@ -54,6 +54,10 @@ public:
 
 private:
     virtual bool get(std::string path, std::vector<char>& data) const override;
+
+    virtual std::unique_ptr<std::size_t> tryGetSize(
+            std::string path) const override;
+
     virtual std::vector<std::string> glob(
             std::string path,
             bool verbose) const override;

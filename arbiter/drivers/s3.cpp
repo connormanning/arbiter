@@ -209,6 +209,33 @@ std::unique_ptr<S3> S3::create(HttpPool& pool, const Json::Value& json)
     return s3;
 }
 
+std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
+{
+    std::unique_ptr<std::size_t> size;
+
+    rawPath = Http::sanitize(rawPath);
+    const Resource resource(rawPath);
+
+    const std::string path(resource.buildPath());
+
+    Headers headers(httpGetHeaders(rawPath));
+
+    auto http(m_pool.acquire());
+
+    HttpResponse res(http.head(path, headers));
+
+    if (res.ok())
+    {
+        if (res.headers().count("Content-Length"))
+        {
+            const std::string& str(res.headers().at("Content-Length"));
+            size.reset(new std::size_t(std::stoul(str)));
+        }
+    }
+
+    return size;
+}
+
 bool S3::get(std::string rawPath, std::vector<char>& data) const
 {
     return buildRequestAndGet(rawPath, Query(), data);

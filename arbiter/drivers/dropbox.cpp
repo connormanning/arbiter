@@ -41,6 +41,7 @@ namespace
     const bool legacy(true);
 
     const std::string listUrl("https://api.dropboxapi.com/2/files/list_folder");
+    const std::string metaUrl("https://api.dropboxapi.com/2/files/get_metadata");
     const std::string continueListUrl(listUrl + "/continue");
 
     const auto ins([](unsigned char lhs, unsigned char rhs)
@@ -112,6 +113,38 @@ Headers Dropbox::httpPostHeaders() const
 bool Dropbox::get(const std::string rawPath, std::vector<char>& data) const
 {
     return buildRequestAndGet(rawPath, data);
+}
+
+std::unique_ptr<std::size_t> Dropbox::tryGetSize(
+        const std::string rawPath) const
+{
+    std::unique_ptr<std::size_t> result;
+
+    Headers headers(httpPostHeaders());
+
+    Json::Value json;
+    json["path"] = std::string("/" + Http::sanitize(rawPath));
+    const auto f(toSanitizedString(json));
+    const std::vector<char> postData(f.begin(), f.end());
+
+    auto http(m_pool.acquire());
+    HttpResponse res(http.post(metaUrl, postData, headers));
+
+    if (res.ok())
+    {
+        const auto data(res.data());
+
+        Json::Value json;
+        Json::Reader reader;
+        reader.parse(std::string(data.data(), data.size()), json, false);
+
+        if (json.isMember("size"))
+        {
+            result.reset(new std::size_t(json["size"].asUInt64()));
+        }
+    }
+
+    return result;
 }
 
 bool Dropbox::buildRequestAndGet(
@@ -192,7 +225,7 @@ std::string Dropbox::continueFileInfo(std::string cursor) const
 
     Json::Value json;
     json["cursor"] = cursor;
-    std::string f = toSanitizedString(json);
+    const std::string f(toSanitizedString(json));
 
     std::vector<char> postData(f.begin(), f.end());
     HttpResponse res(http.post(continueListUrl, postData, headers));
