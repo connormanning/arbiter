@@ -76,13 +76,14 @@ private:
             std::string path,
             bool verbose) const override;
 
+    // V2.
     bool buildRequestAndGet(
             std::string rawPath,
             const Query& query,
             std::vector<char>& data,
             Headers = Headers()) const;
 
-    Headers httpGetHeaders(std::string filePath) const;
+    Headers httpGetHeaders(std::string filePath, std::string req = "GET") const;
     Headers httpPutHeaders(std::string filePath) const;
 
     std::string getHttpDate() const;
@@ -100,7 +101,13 @@ private:
             std::string contentType) const;
 
     std::vector<char> signString(std::string input) const;
-    std::string encodeBase64(std::vector<char> input) const;
+
+    // V4.
+    std::string buildCanonicalRequest(
+            std::string request,
+            std::string canonicalUri,
+            std::string canonicalQueryString,
+            std::string signedHeaders);
 
     HttpPool& m_pool;
     AwsAuth m_auth;

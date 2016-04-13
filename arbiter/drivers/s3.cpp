@@ -218,7 +218,7 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
 
     const std::string path(resource.buildPath());
 
-    Headers headers(httpGetHeaders(rawPath));
+    Headers headers(httpGetHeaders(rawPath, "HEAD"));
 
     auto http(m_pool.acquire());
 
@@ -386,14 +386,11 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
     return results;
 }
 
-Headers S3::httpGetHeaders(std::string filePath) const
+Headers S3::httpGetHeaders(std::string filePath, std::string request) const
 {
     const std::string httpDate(getHttpDate());
     const std::string signedEncoded(
-            getSignedEncodedString(
-                "GET",
-                filePath,
-                httpDate));
+            getSignedEncodedString(request, filePath, httpDate));
 
     Headers headers;
 
@@ -458,7 +455,7 @@ std::string S3::getSignedEncodedString(
                 contentType));
 
     const std::vector<char> signedData(signString(toSign));
-    return encodeBase64(signedData);
+    return crypto::encodeBase64(signedData);
 }
 
 std::string S3::getStringToSign(
@@ -478,55 +475,6 @@ std::string S3::getStringToSign(
 std::vector<char> S3::signString(std::string input) const
 {
     return crypto::hmacSha1(m_auth.hidden(), input);
-}
-
-std::string S3::encodeBase64(std::vector<char> data) const
-{
-    std::vector<uint8_t> input;
-    for (std::size_t i(0); i < data.size(); ++i)
-    {
-        char c(data[i]);
-        input.push_back(*reinterpret_cast<uint8_t*>(&c));
-    }
-
-    const std::string vals(
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
-
-    std::size_t fullSteps(input.size() / 3);
-    while (input.size() % 3) input.push_back(0);
-    uint8_t* pos(input.data());
-    uint8_t* end(input.data() + fullSteps * 3);
-
-    std::string output(fullSteps * 4, '_');
-    std::size_t outIndex(0);
-
-    const uint32_t mask(0x3F);
-
-    while (pos != end)
-    {
-        uint32_t chunk((*pos) << 16 | *(pos + 1) << 8 | *(pos + 2));
-
-        output[outIndex++] = vals[(chunk >> 18) & mask];
-        output[outIndex++] = vals[(chunk >> 12) & mask];
-        output[outIndex++] = vals[(chunk >>  6) & mask];
-        output[outIndex++] = vals[chunk & mask];
-
-        pos += 3;
-    }
-
-    if (end != input.data() + input.size())
-    {
-        const std::size_t num(pos - end == 1 ? 2 : 3);
-        uint32_t chunk(*(pos) << 16 | *(pos + 1) << 8 | *(pos + 2));
-
-        output.push_back(vals[(chunk >> 18) & mask]);
-        output.push_back(vals[(chunk >> 12) & mask]);
-        if (num == 3) output.push_back(vals[(chunk >> 6) & mask]);
-    }
-
-    while (output.size() % 4) output.push_back('=');
-
-    return output;
 }
 
 
