@@ -213,11 +213,11 @@ std::string getTempPath()
     std::string result;
 
 #ifndef ARBITER_WINDOWS
-    result = getenv("TMPDIR");
-    if (result.empty()) result = getenv("TMP");
-    if (result.empty()) result = getenv("TEMP");
-    if (result.empty()) result = getenv("TEMPDIR");
-    if (result.empty()) result = "/tmp";
+    if (const char* t = getenv("TMPDIR"))   return t;
+    if (const char* t = getenv("TMP"))      return t;
+    if (const char* t = getenv("TEMP"))     return t;
+    if (const char* t = getenv("TEMPDIR"))  return t;
+    if (result.empty()) return "/tmp";
 #else
     throw ArbiterError("Windows getTempPath not done yet.");
 #endif
