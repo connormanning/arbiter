@@ -195,10 +195,9 @@ bool Dropbox::buildRequestAndGet(
         }
         else
         {
-            std::ostringstream oss;
-            oss << "Data size check failed. State size was '" << size
-                << "' and downloaded size was '" << res.data().size() << "'";
-            throw ArbiterError(oss.str());
+            throw ArbiterError(
+                    "Data size check failed - got " + std::to_string(size) +
+                    " of " + std::to_string(res.data().size()) + " bytes.");
         }
     }
     else
