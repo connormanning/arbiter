@@ -30,7 +30,7 @@ public:
      *      - Check for them in `~/.aws/credentials`.
      *      - If not found, try the environment settings.
      */
-    static std::unique_ptr<AwsAuth> find(std::string user = "");
+    static std::unique_ptr<AwsAuth> find(std::string profile = "");
 
     std::string access() const;
     std::string hidden() const;
@@ -44,7 +44,11 @@ private:
 class S3 : public CustomHeaderDriver
 {
 public:
-    S3(HttpPool& pool, AwsAuth awsAuth);
+    S3(
+            HttpPool& pool,
+            AwsAuth awsAuth,
+            std::string region = "us-east-1",
+            std::string serverSideEncryptionKey = "");
 
     /** Try to construct an S3 Driver.  Searches @p json primarily for the keys
      * `access` and `hidden` to construct an AwsAuth.  If not found, common
@@ -52,6 +56,7 @@ public:
      * AwsAuth::find).
      */
     static std::unique_ptr<S3> create(HttpPool& pool, const Json::Value& json);
+    static std::string extractProfile(const Json::Value& json);
 
     virtual std::string type() const override { return "s3"; }
 
@@ -76,41 +81,95 @@ private:
             std::string path,
             bool verbose) const override;
 
-    // V2.
-    bool buildRequestAndGet(
+    bool get(
             std::string rawPath,
             const Query& query,
-            std::vector<char>& data,
-            Headers = Headers()) const;
+            const Headers& headers,
+            std::vector<char>& data) const;
 
-    Headers httpGetHeaders(std::string filePath, std::string req = "GET") const;
-    Headers httpPutHeaders(std::string filePath) const;
+    struct Resource
+    {
+        Resource(std::string baseUrl, std::string fullPath);
 
-    std::string getHttpDate() const;
+        std::string buildPath(Query query = Query()) const;
+        std::string host() const;
 
-    std::string getSignedEncodedString(
-            std::string command,
-            std::string file,
-            std::string httpDate,
-            std::string contentType = "") const;
+        std::string baseUrl;
+        std::string bucket;
+        std::string object;
+    };
 
-    std::string getStringToSign(
-            std::string command,
-            std::string file,
-            std::string httpDate,
-            std::string contentType) const;
+    class FormattedTime
+    {
+    public:
+        FormattedTime();
 
-    std::vector<char> signString(std::string input) const;
+        const std::string& date() const { return m_date; }
+        const std::string& time() const { return m_time; }
 
-    // V4.
-    std::string buildCanonicalRequest(
-            std::string request,
-            std::string canonicalUri,
-            std::string canonicalQueryString,
-            std::string signedHeaders);
+        std::string amazonDate() const
+        {
+            return date() + 'T' + time() + 'Z';
+        }
+
+    private:
+        std::string formatTime(const std::string& format) const;
+
+        const std::string m_date;
+        const std::string m_time;
+    };
+
+    class AuthV4
+    {
+    public:
+        AuthV4(
+                std::string verb,
+                const std::string& region,
+                const Resource& resource,
+                const AwsAuth& auth,
+                const Query& query,
+                const Headers& headers,
+                const std::vector<char>& data);
+
+        const Headers& headers() const { return m_headers; }
+
+        const std::string& signedHeadersString() const
+        {
+            return m_signedHeadersString;
+        }
+
+    private:
+        std::string buildCanonicalRequest(
+                std::string verb,
+                const Resource& resource,
+                const Query& query,
+                const std::vector<char>& data) const;
+
+        std::string buildStringToSign(
+                const std::string& canonicalRequest) const;
+
+        std::string calculateSignature(
+                const std::string& stringToSign) const;
+
+        std::string getAuthHeader(
+                const std::string& signedHeadersString,
+                const std::string& signature) const;
+
+        const AwsAuth& m_auth;
+        const std::string m_region;
+        const FormattedTime m_formattedTime;
+
+        Headers m_headers;
+        std::string m_canonicalHeadersString;
+        std::string m_signedHeadersString;
+    };
 
     HttpPool& m_pool;
     AwsAuth m_auth;
+
+    std::string m_region;
+    std::string m_baseUrl;
+    std::unique_ptr<Headers> m_sseHeaders;
 };
 
 } // namespace drivers

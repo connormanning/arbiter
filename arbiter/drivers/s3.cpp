@@ -8,15 +8,19 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <functional>
 #include <iostream>
+#include <numeric>
 #include <thread>
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/arbiter.hpp>
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/third/xml/xml.hpp>
-#include <arbiter/util/crypto.hpp>
+#include <arbiter/util/md5.hpp>
+#include <arbiter/util/transforms.hpp>
+#include <arbiter/util/sha256.hpp>
 #endif
 
 namespace arbiter
@@ -24,7 +28,20 @@ namespace arbiter
 
 namespace
 {
-    const std::string baseUrl(".s3.amazonaws.com/");
+    const std::string dateFormat("%Y%m%d");
+    const std::string timeFormat("%H%M%S");
+
+    std::string getBaseUrl(const std::string& region)
+    {
+        // https://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+        if (region == "us-east-1") return ".s3.amazonaws.com/";
+        else return ".s3-" + region + ".amazonaws.com/";
+    }
+
+    drivers::Fs fsDriver;
+
+    std::string line(const std::string& data) { return data + "\n"; }
+    const std::vector<char> empty;
 
     std::string getQueryString(const Query& query)
     {
@@ -40,57 +57,71 @@ namespace
         return result;
     }
 
-    struct Resource
-    {
-        Resource(std::string fullPath)
-        {
-            const std::size_t split(fullPath.find("/"));
-
-            bucket = fullPath.substr(0, split);
-
-            if (split != std::string::npos)
-            {
-                object = fullPath.substr(split + 1);
-            }
-        }
-
-        std::string buildPath(Query query = Query()) const
-        {
-            const std::string queryString(getQueryString(query));
-            return "http://" + bucket + baseUrl + object + queryString;
-        }
-
-        std::string bucket;
-        std::string object;
-    };
-
     typedef Xml::xml_node<> XmlNode;
-
     const std::string badResponse("Unexpected contents in AWS response");
-}
 
-namespace drivers
-{
-
-AwsAuth::AwsAuth(const std::string access, const std::string hidden)
-    : m_access(access)
-    , m_hidden(hidden)
-{ }
-
-std::unique_ptr<AwsAuth> AwsAuth::find(std::string user)
-{
-    std::unique_ptr<AwsAuth> auth;
-
-    if (user.empty())
+    std::string toLower(const std::string& in)
     {
-        user = getenv("AWS_PROFILE") ? getenv("AWS_PROFILE") : "default";
+        return std::accumulate(
+                in.begin(),
+                in.end(),
+                std::string(),
+                [](const std::string& out, const char c)
+                {
+                    return out + static_cast<char>(::tolower(c));
+                });
     }
 
-    drivers::Fs fs;
-    std::unique_ptr<std::string> file(fs.tryGet("~/.aws/credentials"));
+    // Trims sequential whitespace into a single character, and trims all
+    // leading and trailing whitespace.
+    std::string trim(const std::string& in)
+    {
+        std::string s = std::accumulate(
+                in.begin(),
+                in.end(),
+                std::string(),
+                [](const std::string& out, const char c)
+                {
+                    if (
+                        std::isspace(c) &&
+                        (out.empty() || std::isspace(out.back())))
+                    {
+                        return out;
+                    }
+                    else
+                    {
+                        return out + c;
+                    }
+                });
 
-    // First, try reading credentials file.
-    if (file)
+        // Might have one trailing whitespace character.
+        if (s.size() && std::isspace(s.back())) s.pop_back();
+        return s;
+    }
+
+    std::vector<std::string> condense(const std::vector<std::string>& in)
+    {
+        return std::accumulate(
+                in.begin(),
+                in.end(),
+                std::vector<std::string>(),
+                [](const std::vector<std::string>& base, const std::string& in)
+                {
+                    auto out(base);
+
+                    std::string current(in);
+                    current.erase(
+                            std::remove_if(
+                                current.begin(),
+                                current.end(),
+                                [](char c) { return std::isspace(c); }));
+
+                    out.push_back(current);
+                    return out;
+                });
+    }
+
+    std::vector<std::string> split(const std::string& in, char delimiter = '\n')
     {
         std::size_t index(0);
         std::size_t pos(0);
@@ -98,8 +129,8 @@ std::unique_ptr<AwsAuth> AwsAuth::find(std::string user)
 
         do
         {
-            index = file->find('\n', pos);
-            std::string line(file->substr(pos, index - pos));
+            index = in.find(delimiter, pos);
+            std::string line(in.substr(pos, index - pos));
 
             line.erase(
                     std::remove_if(line.begin(), line.end(), ::isspace),
@@ -111,17 +142,40 @@ std::unique_ptr<AwsAuth> AwsAuth::find(std::string user)
         }
         while (index != std::string::npos);
 
+        return lines;
+    }
+}
+
+namespace drivers
+{
+
+AwsAuth::AwsAuth(const std::string access, const std::string hidden)
+    : m_access(access)
+    , m_hidden(hidden)
+{ }
+
+std::unique_ptr<AwsAuth> AwsAuth::find(std::string profile)
+{
+    std::unique_ptr<AwsAuth> auth;
+
+    const std::string credFile("~/.aws/credentials");
+
+    // First, try reading credentials file.
+    if (std::unique_ptr<std::string> cred = fsDriver.tryGet(credFile))
+    {
+        const std::vector<std::string> lines(condense(split(*cred)));
+
         if (lines.size() >= 3)
         {
             std::size_t i(0);
 
-            const std::string userFind("[" + user + "]");
+            const std::string profileFind("[" + profile + "]");
             const std::string accessFind("aws_access_key_id=");
             const std::string hiddenFind("aws_secret_access_key=");
 
             while (i < lines.size() - 2 && !auth)
             {
-                if (lines[i].find(userFind) != std::string::npos)
+                if (lines[i].find(profileFind) != std::string::npos)
                 {
                     const std::string& accessLine(lines[i + 1]);
                     const std::string& hiddenLine(lines[i + 2]);
@@ -186,51 +240,133 @@ std::string AwsAuth::hidden() const
     return m_hidden;
 }
 
-S3::S3(HttpPool& pool, const AwsAuth auth)
+S3::S3(
+        HttpPool& pool,
+        const AwsAuth auth,
+        const std::string region,
+        const std::string sseKey)
     : m_pool(pool)
     , m_auth(auth)
-{ }
+    , m_region(region)
+    , m_baseUrl(getBaseUrl(region))
+    , m_sseHeaders()
+{
+    if (!sseKey.empty())
+    {
+        Headers h;
+        h["x-amz-server-side-encryption-customer-algorithm"] = "AES256";
+        h["x-amz-server-side-encryption-customer-key"] =
+            crypto::encodeBase64(sseKey);
+        h["x-amz-server-side-encryption-customer-key-MD5"] =
+            crypto::encodeBase64(crypto::md5(sseKey));
+
+        m_sseHeaders.reset(new Headers(h));
+    }
+}
 
 std::unique_ptr<S3> S3::create(HttpPool& pool, const Json::Value& json)
 {
+    std::unique_ptr<AwsAuth> auth;
     std::unique_ptr<S3> s3;
+
+    const std::string profile(extractProfile(json));
+    const std::string sseKey(json["sse"].asString());
 
     if (!json.isNull() && json.isMember("access") & json.isMember("hidden"))
     {
-        AwsAuth auth(json["access"].asString(), json["hidden"].asString());
-        s3.reset(new S3(pool, auth));
+        auth.reset(
+                new AwsAuth(
+                    json["access"].asString(),
+                    json["hidden"].asString()));
     }
     else
     {
-        auto auth(AwsAuth::find(json.isNull() ? "" : json["user"].asString()));
-        if (auth) s3.reset(new S3(pool, *auth));
+        auth = AwsAuth::find(profile);
     }
 
+    if (!auth) return s3;
+
+    // Try to get the region from the config file, or default to US standard.
+    std::string region("us-east-1");
+
+    if (std::unique_ptr<std::string> config = fsDriver.tryGet("~/.aws/config"))
+    {
+        const std::vector<std::string> lines(condense(split(*config)));
+        bool regionFound(false);
+
+        if (lines.size() >= 3)
+        {
+            std::size_t i(0);
+
+            const std::string profileFind("[" + profile + "]");
+            const std::string outputFind("output=");
+            const std::string regionFind("region=");
+
+            while (i < lines.size() - 2 && !regionFound)
+            {
+                if (lines[i].find(profileFind) != std::string::npos)
+                {
+                    const std::string& outputLine(lines[i + 1]);
+                    const std::string& regionLine(lines[i + 2]);
+
+                    std::size_t outputPos(outputLine.find(outputFind));
+                    std::size_t regionPos(regionLine.find(regionFind));
+
+                    if (
+                            outputPos != std::string::npos &&
+                            regionPos != std::string::npos)
+                    {
+                        region = regionLine.substr(
+                                regionPos + regionFind.size(),
+                                regionLine.find(';'));
+
+                        regionFound = true;
+                    }
+                }
+
+                ++i;
+            }
+        }
+    }
+
+    s3.reset(new S3(pool, *auth, region, sseKey));
+
     return s3;
+}
+
+std::string S3::extractProfile(const Json::Value& json)
+{
+    if (!json.isNull() && json.isMember("profile"))
+    {
+        return json["profile"].asString();
+    }
+    else
+    {
+        return getenv("AWS_PROFILE") ? getenv("AWS_PROFILE") : "default";
+    }
 }
 
 std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
 {
     std::unique_ptr<std::size_t> size;
 
-    rawPath = Http::sanitize(rawPath);
-    const Resource resource(rawPath);
-
-    const std::string path(resource.buildPath());
-
-    Headers headers(httpGetHeaders(rawPath, "HEAD"));
+    const Resource resource(m_baseUrl, rawPath);
+    const AuthV4 authV4(
+            "HEAD",
+            m_region,
+            resource,
+            m_auth,
+            Query(),
+            Headers(),
+            empty);
 
     auto http(m_pool.acquire());
+    HttpResponse res(http.head(resource.buildPath(), authV4.headers()));
 
-    HttpResponse res(http.head(path, headers));
-
-    if (res.ok())
+    if (res.ok() && res.headers().count("Content-Length"))
     {
-        if (res.headers().count("Content-Length"))
-        {
-            const std::string& str(res.headers().at("Content-Length"));
-            size.reset(new std::size_t(std::stoul(str)));
-        }
+        const std::string& str(res.headers().at("Content-Length"));
+        size.reset(new std::size_t(std::stoul(str)));
     }
 
     return size;
@@ -238,26 +374,27 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
 
 bool S3::get(std::string rawPath, std::vector<char>& data) const
 {
-    return buildRequestAndGet(rawPath, Query(), data);
+    return get(rawPath, Query(), Headers(), data);
 }
 
-bool S3::buildRequestAndGet(
+bool S3::get(
         std::string rawPath,
         const Query& query,
-        std::vector<char>& data,
-        const Headers userHeaders) const
+        const Headers& headers,
+        std::vector<char>& data) const
 {
-    rawPath = Http::sanitize(rawPath);
-    const Resource resource(rawPath);
-
-    const std::string path(resource.buildPath(query));
-
-    Headers headers(httpGetHeaders(rawPath));
-    for (const auto& h : userHeaders) headers[h.first] = h.second;
+    const Resource resource(m_baseUrl, rawPath);
+    const AuthV4 authV4(
+            "GET",
+            m_region,
+            resource,
+            m_auth,
+            query,
+            headers,
+            empty);
 
     auto http(m_pool.acquire());
-
-    HttpResponse res(http.get(path, headers));
+    HttpResponse res(http.get(resource.buildPath(query), authV4.headers()));
 
     if (res.ok())
     {
@@ -266,22 +403,34 @@ bool S3::buildRequestAndGet(
     }
     else
     {
+        std::cout << std::string(res.data().data(), res.data().size()) <<
+            std::endl;
         return false;
     }
 }
 
 void S3::put(std::string rawPath, const std::vector<char>& data) const
 {
-    const Resource resource(rawPath);
+    const Resource resource(m_baseUrl, rawPath);
 
-    const std::string path(resource.buildPath());
-    const Headers headers(httpPutHeaders(rawPath));
+    Headers headers(m_sseHeaders ? *m_sseHeaders : Headers());
+    const AuthV4 authV4(
+            "PUT",
+            m_region,
+            resource,
+            m_auth,
+            Query(),
+            headers,
+            data);
 
     auto http(m_pool.acquire());
+    HttpResponse res(http.put(resource.buildPath(), data, authV4.headers()));
 
-    if (!http.put(path, data, headers).ok())
+    if (!res.ok())
     {
-        throw ArbiterError("Couldn't S3 PUT to " + rawPath);
+        throw ArbiterError(
+                "Couldn't S3 PUT to " + rawPath + ": " +
+                std::string(res.data().data(), res.data().size()));
     }
 }
 
@@ -294,14 +443,13 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
     if (recursive) path.pop_back();
 
     // https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGET.html
-    const Resource resource(path);
+    const Resource resource(m_baseUrl, path);
     const std::string& bucket(resource.bucket);
     const std::string& object(resource.object);
-    const std::string prefix(resource.object.empty() ? "" : resource.object);
 
     Query query;
 
-    if (prefix.size()) query["prefix"] = prefix;
+    if (object.size()) query["prefix"] = object;
 
     bool more(false);
     std::vector<char> data;
@@ -310,7 +458,7 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
     {
         if (verbose) std::cout << "." << std::flush;
 
-        if (!buildRequestAndGet(resource.bucket + "/", query, data))
+        if (!get(resource.bucket + "/", query, Headers(), data))
         {
             throw ArbiterError("Couldn't S3 GET " + resource.bucket);
         }
@@ -333,7 +481,7 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
             if (XmlNode* truncNode = topNode->first_node("IsTruncated"))
             {
                 std::string t(truncNode->value());
-                std::transform(t.begin(), t.end(), t.begin(), tolower);
+                std::transform(t.begin(), t.end(), t.begin(), ::tolower);
 
                 more = (t == "true");
             }
@@ -346,13 +494,13 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
                     {
                         std::string key(keyNode->value());
                         const bool isSubdir(
-                                key.find('/', prefix.size()) !=
+                                key.find('/', object.size()) !=
                                 std::string::npos);
 
                         // The prefix may contain slashes (i.e. is a sub-dir)
                         // but we only want to traverse into subdirectories
                         // beyond the prefix if recursive is true.
-                        if ( recursive || !isSubdir)
+                        if (recursive || !isSubdir)
                         {
                             results.push_back("s3://" + bucket + "/" + key);
                         }
@@ -360,7 +508,7 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
                         if (more)
                         {
                             query["marker"] =
-                                object + key.substr(prefix.size());
+                                object + key.substr(object.size());
                         }
                     }
                     else
@@ -386,96 +534,146 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
     return results;
 }
 
-Headers S3::httpGetHeaders(std::string filePath, std::string request) const
+S3::AuthV4::AuthV4(
+        const std::string verb,
+        const std::string& region,
+        const Resource& resource,
+        const AwsAuth& auth,
+        const Query& query,
+        const Headers& headers,
+        const std::vector<char>& data)
+    : m_auth(auth)
+    , m_region(region)
+    , m_formattedTime()
+    , m_headers(headers)
+    , m_signedHeadersString()
 {
-    const std::string httpDate(getHttpDate());
-    const std::string signedEncoded(
-            getSignedEncodedString(request, filePath, httpDate));
+    m_headers["Host"] = resource.host();
+    m_headers["X-Amz-Date"] = m_formattedTime.amazonDate();
+    m_headers["X-Amz-Content-Sha256"] =
+            crypto::encodeAsHex(crypto::sha256(data));
 
-    Headers headers;
+    if (verb == "PUT" || verb == "POST")
+    {
+        m_headers["Content-Type"] = "application/octet-stream";
+        m_headers["Transfer-Encoding"] = "";
+        m_headers["Expect"] = "";
+    }
 
-    headers["Date"] = httpDate;
-    headers["Authorization"] = "AWS " + m_auth.access() + ":" + signedEncoded;
+    const Headers normalizedHeaders(
+            std::accumulate(
+                m_headers.begin(),
+                m_headers.end(),
+                Headers(),
+                [](const Headers& in, const Headers::value_type& h)
+                {
+                    Headers out(in);
+                    out[toLower(h.first)] = trim(h.second);
+                    return out;
+                }));
 
-    return headers;
+    m_canonicalHeadersString =
+            std::accumulate(
+                normalizedHeaders.begin(),
+                normalizedHeaders.end(),
+                std::string(),
+                [](const std::string& in, const Headers::value_type& h)
+                {
+                    return in + h.first + ':' + h.second + '\n';
+                });
+
+    m_signedHeadersString =
+            std::accumulate(
+                normalizedHeaders.begin(),
+                normalizedHeaders.end(),
+                std::string(),
+                [](const std::string& in, const Headers::value_type& h)
+                {
+                    return in + (in.empty() ? "" : ";") + h.first;
+                });
+
+    const std::string canonicalRequest(
+            buildCanonicalRequest(verb, resource, query, data));
+
+    const std::string stringToSign(buildStringToSign(canonicalRequest));
+
+    const std::string signature(calculateSignature(stringToSign));
+
+    m_headers["Authorization"] =
+            getAuthHeader(m_signedHeadersString, signature);
 }
 
-Headers S3::httpPutHeaders(std::string filePath) const
+std::string S3::AuthV4::buildCanonicalRequest(
+        const std::string verb,
+        const Resource& resource,
+        const Query& query,
+        const std::vector<char>& data) const
 {
-    const std::string httpDate(getHttpDate());
-    const std::string signedEncoded(
-            getSignedEncodedString(
-                "PUT",
-                filePath,
-                httpDate,
-                "application/octet-stream"));
+    const std::string canonicalUri(Http::sanitize("/" + resource.object));
 
-    Headers headers;
+    auto canonicalizeQuery([](const std::string& s, const Query::value_type& q)
+    {
+        const std::string keyVal(
+                Http::sanitize(q.first, "") + '=' +
+                Http::sanitize(q.second, ""));
 
-    headers["Content-Type"] = "application/octet-stream";
-    headers["Date"] = httpDate;
-    headers["Authorization"] = "AWS " + m_auth.access() + ":" + signedEncoded;
-    headers["Transfer-Encoding"] = "";
-    headers["Expect"] = "";
+        return (s.size() ? "&" : "") + keyVal;
+    });
 
-    return headers;
+    const std::string canonicalQuery(
+            std::accumulate(
+                query.begin(),
+                query.end(),
+                std::string(),
+                canonicalizeQuery));
+
+    return
+        line(verb) +
+        line(canonicalUri) +
+        line(canonicalQuery) +
+        line(m_canonicalHeadersString) +
+        line(m_signedHeadersString) +
+        crypto::encodeAsHex(crypto::sha256(data));
 }
 
-std::string S3::getHttpDate() const
-{
-    time_t rawTime;
-    char charBuf[80];
-
-    time(&rawTime);
-
-#ifndef ARBITER_WINDOWS
-    tm* timeInfoPtr = localtime(&rawTime);
-#else
-    tm timeInfo;
-    localtime_s(&timeInfo, &rawTime);
-    tm* timeInfoPtr(&timeInfo);
-#endif
-
-    strftime(charBuf, 80, "%a, %d %b %Y %H:%M:%S %z", timeInfoPtr);
-    std::string stringBuf(charBuf);
-
-    return stringBuf;
-}
-
-std::string S3::getSignedEncodedString(
-        std::string command,
-        std::string file,
-        std::string httpDate,
-        std::string contentType) const
-{
-    const std::string toSign(getStringToSign(
-                command,
-                file,
-                httpDate,
-                contentType));
-
-    const std::vector<char> signedData(signString(toSign));
-    return crypto::encodeBase64(signedData);
-}
-
-std::string S3::getStringToSign(
-        std::string command,
-        std::string file,
-        std::string httpDate,
-        std::string contentType) const
+std::string S3::AuthV4::buildStringToSign(
+        const std::string& canonicalRequest) const
 {
     return
-        command + "\n" +
-        "\n" +
-        contentType + "\n" +
-        httpDate + "\n" +
-        "/" + file;
+        line("AWS4-HMAC-SHA256") +
+        line(m_formattedTime.amazonDate()) +
+        line(m_formattedTime.date() + "/" + m_region + "/s3/aws4_request") +
+        crypto::encodeAsHex(crypto::sha256(canonicalRequest));
 }
 
-std::vector<char> S3::signString(std::string input) const
+std::string S3::AuthV4::calculateSignature(
+        const std::string& stringToSign) const
 {
-    return crypto::hmacSha1(m_auth.hidden(), input);
+    const std::string kDate(
+            crypto::hmacSha256(
+                "AWS4" + m_auth.hidden(),
+                m_formattedTime.date()));
+
+    const std::string kRegion(crypto::hmacSha256(kDate, m_region));
+    const std::string kService(crypto::hmacSha256(kRegion, "s3"));
+    const std::string kSigning(
+            crypto::hmacSha256(kService, "aws4_request"));
+
+    return crypto::encodeAsHex(crypto::hmacSha256(kSigning, stringToSign));
 }
+
+std::string S3::AuthV4::getAuthHeader(
+        const std::string& signedHeadersString,
+        const std::string& signature) const
+{
+    return
+        std::string("AWS4-HMAC-SHA256 ") +
+        "Credential=" + m_auth.access() + '/' +
+            m_formattedTime.date() + "/" + m_region + "/s3/aws4_request, " +
+        "SignedHeaders=" + signedHeadersString + ", " +
+        "Signature=" + signature;
+}
+
 
 
 
@@ -486,9 +684,7 @@ std::vector<char> S3::signString(std::string input) const
 std::vector<char> S3::getBinary(std::string rawPath, Headers headers) const
 {
     std::vector<char> data;
-    const std::string stripped(Arbiter::stripType(rawPath));
-
-    if (!buildRequestAndGet(stripped, Query(), data, headers))
+    if (!get(Arbiter::stripType(rawPath), Query(), headers, data))
     {
         throw ArbiterError("Couldn't S3 GET " + rawPath);
     }
@@ -502,6 +698,56 @@ std::string S3::get(std::string rawPath, Headers headers) const
     return std::string(data.begin(), data.end());
 }
 
+S3::Resource::Resource(std::string baseUrl, std::string fullPath)
+    : baseUrl(baseUrl)
+    , bucket()
+    , object()
+{
+    fullPath = Http::sanitize(fullPath);
+    const std::size_t split(fullPath.find("/"));
+
+    bucket = fullPath.substr(0, split);
+
+    if (split != std::string::npos)
+    {
+        object = fullPath.substr(split + 1);
+    }
+}
+
+std::string S3::Resource::buildPath(Query query) const
+{
+    const std::string queryString(getQueryString(query));
+    return "https://" + bucket + baseUrl + object + queryString;
+}
+
+std::string S3::Resource::host() const
+{
+    return bucket + baseUrl.substr(0, baseUrl.size() - 1); // Pop slash.
+}
+
+S3::FormattedTime::FormattedTime()
+    : m_date(formatTime(dateFormat))
+    , m_time(formatTime(timeFormat))
+{ }
+
+std::string S3::FormattedTime::formatTime(const std::string& format) const
+{
+    std::time_t time(std::time(nullptr));
+    std::vector<char> buf(80, 0);
+
+    if (std::strftime(
+                buf.data(),
+                buf.size(),
+                format.data(),
+                std::gmtime(&time)))
+    {
+        return std::string(buf.data());
+    }
+    else
+    {
+        throw ArbiterError("Could not format time");
+    }
+}
 } // namespace drivers
 } // namespace arbiter
 

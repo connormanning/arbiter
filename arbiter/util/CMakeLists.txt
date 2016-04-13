@@ -3,12 +3,17 @@ set(BASE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(
     SOURCES
-    "${BASE}/crypto.cpp"
+    "${BASE}/transforms.cpp"
+    "${BASE}/md5.cpp"
+    "${BASE}/sha256.cpp"
 )
 
 set(
     HEADERS
-    "${BASE}/crypto.hpp"
+    "${BASE}/transforms.hpp"
+    "${BASE}/macros.hpp"
+    "${BASE}/md5.hpp"
+    "${BASE}/sha256.hpp"
 )
 
 install(FILES ${HEADERS} DESTINATION include/arbiter/${MODULE})
