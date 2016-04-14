@@ -103,6 +103,7 @@ namespace
         { '*', "%2A" },
         { '+', "%2B" },
         { ',', "%2C" },
+        { '/', "%2F" },
         { ';', "%3B" },
         { '<', "%3C" },
         { '>', "%3E" },
@@ -176,7 +177,7 @@ void Http::put(std::string path, const std::vector<char>& data) const
     }
 }
 
-std::string Http::sanitize(std::string path)
+std::string Http::sanitize(const std::string path, const std::string exclusions)
 {
     std::string result;
 
@@ -184,7 +185,7 @@ std::string Http::sanitize(std::string path)
     {
         auto it(sanitizers.find(c));
 
-        if (it == sanitizers.end())
+        if (it == sanitizers.end() || exclusions.find(c) != std::string::npos)
         {
             result += c;
         }

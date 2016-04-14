@@ -4,7 +4,15 @@
 
 #include <cstdint>
 
-#define ROTLEFT(a, b) ((a << b) | (a >> (32 - b)))
+#define ROTLEFT(a, b)  ((a << b) | (a >> (32 - b)))
+#define ROTRIGHT(a, b) (((a) >> (b)) | ((a) << (32-(b))))
+
+#define CH(x,y,z) (((x) & (y)) ^ (~(x) & (z)))
+#define MAJ(x,y,z) (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
+#define EP0(x) (ROTRIGHT(x,2) ^ ROTRIGHT(x,13) ^ ROTRIGHT(x,22))
+#define EP1(x) (ROTRIGHT(x,6) ^ ROTRIGHT(x,11) ^ ROTRIGHT(x,25))
+#define SIG0(x) (ROTRIGHT(x,7) ^ ROTRIGHT(x,18) ^ ((x) >> 3))
+#define SIG1(x) (ROTRIGHT(x,17) ^ ROTRIGHT(x,19) ^ ((x) >> 10))
 
 namespace arbiter
 {
@@ -195,7 +203,7 @@ namespace
     std::vector<char> sha1(const std::vector<char>& data)
     {
         SHA1_CTX ctx;
-        std::vector<char> out(20);
+        std::vector<char> out(20, 0);
 
         sha1_init(&ctx);
         sha1_update(
@@ -215,8 +223,10 @@ namespace
 
 } // unnamed namespace
 
-std::vector<char> hmacSha1(std::string key, const std::string message)
+std::vector<char> hmacSha1(const std::string& rawKey, const std::string& data)
 {
+    std::string key(rawKey);
+
     if (key.size() > block) key = sha1(key);
     if (key.size() < block) key.insert(key.end(), block - key.size(), 0);
 
@@ -229,7 +239,7 @@ std::vector<char> hmacSha1(std::string key, const std::string message)
         ikeypad[i] ^= key[i];
     }
 
-    return sha1(append(okeypad, sha1(append(ikeypad, message))));
+    return sha1(append(okeypad, sha1(append(ikeypad, data))));
 }
 
 std::string encodeBase64(const std::vector<char>& data)
@@ -293,6 +303,11 @@ std::string encodeAsHex(const std::vector<char>& input)
     }
 
     return output;
+}
+
+std::string encodeAsHex(const std::string& input)
+{
+    return encodeAsHex(std::vector<char>(input.begin(), input.end()));
 }
 
 } // namespace crypto
