@@ -7,6 +7,7 @@
 #include <glob.h>
 #include <sys/stat.h>
 #else
+#define UNICODE
 #include <locale>
 #include <codecvt>
 #endif
@@ -129,19 +130,21 @@ std::vector<std::string> Fs::glob(std::string path, bool) const
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     const std::wstring wide(converter.from_bytes(path));
 
-    WIN32_FIND_DATA data;
-    HANDLE hFind(FindFirstFile(wide.c_str(), &data));
+	LPWIN32_FIND_DATAW* data;
+	data = (LPWIN32_FIND_DATAW*) malloc(1 * sizeof(LPWIN32_FIND_DATAW));
+
+    HANDLE hFind(FindFirstFileW(wide.c_str(), *data));
 
     if (hFind != INVALID_HANDLE_VALUE)
     {
         do
         {
-            if ((data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+            if (((*data)->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
             {
-                results.push_back(converter.to_bytes(data.cFileName));
+                results.push_back(converter.to_bytes((*data)->cFileName));
             }
         }
-        while (FindNextFile(hFind, &data));
+        while (FindNextFileW(hFind, *data));
     }
 #endif
 
@@ -190,16 +193,24 @@ std::string expandTilde(std::string in)
 
         static const std::string home(getenv("HOME"));
 #else
+		char* user_profile = 0;
+		char* home_path = 0;
+		char* home_drive = 0;
+		size_t len(0);
+		errno_t err(0);
+		err = _dupenv_s(&user_profile, &len, "USERPROFILE");
+		err = _dupenv_s(&home_drive, &len, "HOMEDRIVE");
+		err = _dupenv_s(&home_path, &len, "HOMEPATH");
+
         if (
-                !getenv("USERPROFILE") &&
-                !(getenv("HOMEDRIVE") && getenv("HOMEPATH")))
+                !user_profile &&
+                !(home_drive && home_path))
         {
             noHome();
         }
 
-        static const std::string home(
-                getenv("USERPROFILE") ? getenv("USERPROFILE") :
-                    (getenv("HOMEDRIVE") + getenv("HOMEPATH"));
+		std::string merged = std::string(home_drive) + std::string(home_path);
+		static const std::string home(user_profile ? user_profile : merged);
 #endif
 
         out = home + in.substr(1);
