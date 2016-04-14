@@ -12,7 +12,6 @@
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/drivers/dropbox.hpp>
 #include <arbiter/third/xml/xml.hpp>
-#include <arbiter/util/crypto.hpp>
 
 #ifndef ARBITER_EXTERNAL_JSON
 #include <arbiter/third/json/json.hpp>

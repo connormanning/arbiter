@@ -18,7 +18,7 @@
 #include <arbiter/arbiter.hpp>
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/third/xml/xml.hpp>
-#include <arbiter/util/crypto.hpp>
+#include <arbiter/util/transforms.hpp>
 #include <arbiter/util/sha256.hpp>
 #endif
 
