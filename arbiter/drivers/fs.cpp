@@ -129,7 +129,7 @@ std::vector<std::string> Fs::glob(std::string path, bool) const
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
     const std::wstring wide(converter.from_bytes(path));
 
-    WIN32_FIND_DATA data;
+    WIN32_FIND_DATA data{};
     HANDLE hFind(FindFirstFile(wide.c_str(), &data));
 
     if (hFind != INVALID_HANDLE_VALUE)
@@ -198,8 +198,10 @@ std::string expandTilde(std::string in)
         }
 
         static const std::string home(
-                getenv("USERPROFILE") ? getenv("USERPROFILE") :
-                    (getenv("HOMEDRIVE") + getenv("HOMEPATH"));
+                getenv("USERPROFILE") ?
+                    getenv("USERPROFILE") :
+                    (getenv("HOMEDRIVE") && getenv("HOMEPATH")) ?
+                        (getenv("HOMEDRIVE") + getenv("HOMEPATH") : ""));
 #endif
 
         out = home + in.substr(1);

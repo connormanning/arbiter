@@ -84,7 +84,7 @@ public:
             std::string path,
             const std::vector<char>& data) const override;
 
-    static std::string sanitize(std::string path);
+    static std::string sanitize(std::string path, std::string exclusions = "/");
 
 private:
     virtual bool get(
