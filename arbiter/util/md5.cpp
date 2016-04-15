@@ -16,9 +16,9 @@ namespace
 
 const std::size_t blockSize(16);
 
-struct Context
+struct Md5Context
 {
-    Context() : data(), datalen(0), bitlen(0), state()
+    Md5Context() : data(), datalen(0), bitlen(0), state()
     {
         state[0] = 0x67452301;
         state[1] = 0xEFCDAB89;
@@ -32,7 +32,7 @@ struct Context
     uint32_t state[4];
 };
 
-void md5_transform(Context *ctx, const uint8_t data[])
+void md5_transform(Md5Context *ctx, const uint8_t data[])
 {
     uint32_t a, b, c, d, m[16], i, j;
 
@@ -125,7 +125,7 @@ void md5_transform(Context *ctx, const uint8_t data[])
     ctx->state[3] += d;
 }
 
-void md5_update(Context *ctx, const uint8_t data[], std::size_t len)
+void md5_update(Md5Context *ctx, const uint8_t data[], std::size_t len)
 {
     for (std::size_t i(0); i < len; ++i) {
         ctx->data[ctx->datalen] = data[i];
@@ -138,7 +138,7 @@ void md5_update(Context *ctx, const uint8_t data[], std::size_t len)
     }
 }
 
-void md5_final(Context *ctx, uint8_t hash[])
+void md5_final(Md5Context *ctx, uint8_t hash[])
 {
     std::size_t i(ctx->datalen);
 
@@ -185,7 +185,7 @@ std::string md5(const std::string& data)
 {
     std::vector<char> out(blockSize, 0);
 
-    Context ctx;
+    Md5Context ctx;
     md5_update(
             &ctx,
             reinterpret_cast<const uint8_t*>(data.data()),

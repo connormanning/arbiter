@@ -34,9 +34,9 @@ const std::vector<uint32_t> k {
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-struct Context
+struct Sha256Context
 {
-    Context() : data(), datalen(0), bitlen(0), state()
+    Sha256Context() : data(), datalen(0), bitlen(0), state()
     {
         state[0] = 0x6a09e667;
         state[1] = 0xbb67ae85;
@@ -54,7 +54,7 @@ struct Context
     uint32_t state[8];
 };
 
-void sha256_transform(Context *ctx, const uint8_t data[])
+void sha256_transform(Sha256Context *ctx, const uint8_t data[])
 {
     uint32_t a, b, c, d, e, f, g, h, i, j, t1, t2, m[64];
 
@@ -105,7 +105,7 @@ void sha256_transform(Context *ctx, const uint8_t data[])
     ctx->state[7] += h;
 }
 
-void sha256_update(Context *ctx, const uint8_t data[], std::size_t len)
+void sha256_update(Sha256Context *ctx, const uint8_t data[], std::size_t len)
 {
     uint32_t i;
 
@@ -122,7 +122,7 @@ void sha256_update(Context *ctx, const uint8_t data[], std::size_t len)
     }
 }
 
-void sha256_final(Context *ctx, uint8_t hash[])
+void sha256_final(Sha256Context *ctx, uint8_t hash[])
 {
     uint32_t i(ctx->datalen);
 
@@ -183,7 +183,7 @@ std::vector<char> sha256(const std::vector<char>& data)
 {
     std::vector<char> out(32, 0);
 
-    Context ctx;
+    Sha256Context ctx;
     sha256_update(
             &ctx,
             reinterpret_cast<const uint8_t*>(data.data()),
