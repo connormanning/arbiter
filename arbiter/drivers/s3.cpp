@@ -201,14 +201,31 @@ std::string AwsAuth::hidden() const
     return m_hidden;
 }
 
-S3::S3(HttpPool& pool, const AwsAuth auth)
+S3::S3(
+        HttpPool& pool,
+        const AwsAuth auth,
+        const std::string sseKey)
     : m_pool(pool)
     , m_auth(auth)
-{ }
+    , m_sseHeaders()
+{
+    if (!sseKey.empty())
+    {
+        Headers h;
+        h["x-amz-server-side-encryption-customer-algorithm"] = "AES256";
+        h["x-amz-server-side-encryption-customer-key"] = sseKey;
+        h["x-amz-server-side-encryption-customer-key-MD5"] =
+            crypto::md5(sseKey);
+
+        m_sseHeaders.reset(new Headers(h));
+    }
+}
 
 std::unique_ptr<S3> S3::create(HttpPool& pool, const Json::Value& json)
 {
     std::unique_ptr<S3> s3;
+
+    const std::string sseKey(json["sse"].asString());
 
     if (!json.isNull() && json.isMember("access") & json.isMember("hidden"))
     {
@@ -276,7 +293,9 @@ bool S3::get(
 void S3::put(std::string rawPath, const std::vector<char>& data) const
 {
     const Resource resource(rawPath);
-    const AuthV4 authV4("PUT", resource, m_auth, Query(), Headers(), data);
+
+    Headers headers(m_sseHeaders ? *m_sseHeaders : Headers());
+    const AuthV4 authV4("PUT", resource, m_auth, Query(), headers, data);
 
     auto http(m_pool.acquire());
     HttpResponse res(http.put(resource.buildPath(), data, authV4.headers()));

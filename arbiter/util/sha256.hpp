@@ -4,6 +4,11 @@
 #include <string>
 #include <vector>
 
+// SHA256 implementation adapted from:
+//      https://github.com/B-Con/crypto-algorithms
+// HMAC:
+//      https://en.wikipedia.org/wiki/Hash-based_message_authentication_code
+
 namespace arbiter
 {
 namespace crypto

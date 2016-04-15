@@ -44,7 +44,10 @@ private:
 class S3 : public CustomHeaderDriver
 {
 public:
-    S3(HttpPool& pool, AwsAuth awsAuth);
+    S3(
+            HttpPool& pool,
+            AwsAuth awsAuth,
+            std::string serverSideEncryptionKey = "");
 
     /** Try to construct an S3 Driver.  Searches @p json primarily for the keys
      * `access` and `hidden` to construct an AwsAuth.  If not found, common
@@ -158,6 +161,8 @@ private:
 
     HttpPool& m_pool;
     AwsAuth m_auth;
+
+    std::unique_ptr<Headers> m_sseHeaders;
 };
 
 } // namespace drivers
