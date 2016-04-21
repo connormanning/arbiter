@@ -30,7 +30,7 @@ public:
      *      - Check for them in `~/.aws/credentials`.
      *      - If not found, try the environment settings.
      */
-    static std::unique_ptr<AwsAuth> find(std::string user = "");
+    static std::unique_ptr<AwsAuth> find(std::string profile = "");
 
     std::string access() const;
     std::string hidden() const;
@@ -47,6 +47,7 @@ public:
     S3(
             HttpPool& pool,
             AwsAuth awsAuth,
+            std::string region = "us-east-1",
             std::string serverSideEncryptionKey = "");
 
     /** Try to construct an S3 Driver.  Searches @p json primarily for the keys
@@ -55,6 +56,7 @@ public:
      * AwsAuth::find).
      */
     static std::unique_ptr<S3> create(HttpPool& pool, const Json::Value& json);
+    static std::string extractProfile(const Json::Value& json);
 
     virtual std::string type() const override { return "s3"; }
 
@@ -87,11 +89,12 @@ private:
 
     struct Resource
     {
-        Resource(std::string fullPath);
+        Resource(std::string baseUrl, std::string fullPath);
 
         std::string buildPath(Query query = Query()) const;
         std::string host() const;
 
+        std::string baseUrl;
         std::string bucket;
         std::string object;
     };
@@ -121,6 +124,7 @@ private:
     public:
         AuthV4(
                 std::string verb,
+                const std::string& region,
                 const Resource& resource,
                 const AwsAuth& auth,
                 const Query& query,
@@ -152,6 +156,7 @@ private:
                 const std::string& signature) const;
 
         const AwsAuth& m_auth;
+        const std::string m_region;
         const FormattedTime m_formattedTime;
 
         Headers m_headers;
@@ -162,6 +167,8 @@ private:
     HttpPool& m_pool;
     AwsAuth m_auth;
 
+    std::string m_region;
+    std::string m_baseUrl;
     std::unique_ptr<Headers> m_sseHeaders;
 };
 

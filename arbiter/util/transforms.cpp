@@ -62,6 +62,11 @@ std::string encodeBase64(const std::vector<char>& data)
     return output;
 }
 
+std::string encodeBase64(const std::string& input)
+{
+    return encodeBase64(std::vector<char>(input.begin(), input.end()));
+}
+
 std::string encodeAsHex(const std::vector<char>& input)
 {
     std::string output;

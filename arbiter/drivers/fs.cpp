@@ -216,16 +216,9 @@ std::string expandTilde(std::string in)
         }
 
         static const std::string home(
-<<<<<<< HEAD
                 userProfile ?
                     userProfile :
                     std::string(homeDrive) + std::string(homePath));
-=======
-                getenv("USERPROFILE") ?
-                    getenv("USERPROFILE") :
-                    (getenv("HOMEDRIVE") && getenv("HOMEPATH")) ?
-                        (getenv("HOMEDRIVE") + getenv("HOMEPATH") : ""));
->>>>>>> v4
 #endif
 
         out = home + in.substr(1);
