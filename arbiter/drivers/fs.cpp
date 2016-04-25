@@ -222,20 +222,17 @@ std::string expandTilde(std::string in)
 
 std::string getTempPath()
 {
-    std::string result;
-
 #ifndef ARBITER_WINDOWS
     if (const char* t = getenv("TMPDIR"))   return t;
     if (const char* t = getenv("TMP"))      return t;
     if (const char* t = getenv("TEMP"))     return t;
     if (const char* t = getenv("TEMPDIR"))  return t;
-    if (result.empty()) return "/tmp";
+    return "/tmp";
 #else
-	char charPath[MAX_PATH];
-	if (GetTempPath(MAX_PATH, charPath))
-		result = charPath;
+    std::vector<char> path(MAX_PATH, '\0');
+    if (GetTempPath(MAX_PATH, path.data())) return path.data();
+    else throw ArbiterError("Could not find a temp path.");
 #endif
-    return result;
 }
 
 LocalHandle::LocalHandle(const std::string localPath, const bool isRemote)

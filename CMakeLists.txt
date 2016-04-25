@@ -21,7 +21,7 @@ if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
     add_definitions(${CMAKE_CXX_FLAGS} "-fPIC")
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     add_definitions("-DWINDOWS")
-	add_definitions("-D_CRT_SECURE_NO_WARNINGS")
+    add_definitions("-D_CRT_SECURE_NO_WARNINGS")
 endif()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
@@ -36,7 +36,7 @@ set(OBJS
     $<TARGET_OBJECTS:util>)
 
 add_library(arbiter SHARED ${OBJS})
-target_link_libraries(arbiter ${CURL_LIBRARIES} )
+target_link_libraries(arbiter ${CURL_LIBRARIES})
 
 install(TARGETS arbiter DESTINATION lib)
 
