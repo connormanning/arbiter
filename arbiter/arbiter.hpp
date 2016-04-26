@@ -212,7 +212,7 @@ public:
      * logic above, thus the innermost directory in the full path will be
      * returned.
      */
-    static std::string getTerminus(const std::string fullPath);
+    static std::string getBasename(const std::string fullPath);
 
     /** Fetch the common HTTP pool, which may be useful when dynamically
      * constructing adding a Driver via Arbiter::addDriver.

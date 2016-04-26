@@ -102,7 +102,7 @@ void Arbiter::copy(const std::string from, const std::string to) const
 
     for (const auto& path : paths)
     {
-        outEndpoint.putSubpath(getTerminus(path), getBinary(path));
+        outEndpoint.putSubpath(getBasename(path), getBinary(path));
     }
 }
 
@@ -206,7 +206,7 @@ std::string Arbiter::stripType(const std::string raw)
     return result;
 }
 
-std::string Arbiter::getTerminus(const std::string fullPath)
+std::string Arbiter::getBasename(const std::string fullPath)
 {
     std::string result(fullPath);
 
