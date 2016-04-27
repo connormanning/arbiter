@@ -4,6 +4,13 @@
 
 namespace arbiter
 {
+
+/**
+ * \defgroup util
+ * @{
+ */
+
+/** General utilities. */
 namespace util
 {
 
@@ -51,9 +58,10 @@ inline std::string joinImpl(bool first, std::string current, Paths&&... paths)
     return current + sep + next;
 }
 
-/** Join one or more path components "intelligently".  The result is the
- * concatenation of @p path and any members of @p paths with exactly one slash
- * preceding each non-empty portion of @p path or @p paths.
+/** @brief Join one or more path components "intelligently".
+ *
+ * The result is the concatenation of @p path and any members of @p paths with
+ * exactly one slash preceding each non-empty portion of @p path or @p paths.
  *
  * Portions of @p paths will be stripped of leading slashes prior to processing,
  * so portions containing only slashes are considered empty.
@@ -77,5 +85,8 @@ inline std::string join(std::string path, Paths&&... paths)
 }
 
 } // namespace util
+
+/** @} */
+
 } // namespace arbiter
 

@@ -149,7 +149,7 @@ def amalgamate_source(source_top_dir=None,
     source.add_file("arbiter/util/md5.cpp")
     source.add_file("arbiter/util/sha256.cpp")
     source.add_file("arbiter/util/transforms.cpp")
-    header.add_file("arbiter/util/util.cpp")
+    source.add_file("arbiter/util/util.cpp")
 
     print("Writing amalgamated source to %r" % target_source_path)
     source.write_to(target_source_path)
