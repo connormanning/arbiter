@@ -202,18 +202,6 @@ public:
     /** Strip the type and delimiter `://`, if they exist. */
     static std::string stripType(std::string path);
 
-    /** Returns the portion of @p fullPath following the last instance of the
-     * character `/`, if any instances exist aside from possibly the delimiter
-     * `://`.  If there are no other instances of `/`, then @p fullPath itself
-     * will be returned.
-     *
-     * If @p fullPath ends with a trailing `/` or a glob indication (i.e. is a
-     * directory), these trailing characters will be stripped prior to the
-     * logic above, thus the innermost directory in the full path will be
-     * returned.
-     */
-    static std::string getBasename(const std::string fullPath);
-
     /** Fetch the common HTTP pool, which may be useful when dynamically
      * constructing adding a Driver via Arbiter::addDriver.
      */

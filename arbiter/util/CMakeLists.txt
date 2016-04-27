@@ -6,6 +6,7 @@ set(
     "${BASE}/transforms.cpp"
     "${BASE}/md5.cpp"
     "${BASE}/sha256.cpp"
+    "${BASE}/util.cpp"
 )
 
 set(
@@ -14,6 +15,7 @@ set(
     "${BASE}/macros.hpp"
     "${BASE}/md5.hpp"
     "${BASE}/sha256.hpp"
+    "${BASE}/util.hpp"
 )
 
 if (WIN32)
