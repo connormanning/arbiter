@@ -617,7 +617,7 @@ std::string S3::AuthV4::buildCanonicalRequest(
                 Http::sanitize(q.first, "") + '=' +
                 Http::sanitize(q.second, ""));
 
-        return (s.size() ? "&" : "") + keyVal;
+        return s + (s.size() ? "&" : "") + keyVal;
     });
 
     const std::string canonicalQuery(
