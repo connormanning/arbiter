@@ -14,6 +14,11 @@
 #include <arbiter/driver.hpp>
 #endif
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 
@@ -191,4 +196,8 @@ private:
 /** @endcond */
 
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

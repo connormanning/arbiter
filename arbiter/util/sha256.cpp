@@ -6,6 +6,11 @@
 #include <arbiter/util/macros.hpp>
 #endif
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 namespace crypto
@@ -221,4 +226,8 @@ std::string hmacSha256(const std::string& rawKey, const std::string& data)
 
 } // namespace crypto
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

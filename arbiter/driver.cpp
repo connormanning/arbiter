@@ -4,6 +4,11 @@
 #include <arbiter/arbiter.hpp>
 #endif
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 
@@ -84,4 +89,8 @@ std::vector<std::string> Driver::glob(std::string path, bool verbose) const
 }
 
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

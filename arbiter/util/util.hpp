@@ -2,6 +2,11 @@
 
 #include <string>
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 
@@ -92,4 +97,8 @@ namespace util
 } // namespace util
 
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

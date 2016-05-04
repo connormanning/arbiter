@@ -23,6 +23,11 @@
 #include <arbiter/util/sha256.hpp>
 #endif
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 
@@ -754,4 +759,8 @@ std::string S3::FormattedTime::formatTime(const std::string& format) const
 }
 } // namespace drivers
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

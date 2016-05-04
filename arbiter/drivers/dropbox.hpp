@@ -9,6 +9,11 @@
 #include <arbiter/drivers/http.hpp>
 #endif
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 
@@ -78,4 +83,8 @@ private:
 
 } // namespace drivers
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

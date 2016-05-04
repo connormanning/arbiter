@@ -17,6 +17,11 @@
 #include <fstream>
 #include <stdexcept>
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 
@@ -247,4 +252,8 @@ LocalHandle::~LocalHandle()
 
 } // namespace fs
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

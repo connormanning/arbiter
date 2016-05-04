@@ -8,6 +8,11 @@
 #include <algorithm>
 #include <cstdlib>
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 
@@ -208,4 +213,8 @@ std::string Arbiter::stripType(const std::string raw)
 }
 
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

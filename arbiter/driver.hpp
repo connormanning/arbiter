@@ -6,6 +6,11 @@
 #include <string>
 #include <vector>
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 
@@ -128,4 +133,8 @@ public:
 typedef std::map<std::string, std::unique_ptr<Driver>> DriverMap;
 
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

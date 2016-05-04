@@ -4,6 +4,11 @@
 #include <arbiter/arbiter.hpp>
 #endif
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 namespace util
@@ -39,4 +44,8 @@ std::string getBasename(const std::string fullPath)
 
 } // namespace util
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

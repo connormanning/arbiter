@@ -12,6 +12,14 @@
 #include <cstring>
 #include <iostream>
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
+namespace arbiter
+{
+
 namespace
 {
     struct PutData
@@ -118,10 +126,8 @@ namespace
         { '}', "%7D" },
         { '~', "%7E" }
     };
-}
+} // unnamed namespace
 
-namespace arbiter
-{
 namespace drivers
 {
 
@@ -530,4 +536,8 @@ void HttpPool::release(const std::size_t id)
 }
 
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

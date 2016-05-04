@@ -4,6 +4,11 @@
 
 #include <cstdint>
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 namespace crypto
@@ -91,4 +96,8 @@ std::string encodeAsHex(const std::string& input)
 
 } // namespace crypto
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

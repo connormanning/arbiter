@@ -25,6 +25,11 @@
 #include <json/json.h>
 #endif
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 
@@ -364,4 +369,8 @@ std::string Dropbox::get(std::string rawPath, Headers headers) const
 
 } // namespace drivers
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 
