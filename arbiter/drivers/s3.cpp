@@ -250,23 +250,18 @@ S3::S3(
         HttpPool& pool,
         const AwsAuth auth,
         const std::string region,
-        const std::string sseKey)
+        const bool sse)
     : m_pool(pool)
     , m_auth(auth)
     , m_region(region)
     , m_baseUrl(getBaseUrl(region))
-    , m_sseHeaders()
+    , m_baseHeaders()
 {
-    if (!sseKey.empty())
+    if (sse)
     {
-        Headers h;
-        h["x-amz-server-side-encryption-customer-algorithm"] = "AES256";
-        h["x-amz-server-side-encryption-customer-key"] =
-            crypto::encodeBase64(sseKey);
-        h["x-amz-server-side-encryption-customer-key-MD5"] =
-            crypto::encodeBase64(crypto::md5(sseKey));
-
-        m_sseHeaders.reset(new Headers(h));
+        // This could grow to support other SSE schemes, like KMS and customer-
+        // supplied keys.
+        m_baseHeaders["x-amz-server-side-encryption"] = "AES256";
     }
 }
 
@@ -276,7 +271,7 @@ std::unique_ptr<S3> S3::create(HttpPool& pool, const Json::Value& json)
     std::unique_ptr<S3> s3;
 
     const std::string profile(extractProfile(json));
-    const std::string sseKey(json["sse"].asString());
+    const bool sse(json["sse"].asBool());
 
     if (!json.isNull() && json.isMember("access") & json.isMember("hidden"))
     {
@@ -335,7 +330,7 @@ std::unique_ptr<S3> S3::create(HttpPool& pool, const Json::Value& json)
         }
     }
 
-    s3.reset(new S3(pool, *auth, region, sseKey));
+    s3.reset(new S3(pool, *auth, region, sse));
 
     return s3;
 }
@@ -422,7 +417,7 @@ void S3::put(std::string rawPath, const std::vector<char>& data) const
 {
     const Resource resource(m_baseUrl, rawPath);
 
-    Headers headers(m_sseHeaders ? *m_sseHeaders : Headers());
+    Headers headers(m_baseHeaders);
     const AuthV4 authV4(
             "PUT",
             m_region,
