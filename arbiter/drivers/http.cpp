@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cstring>
 #include <iostream>
+#include <numeric>
 
 namespace
 {
@@ -139,24 +140,25 @@ std::unique_ptr<std::size_t> Http::tryGetSize(std::string path) const
     auto http(m_pool.acquire());
     HttpResponse res(http.head(path));
 
-    if (res.ok())
+    if (res.ok() && res.headers().count("Content-Length"))
     {
-        if (res.headers().count("Content-Length"))
-        {
-            const std::string& str(res.headers().at("Content-Length"));
-            size.reset(new std::size_t(std::stoul(str)));
-        }
+        const std::string& str(res.headers().at("Content-Length"));
+        size.reset(new std::size_t(std::stoul(str)));
     }
 
     return size;
 }
 
-bool Http::get(std::string path, std::vector<char>& data) const
+bool Http::get(
+        std::string path,
+        std::vector<char>& data,
+        const Headers headers,
+        const Query query) const
 {
     bool good(false);
 
     auto http(m_pool.acquire());
-    HttpResponse res(http.get(path));
+    HttpResponse res(http.get(path, headers, query));
 
     if (res.ok())
     {
@@ -167,14 +169,74 @@ bool Http::get(std::string path, std::vector<char>& data) const
     return good;
 }
 
-void Http::put(std::string path, const std::vector<char>& data) const
+void Http::put(
+        const std::string path,
+        const std::vector<char>& data,
+        const Headers headers,
+        const Query query) const
 {
     auto http(m_pool.acquire());
 
-    if (!http.put(path, data).ok())
+    if (!http.put(path, data, headers, query).ok())
     {
         throw ArbiterError("Couldn't HTTP PUT to " + path);
     }
+}
+
+std::string Http::get(
+        const std::string path,
+        const Headers headers,
+        const Query query) const
+{
+    const auto data(getBinary(path, headers, query));
+    return std::string(data.begin(), data.end());
+}
+
+std::vector<char> Http::getBinary(
+        const std::string path,
+        const Headers headers,
+        const Query query) const
+{
+    std::vector<char> data;
+    if (!get(path, data, headers, query))
+    {
+        throw ArbiterError("Could not read resource " + path);
+    }
+    return data;
+}
+
+HttpResponse Http::internalGet(
+        const std::string path,
+        const Headers headers,
+        const Query query) const
+{
+    return m_pool.acquire().get(path, headers, query);
+}
+
+HttpResponse Http::internalPut(
+        const std::string path,
+        const std::vector<char>& data,
+        const Headers headers,
+        const Query query) const
+{
+    return m_pool.acquire().put(path, data, headers, query);
+}
+
+HttpResponse Http::internalHead(
+        const std::string path,
+        const Headers headers,
+        const Query query) const
+{
+    return m_pool.acquire().head(path, headers, query);
+}
+
+HttpResponse Http::internalPost(
+        const std::string path,
+        const std::vector<char>& data,
+        const Headers headers,
+        const Query query) const
+{
+    return m_pool.acquire().post(path, data, headers, query);
 }
 
 std::string Http::sanitize(const std::string path, const std::string exclusions)
@@ -183,7 +245,7 @@ std::string Http::sanitize(const std::string path, const std::string exclusions)
 
     for (const auto c : path)
     {
-        auto it(sanitizers.find(c));
+        const auto it(sanitizers.find(c));
 
         if (it == sanitizers.end() || exclusions.find(c) != std::string::npos)
         {
@@ -196,6 +258,19 @@ std::string Http::sanitize(const std::string path, const std::string exclusions)
     }
 
     return result;
+}
+
+std::string Http::buildQueryString(const Query& query)
+{
+    return std::accumulate(
+            query.begin(),
+            query.end(),
+            std::string(),
+            [](const std::string& out, const Query::value_type& keyVal)
+            {
+                const char sep(out.empty() ? '?' : '&');
+                return out + sep + keyVal.first + '=' + keyVal.second;
+            });
 }
 
 } // namespace drivers
@@ -217,13 +292,15 @@ Curl::~Curl()
     m_headers = 0;
 }
 
-void Curl::init(std::string path, const Headers& headers)
+void Curl::init(std::string path, const Headers& headers, const Query& query)
 {
     // Reset our curl instance and header list.
     curl_slist_free_all(m_headers);
     m_headers = 0;
 
     // Set path.
+    path = drivers::Http::sanitize(
+            path + drivers::Http::buildQueryString(query));
     curl_easy_setopt(m_curl, CURLOPT_URL, path.c_str());
 
     // Needed for multithreaded Curl usage.
@@ -247,15 +324,13 @@ void Curl::init(std::string path, const Headers& headers)
     }
 }
 
-HttpResponse Curl::get(std::string path, Headers headers)
+HttpResponse Curl::get(std::string path, Headers headers, Query query)
 {
     int httpCode(0);
     std::vector<char> data;
 
+    init(path, headers, query);
     if (m_verbose) curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
-
-    path = drivers::Http::sanitize(path);
-    init(path, headers);
 
     // Register callback function and date pointer to consume the result.
     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
@@ -277,15 +352,13 @@ HttpResponse Curl::get(std::string path, Headers headers)
     return HttpResponse(httpCode, data, receivedHeaders);
 }
 
-HttpResponse Curl::head(std::string path, Headers headers)
+HttpResponse Curl::head(std::string path, Headers headers, Query query)
 {
     int httpCode(0);
     std::vector<char> data;
 
+    init(path, headers, query);
     if (m_verbose) curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
-
-    path = drivers::Http::sanitize(path);
-    init(path, headers);
 
     // Register callback function and date pointer to consume the result.
     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
@@ -313,11 +386,10 @@ HttpResponse Curl::head(std::string path, Headers headers)
 HttpResponse Curl::put(
         std::string path,
         const std::vector<char>& data,
-        Headers headers)
+        Headers headers,
+        Query query)
 {
-    path = drivers::Http::sanitize(path);
-    init(path, headers);
-
+    init(path, headers, query);
     if (m_verbose) curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
     int httpCode(0);
@@ -356,10 +428,10 @@ HttpResponse Curl::put(
 HttpResponse Curl::post(
         std::string path,
         const std::vector<char>& data,
-        Headers headers)
+        Headers headers,
+        Query query)
 {
-    path = drivers::Http::sanitize(path);
-    init(path, headers);
+    init(path, headers, query);
     if (m_verbose) curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
     int httpCode(0);
@@ -420,50 +492,50 @@ HttpResource::~HttpResource()
     m_pool.release(m_id);
 }
 
-HttpResponse HttpResource::get(const std::string path, const Headers headers)
+HttpResponse HttpResource::get(
+        const std::string path,
+        const Headers headers,
+        const Query query)
 {
-    auto f([this, path, headers]()->HttpResponse
+    return exec([this, path, headers, query]()->HttpResponse
     {
-        return m_curl.get(path, headers);
+        return m_curl.get(path, headers, query);
     });
-
-    return exec(f);
 }
 
-HttpResponse HttpResource::head( const std::string path, const Headers headers)
+HttpResponse HttpResource::head(
+        const std::string path,
+        const Headers headers,
+        const Query query)
 {
-    auto f([this, path, headers]()->HttpResponse
+    return exec([this, path, headers, query]()->HttpResponse
     {
-        return m_curl.head(path, headers);
+        return m_curl.head(path, headers, query);
     });
-
-    return exec(f);
 }
 
 HttpResponse HttpResource::put(
         std::string path,
         const std::vector<char>& data,
-        Headers headers)
+        const Headers headers,
+        const Query query)
 {
-    auto f([this, path, &data, headers]()->HttpResponse
+    return exec([this, path, &data, headers, query]()->HttpResponse
     {
-        return m_curl.put(path, data, headers);
+        return m_curl.put(path, data, headers, query);
     });
-
-    return exec(f);
 }
 
 HttpResponse HttpResource::post(
         std::string path,
         const std::vector<char>& data,
-        Headers headers)
+        const Headers headers,
+        const Query query)
 {
-    auto f([this, path, &data, headers]()->HttpResponse
+    return exec([this, path, &data, headers, query]()->HttpResponse
     {
-        return m_curl.post(path, data, headers);
+        return m_curl.post(path, data, headers, query);
     });
-
-    return exec(f);
 }
 
 HttpResponse HttpResource::exec(std::function<HttpResponse()> f)

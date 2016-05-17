@@ -5,7 +5,6 @@
 #include <vector>
 
 #ifndef ARBITER_IS_AMALGAMATION
-#include <arbiter/driver.hpp>
 #include <arbiter/drivers/http.hpp>
 #endif
 
@@ -27,7 +26,7 @@ private:
 };
 
 /** @brief %Dropbox driver. */
-class Dropbox : public CustomHeaderDriver
+class Dropbox : public Http
 {
 public:
     Dropbox(HttpPool& pool, DropboxAuth auth);
@@ -42,18 +41,16 @@ public:
     virtual std::string type() const override { return "dropbox"; }
     virtual void put(
             std::string path,
-            const std::vector<char>& data) const override;
-
-    /** Inherited from CustomHeaderDriver. */
-    virtual std::string get(std::string path, Headers headers) const override;
-
-    /** Inherited from CustomHeaderDriver. */
-    virtual std::vector<char> getBinary(
-            std::string path,
-            Headers headers) const override;
+            const std::vector<char>& data,
+            Headers headers,
+            Query query = Query()) const override;
 
 private:
-    virtual bool get(std::string path, std::vector<char>& data) const override;
+    virtual bool get(
+            std::string path,
+            std::vector<char>& data,
+            Headers headers,
+            Query query = Query()) const override;
 
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
@@ -62,17 +59,11 @@ private:
             std::string path,
             bool verbose) const override;
 
-    bool buildRequestAndGet(
-            std::string path,
-            std::vector<char>& data,
-            Headers headers = Headers()) const;
-
     std::string continueFileInfo(std::string cursor) const;
 
     Headers httpGetHeaders() const;
     Headers httpPostHeaders() const;
 
-    HttpPool& m_pool;
     DropboxAuth m_auth;
 };
 

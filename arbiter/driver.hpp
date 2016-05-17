@@ -9,7 +9,8 @@
 namespace arbiter
 {
 
-typedef std::map<std::string, std::string> Headers;
+using Headers = std::map<std::string, std::string>;
+using Query = std::map<std::string, std::string>;
 
 class HttpPool;
 
@@ -105,24 +106,6 @@ protected:
      * @param[out] data Empty vector in which to write resulting data.
      */
     virtual bool get(std::string path, std::vector<char>& data) const = 0;
-};
-
-class CustomHeaderDriver : public Driver
-{
-    using Driver::get;
-
-public:
-    /** A GET method allowing user-defined headers. Accessible only via the
-     * Arbiter::getDriver directly, and not through the Arbiter.
-     */
-    virtual std::string get(std::string path, Headers headers) const = 0;
-
-    /** A GET method allowing user-defined headers. Accessible only via the
-     * Arbiter::getDriver directly, and not through the Arbiter.
-     */
-    virtual std::vector<char> getBinary(
-            std::string path,
-            Headers headers) const = 0;
 };
 
 typedef std::map<std::string, std::unique_ptr<Driver>> DriverMap;

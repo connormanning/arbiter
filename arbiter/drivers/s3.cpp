@@ -43,20 +43,6 @@ namespace
     std::string line(const std::string& data) { return data + "\n"; }
     const std::vector<char> empty;
 
-    std::string getQueryString(const Query& query)
-    {
-        std::string result;
-
-        bool first(true);
-        for (const auto& q : query)
-        {
-            result += (first ? "?" : "&") + q.first + "=" + q.second;
-            first = false;
-        }
-
-        return result;
-    }
-
     typedef Xml::xml_node<> XmlNode;
     const std::string badResponse("Unexpected contents in AWS response");
 
@@ -246,7 +232,7 @@ S3::S3(
         const AwsAuth auth,
         const std::string region,
         const std::string sseKey)
-    : m_pool(pool)
+    : Http(pool)
     , m_auth(auth)
     , m_region(region)
     , m_baseUrl(getBaseUrl(region))
@@ -364,8 +350,7 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
             Headers(),
             empty);
 
-    auto http(m_pool.acquire());
-    HttpResponse res(http.head(resource.buildPath(), authV4.headers()));
+    HttpResponse res(Http::internalHead(resource.url(), authV4.headers()));
 
     if (res.ok() && res.headers().count("Content-Length"))
     {
@@ -376,16 +361,11 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
     return size;
 }
 
-bool S3::get(std::string rawPath, std::vector<char>& data) const
-{
-    return get(rawPath, Query(), Headers(), data);
-}
-
 bool S3::get(
-        std::string rawPath,
-        const Query& query,
-        const Headers& headers,
-        std::vector<char>& data) const
+        const std::string rawPath,
+        std::vector<char>& data,
+        const Headers headers,
+        const Query query) const
 {
     const Resource resource(m_baseUrl, rawPath);
     const AuthV4 authV4(
@@ -397,8 +377,11 @@ bool S3::get(
             headers,
             empty);
 
-    auto http(m_pool.acquire());
-    HttpResponse res(http.get(resource.buildPath(query), authV4.headers()));
+    HttpResponse res(
+            Http::internalGet(
+                resource.url(),
+                authV4.headers(),
+                authV4.query()));
 
     if (res.ok())
     {
@@ -413,22 +396,36 @@ bool S3::get(
     }
 }
 
-void S3::put(std::string rawPath, const std::vector<char>& data) const
+void S3::put(
+        const std::string rawPath,
+        const std::vector<char>& data,
+        const Headers userHeaders,
+        const Query query) const
 {
     const Resource resource(m_baseUrl, rawPath);
 
-    Headers headers(m_sseHeaders ? *m_sseHeaders : Headers());
+    Headers headers(userHeaders);
+
+    if (m_sseHeaders)
+    {
+        headers.insert(m_sseHeaders->begin(), m_sseHeaders->end());
+    }
+
     const AuthV4 authV4(
             "PUT",
             m_region,
             resource,
             m_auth,
-            Query(),
+            query,
             headers,
             data);
 
-    auto http(m_pool.acquire());
-    HttpResponse res(http.put(resource.buildPath(), data, authV4.headers()));
+    HttpResponse res(
+            Http::internalPut(
+                resource.url(),
+                data,
+                authV4.headers(),
+                authV4.query()));
 
     if (!res.ok())
     {
@@ -462,7 +459,7 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
     {
         if (verbose) std::cout << "." << std::flush;
 
-        if (!get(resource.bucket + "/", query, Headers(), data))
+        if (!get(resource.bucket + "/", data, Headers(), query))
         {
             throw ArbiterError("Couldn't S3 GET " + resource.bucket);
         }
@@ -550,6 +547,7 @@ S3::AuthV4::AuthV4(
     , m_region(region)
     , m_formattedTime()
     , m_headers(headers)
+    , m_query(query)
     , m_signedHeadersString()
 {
     m_headers["Host"] = resource.host();
@@ -678,30 +676,6 @@ std::string S3::AuthV4::getAuthHeader(
         "Signature=" + signature;
 }
 
-
-
-
-// These functions allow a caller to directly pass additional headers into
-// their GET request.  This is only applicable when using the S3 driver
-// directly, as these are not available through the Arbiter.
-
-std::vector<char> S3::getBinary(std::string rawPath, Headers headers) const
-{
-    std::vector<char> data;
-    if (!get(Arbiter::stripType(rawPath), Query(), headers, data))
-    {
-        throw ArbiterError("Couldn't S3 GET " + rawPath);
-    }
-
-    return data;
-}
-
-std::string S3::get(std::string rawPath, Headers headers) const
-{
-    std::vector<char> data(getBinary(rawPath, headers));
-    return std::string(data.begin(), data.end());
-}
-
 S3::Resource::Resource(std::string baseUrl, std::string fullPath)
     : baseUrl(baseUrl)
     , bucket()
@@ -718,10 +692,9 @@ S3::Resource::Resource(std::string baseUrl, std::string fullPath)
     }
 }
 
-std::string S3::Resource::buildPath(Query query) const
+std::string S3::Resource::url() const
 {
-    const std::string queryString(getQueryString(query));
-    return "https://" + bucket + baseUrl + object + queryString;
+    return "https://" + bucket + baseUrl + object;
 }
 
 std::string S3::Resource::host() const

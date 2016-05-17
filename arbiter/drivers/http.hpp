@@ -17,8 +17,6 @@
 namespace arbiter
 {
 
-typedef std::map<std::string, std::string> Query;
-
 /** @cond arbiter_internal */
 class HttpResponse
 {
@@ -66,7 +64,12 @@ class HttpPool;
 namespace drivers
 {
 
-/** @brief HTTP driver. */
+/** @brief HTTP driver.  Intended as both a standalone driver as well as a base
+ * for derived drivers build atop HTTP.  Derivers should overload the
+ * HTTP-specific put/get methods that accept headers and query parameters
+ * rather than Driver::put and Driver::get, which are overridden as `final`
+ * here as they will be routed to the more specific methods.
+ */
 class Http : public Driver
 {
 public:
@@ -75,21 +78,106 @@ public:
             HttpPool& pool,
             const Json::Value& json);
 
+    // Inherited from Driver.
     virtual std::string type() const override { return "http"; }
 
+    /** By default, performs a HEAD request and returns the contents of the
+     * Content-Length header.
+     */
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
 
     virtual void put(
             std::string path,
-            const std::vector<char>& data) const override;
+            const std::vector<char>& data) const final override
+    {
+        put(path, data, Headers(), Query());
+    }
 
+
+
+
+    /* HTTP-specific driver methods follow.  Since many drivers (S3, Dropbox,
+     * etc.) are built atop HTTP, we'll provide HTTP-specific methods for
+     * derived classes to use in addition to the generic PUT/GET combinations.
+     *
+     * Specifically, we'll add POST/HEAD calls, and allow headers and query
+     * parameters to be passed as well.
+     */
+    std::string get(
+            std::string path,
+            Headers headers,
+            Query query = Query()) const;
+
+    std::vector<char> getBinary(
+            std::string path,
+            Headers headers,
+            Query query = Query()) const;
+
+    // Utility functions.
+
+    /** Perform URI percent-encoding, without encoding characters included in
+     * @p exclusions.
+     */
     static std::string sanitize(std::string path, std::string exclusions = "/");
+
+    /** Build a query string from key-value pairs.  If @p query is empty, the
+     * result is an empty string.  Otherwise, the result will start with the
+     * '?' character.
+     */
+    static std::string buildQueryString(const Query& query);
+
+    /** HTTP-derived Drivers should override this version of PUT to allow for
+     * custom headers and query parameters.
+     */
+    virtual void put(
+            std::string path,
+            const std::vector<char>& data,
+            Headers headers,
+            Query query = Query()) const;
+
+protected:
+    /** HTTP-derived Drivers should override this version of GET to allow for
+     * custom headers and query parameters.
+     */
+    virtual bool get(
+            std::string path,
+            std::vector<char>& data,
+            Headers headers,
+            Query query) const;
+
+    /* These operations are other HTTP-specific calls that derived drivers may
+     * need for their underlying API use.
+     */
+    HttpResponse internalGet(
+            std::string path,
+            Headers headers = Headers(),
+            Query query = Query()) const;
+
+    HttpResponse internalPut(
+            std::string path,
+            const std::vector<char>& data,
+            Headers headers = Headers(),
+            Query query = Query()) const;
+
+    HttpResponse internalHead(
+            std::string path,
+            Headers headers = Headers(),
+            Query query = Query()) const;
+
+    HttpResponse internalPost(
+            std::string path,
+            const std::vector<char>& data,
+            Headers headers = Headers(),
+            Query query = Query()) const;
 
 private:
     virtual bool get(
             std::string path,
-            std::vector<char>& data) const override;
+            std::vector<char>& data) const final override
+    {
+        return get(path, data, Headers(), Query());
+    }
 
     HttpPool& m_pool;
 };
@@ -105,21 +193,23 @@ class Curl
 public:
     ~Curl();
 
-    HttpResponse get(std::string path, Headers headers);
-    HttpResponse head(std::string path, Headers headers);
+    HttpResponse get(std::string path, Headers headers, Query query);
+    HttpResponse head(std::string path, Headers headers, Query query);
     HttpResponse put(
             std::string path,
             const std::vector<char>& data,
-            Headers headers);
+            Headers headers,
+            Query query);
     HttpResponse post(
             std::string path,
             const std::vector<char>& data,
-            Headers headers);
+            Headers headers,
+            Query query);
 
 private:
     Curl(bool verbose, std::size_t timeout);
 
-    void init(std::string path, const Headers& headers);
+    void init(std::string path, const Headers& headers, const Query& query);
 
     Curl(const Curl&);
     Curl& operator=(const Curl&);
@@ -140,21 +230,25 @@ public:
 
     HttpResponse get(
             std::string path,
-            Headers headers = Headers());
+            Headers headers = Headers(),
+            Query query = Query());
 
     HttpResponse head(
             std::string path,
-            Headers headers = Headers());
+            Headers headers = Headers(),
+            Query query = Query());
 
     HttpResponse put(
             std::string path,
             const std::vector<char>& data,
-            Headers headers = Headers());
+            Headers headers = Headers(),
+            Query query = Query());
 
     HttpResponse post(
             std::string path,
             const std::vector<char>& data,
-            Headers headers);
+            Headers headers = Headers(),
+            Query query = Query());
 
 private:
     HttpPool& m_pool;

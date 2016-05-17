@@ -38,16 +38,16 @@ void Arbiter::init(const Json::Value& json)
     using namespace drivers;
 
     auto fs(Fs::create(m_pool, json["file"]));
-    if (fs) m_drivers["file"] = std::move(fs);
+    if (fs) m_drivers[fs->type()] = std::move(fs);
 
     auto http(Http::create(m_pool, json["http"]));
-    if (http) m_drivers["http"] = std::move(http);
+    if (http) m_drivers[http->type()] = std::move(http);
 
     auto s3(S3::create(m_pool, json["s3"]));
-    if (s3) m_drivers["s3"] = std::move(s3);
+    if (s3) m_drivers[s3->type()] = std::move(s3);
 
     auto dropbox(Dropbox::create(m_pool, json["dropbox"]));
-    if (dropbox) m_drivers["dropbox"] = std::move(dropbox);
+    if (dropbox) m_drivers[dropbox->type()] = std::move(dropbox);
 }
 
 void Arbiter::addDriver(const std::string type, std::unique_ptr<Driver> driver)

@@ -5,7 +5,6 @@
 #include <vector>
 
 #ifndef ARBITER_IS_AMALGAMATION
-#include <arbiter/driver.hpp>
 #include <arbiter/drivers/http.hpp>
 #endif
 
@@ -41,7 +40,7 @@ private:
 };
 
 /** @brief Amazon %S3 driver. */
-class S3 : public CustomHeaderDriver
+class S3 : public Http
 {
 public:
     S3(
@@ -63,35 +62,30 @@ public:
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
 
+    /** Inherited from Drivers::Http. */
     virtual void put(
             std::string path,
-            const std::vector<char>& data) const override;
-
-    /** Inherited from CustomHeaderDriver. */
-    virtual std::string get(std::string path, Headers headers) const override;
-
-    /** Inherited from CustomHeaderDriver. */
-    virtual std::vector<char> getBinary(
-            std::string path,
-            Headers headers) const override;
+            const std::vector<char>& data,
+            Headers headers,
+            Query query = Query()) const override;
 
 private:
-    virtual bool get(std::string path, std::vector<char>& data) const override;
+    /** Inherited from Drivers::Http. */
+    virtual bool get(
+            std::string path,
+            std::vector<char>& data,
+            Headers headers,
+            Query query) const override;
+
     virtual std::vector<std::string> glob(
             std::string path,
             bool verbose) const override;
-
-    bool get(
-            std::string rawPath,
-            const Query& query,
-            const Headers& headers,
-            std::vector<char>& data) const;
 
     struct Resource
     {
         Resource(std::string baseUrl, std::string fullPath);
 
-        std::string buildPath(Query query = Query()) const;
+        std::string url() const;
         std::string host() const;
 
         std::string baseUrl;
@@ -132,6 +126,7 @@ private:
                 const std::vector<char>& data);
 
         const Headers& headers() const { return m_headers; }
+        const Query& query() const { return m_query; }
 
         const std::string& signedHeadersString() const
         {
@@ -160,11 +155,11 @@ private:
         const FormattedTime m_formattedTime;
 
         Headers m_headers;
+        Query m_query;
         std::string m_canonicalHeadersString;
         std::string m_signedHeadersString;
     };
 
-    HttpPool& m_pool;
     AwsAuth m_auth;
 
     std::string m_region;
