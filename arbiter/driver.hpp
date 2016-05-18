@@ -20,8 +20,11 @@ class HttpPool;
  * Derived classes must override Driver::type,
  * Driver::put(std::string, const std::vector<char>&) const, and
  * Driver::get(std::string, std::vector<char>&) const,
- * Driver::size(std::string) const - and may optionally
+ * Driver::getSize(std::string) const - and may optionally
  * override Driver::glob if possible.
+ *
+ * HTTP-derived classes should override the PUT and GET versions that accept
+ * http::Headers and http::Query parameters instead.
  */
 class Driver
 {

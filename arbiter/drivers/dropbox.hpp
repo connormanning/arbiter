@@ -50,7 +50,7 @@ private:
             std::string path,
             std::vector<char>& data,
             http::Headers headers,
-            http::Query query = http::Query()) const override;
+            http::Query query) const override;
 
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;

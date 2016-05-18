@@ -22,7 +22,10 @@ namespace arbiter
 namespace http
 {
 
+/** HTTP header fields. */
 using Headers = std::map<std::string, std::string>;
+
+/** HTTP query parameters. */
 using Query = std::map<std::string, std::string>;
 
 /** Perform URI percent-encoding, without encoding characters included in

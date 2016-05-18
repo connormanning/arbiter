@@ -98,42 +98,44 @@ public:
     /** Write data to path. */
     void put(std::string path, const std::vector<char>& data) const;
 
-    /** get(std::string) with additional HTTP-specific parameters.  Throws
-     * if isHttpDerived is false for this path. */
+    /** Get data with additional HTTP-specific parameters.  Throws if
+     * isHttpDerived is false for this path. */
     std::string get(
             std::string path,
             http::Headers headers,
             http::Query query = http::Query()) const;
 
-    /** tryGet(std::string) with additional HTTP-specific parameters.  Throws
-     * if isHttpDerived is false for this path. */
+    /** Get data with additional HTTP-specific parameters.  Throws if
+     * isHttpDerived is false for this path. */
     std::unique_ptr<std::string> tryGet(
             std::string path,
             http::Headers headers,
             http::Query query = http::Query()) const;
 
-    /** getBinary(std::string) with additional HTTP-specific parameters.
+    /** Get data in binary form with additional HTTP-specific parameters.
      * Throws if isHttpDerived is false for this path. */
     std::vector<char> getBinary(
             std::string path,
             http::Headers headers,
             http::Query query = http::Query()) const;
 
-    /** tryGetBinary(std::string) with additional HTTP-specific parameters.
+    /** Get data in binary form with additional HTTP-specific parameters.
      * Throws if isHttpDerived is false for this path. */
     std::unique_ptr<std::vector<char>> tryGetBinary(
             std::string path,
             http::Headers headers,
             http::Query query = http::Query()) const;
 
-    /** Write data to path. */
+    /** Write data to path with additional HTTP-specific parameters.
+     * Throws if isHttpDerived is false for this path. */
     void put(
             std::string path,
             const std::string& data,
             http::Headers headers,
             http::Query query = http::Query()) const;
 
-    /** Write data to path. */
+    /** Write data to path with additional HTTP-specific parameters.
+     * Throws if isHttpDerived is false for this path. */
     void put(
             std::string path,
             const std::vector<char>& data,

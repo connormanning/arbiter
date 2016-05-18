@@ -83,7 +83,7 @@ public:
             std::string path,
             const std::vector<char>& data,
             http::Headers headers,
-            http::Query query = http::Query()) const;
+            http::Query query) const;
 
 protected:
     /** HTTP-derived Drivers should override this version of GET to allow for

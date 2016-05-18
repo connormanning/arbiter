@@ -70,7 +70,7 @@ public:
             std::string path,
             const std::vector<char>& data,
             http::Headers headers,
-            http::Query query = http::Query()) const override;
+            http::Query query) const override;
 
 private:
     /** Inherited from Drivers::Http. */
