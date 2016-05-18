@@ -103,6 +103,50 @@ public:
     /** Write data to path. */
     void put(std::string path, const std::vector<char>& data) const;
 
+    /** Get data with additional HTTP-specific parameters.  Throws if
+     * isHttpDerived is false for this path. */
+    std::string get(
+            std::string path,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Get data with additional HTTP-specific parameters.  Throws if
+     * isHttpDerived is false for this path. */
+    std::unique_ptr<std::string> tryGet(
+            std::string path,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Get data in binary form with additional HTTP-specific parameters.
+     * Throws if isHttpDerived is false for this path. */
+    std::vector<char> getBinary(
+            std::string path,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Get data in binary form with additional HTTP-specific parameters.
+     * Throws if isHttpDerived is false for this path. */
+    std::unique_ptr<std::vector<char>> tryGetBinary(
+            std::string path,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Write data to path with additional HTTP-specific parameters.
+     * Throws if isHttpDerived is false for this path. */
+    void put(
+            std::string path,
+            const std::string& data,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Write data to path with additional HTTP-specific parameters.
+     * Throws if isHttpDerived is false for this path. */
+    void put(
+            std::string path,
+            const std::vector<char>& data,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
     /** Copy data from @p from to @p to.  @p from will be resolved with
      * Arbiter::resolve prior to the copy, so globbed directories are supported.
      */
@@ -117,6 +161,12 @@ public:
      * remote.
      */
     bool isLocal(std::string path) const;
+
+    /** Returns true if the protocol for this driver is build on HTTP, like the
+     * S3 and Dropbox drivers are.  If this returns true, http::Headers and
+     * http::Query parameter methods may be used for this path.
+     */
+    bool isHttpDerived(std::string path) const;
 
     /** @brief Resolve a possibly globbed path.
      *
@@ -210,14 +260,17 @@ public:
     /** Fetch the common HTTP pool, which may be useful when dynamically
      * constructing adding a Driver via Arbiter::addDriver.
      */
-    HttpPool& httpPool() { return m_pool; }
+    http::Pool& httpPool() { return m_pool; }
 
 private:
     // Registers all available default Driver instances.
     void init(const Json::Value& json);
 
+    const drivers::Http* tryGetHttpDriver(std::string path) const;
+    const drivers::Http& getHttpDriver(std::string path) const;
+
     DriverMap m_drivers;
-    HttpPool m_pool;
+    http::Pool m_pool;
 };
 
 } // namespace arbiter

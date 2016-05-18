@@ -3,6 +3,7 @@ set(BASE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(
     SOURCES
+    "${BASE}/http.cpp"
     "${BASE}/transforms.cpp"
     "${BASE}/md5.cpp"
     "${BASE}/sha256.cpp"
@@ -11,6 +12,7 @@ set(
 
 set(
     HEADERS
+    "${BASE}/http.hpp"
     "${BASE}/transforms.hpp"
     "${BASE}/macros.hpp"
     "${BASE}/md5.hpp"

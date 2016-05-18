@@ -5,7 +5,6 @@
 #include <vector>
 
 #ifndef ARBITER_IS_AMALGAMATION
-#include <arbiter/driver.hpp>
 #include <arbiter/drivers/http.hpp>
 #endif
 
@@ -46,11 +45,11 @@ private:
 };
 
 /** @brief Amazon %S3 driver. */
-class S3 : public CustomHeaderDriver
+class S3 : public Http
 {
 public:
     S3(
-            HttpPool& pool,
+            http::Pool& pool,
             AwsAuth awsAuth,
             std::string region = "us-east-1",
             bool sse = false);
@@ -63,7 +62,10 @@ public:
      * Server-side encryption may be enabled by setting key `sse` to `true` in
      * @p json.
      */
-    static std::unique_ptr<S3> create(HttpPool& pool, const Json::Value& json);
+    static std::unique_ptr<S3> create(
+            http::Pool& pool,
+            const Json::Value& json);
+
     static std::string extractProfile(const Json::Value& json);
 
     virtual std::string type() const override { return "s3"; }
@@ -71,35 +73,30 @@ public:
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
 
+    /** Inherited from Drivers::Http. */
     virtual void put(
             std::string path,
-            const std::vector<char>& data) const override;
-
-    /** Inherited from CustomHeaderDriver. */
-    virtual std::string get(std::string path, Headers headers) const override;
-
-    /** Inherited from CustomHeaderDriver. */
-    virtual std::vector<char> getBinary(
-            std::string path,
-            Headers headers) const override;
+            const std::vector<char>& data,
+            http::Headers headers,
+            http::Query query) const override;
 
 private:
-    virtual bool get(std::string path, std::vector<char>& data) const override;
+    /** Inherited from Drivers::Http. */
+    virtual bool get(
+            std::string path,
+            std::vector<char>& data,
+            http::Headers headers,
+            http::Query query) const override;
+
     virtual std::vector<std::string> glob(
             std::string path,
             bool verbose) const override;
-
-    bool get(
-            std::string rawPath,
-            const Query& query,
-            const Headers& headers,
-            std::vector<char>& data) const;
 
     struct Resource
     {
         Resource(std::string baseUrl, std::string fullPath);
 
-        std::string buildPath(Query query = Query()) const;
+        std::string url() const;
         std::string host() const;
 
         std::string baseUrl;
@@ -135,11 +132,12 @@ private:
                 const std::string& region,
                 const Resource& resource,
                 const AwsAuth& auth,
-                const Query& query,
-                const Headers& headers,
+                const http::Query& query,
+                const http::Headers& headers,
                 const std::vector<char>& data);
 
-        const Headers& headers() const { return m_headers; }
+        const http::Headers& headers() const { return m_headers; }
+        const http::Query& query() const { return m_query; }
 
         const std::string& signedHeadersString() const
         {
@@ -150,7 +148,7 @@ private:
         std::string buildCanonicalRequest(
                 std::string verb,
                 const Resource& resource,
-                const Query& query,
+                const http::Query& query,
                 const std::vector<char>& data) const;
 
         std::string buildStringToSign(
@@ -167,17 +165,17 @@ private:
         const std::string m_region;
         const FormattedTime m_formattedTime;
 
-        Headers m_headers;
+        http::Headers m_headers;
+        http::Query m_query;
         std::string m_canonicalHeadersString;
         std::string m_signedHeadersString;
     };
 
-    HttpPool& m_pool;
     AwsAuth m_auth;
 
     std::string m_region;
     std::string m_baseUrl;
-    Headers m_baseHeaders;
+    http::Headers m_baseHeaders;
 };
 
 } // namespace drivers

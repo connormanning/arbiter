@@ -68,13 +68,15 @@ namespace
 namespace drivers
 {
 
-Dropbox::Dropbox(HttpPool& pool, const DropboxAuth auth)
-    : m_pool(pool)
+using namespace http;
+
+Dropbox::Dropbox(http::Pool& pool, const DropboxAuth auth)
+    : Http(pool)
     , m_auth(auth)
 { }
 
 std::unique_ptr<Dropbox> Dropbox::create(
-        HttpPool& pool,
+        http::Pool& pool,
         const Json::Value& json)
 {
     std::unique_ptr<Dropbox> dropbox;
@@ -114,11 +116,6 @@ Headers Dropbox::httpPostHeaders() const
     return headers;
 }
 
-bool Dropbox::get(const std::string rawPath, std::vector<char>& data) const
-{
-    return buildRequestAndGet(rawPath, data);
-}
-
 std::unique_ptr<std::size_t> Dropbox::tryGetSize(
         const std::string rawPath) const
 {
@@ -127,12 +124,11 @@ std::unique_ptr<std::size_t> Dropbox::tryGetSize(
     Headers headers(httpPostHeaders());
 
     Json::Value json;
-    json["path"] = std::string("/" + Http::sanitize(rawPath));
+    json["path"] = std::string("/" + sanitize(rawPath));
     const auto f(toSanitizedString(json));
     const std::vector<char> postData(f.begin(), f.end());
 
-    auto http(m_pool.acquire());
-    HttpResponse res(http.post(metaUrl, postData, headers));
+    Response res(Http::internalPost(metaUrl, postData, headers));
 
     if (res.ok())
     {
@@ -151,12 +147,13 @@ std::unique_ptr<std::size_t> Dropbox::tryGetSize(
     return result;
 }
 
-bool Dropbox::buildRequestAndGet(
+bool Dropbox::get(
         const std::string rawPath,
         std::vector<char>& data,
-        const Headers userHeaders) const
+        const Headers userHeaders,
+        const Query query) const
 {
-    const std::string path(Http::sanitize(rawPath));
+    const std::string path(sanitize(rawPath));
 
     Headers headers(httpGetHeaders());
 
@@ -169,12 +166,10 @@ bool Dropbox::buildRequestAndGet(
 
     headers.insert(userHeaders.begin(), userHeaders.end());
 
-    auto http(m_pool.acquire());
-
-    HttpResponse res(
+    Response res(
             legacy ?
-                http.get(getUrlV1 + path, headers) :
-                http.get(getUrlV2, headers));
+                Http::internalGet(getUrlV1 + path, headers, query) :
+                Http::internalGet(getUrlV2, headers, query));
 
     if (res.ok())
     {
@@ -215,7 +210,11 @@ bool Dropbox::buildRequestAndGet(
     return false;
 }
 
-void Dropbox::put(std::string rawPath, const std::vector<char>& data) const
+void Dropbox::put(
+        const std::string rawPath,
+        const std::vector<char>& data,
+        const Headers headers,
+        const Query query) const
 {
     throw ArbiterError("PUT not yet supported for " + type());
 }
@@ -224,14 +223,12 @@ std::string Dropbox::continueFileInfo(std::string cursor) const
 {
     Headers headers(httpPostHeaders());
 
-    auto http(m_pool.acquire());
-
     Json::Value json;
     json["cursor"] = cursor;
     const std::string f(toSanitizedString(json));
 
     std::vector<char> postData(f.begin(), f.end());
-    HttpResponse res(http.post(continueListUrl, postData, headers));
+    Response res(Http::internalPost(continueListUrl, postData, headers));
 
     if (res.ok())
     {
@@ -252,12 +249,10 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
 {
     std::vector<std::string> results;
 
-    const std::string path(
-            Http::sanitize(rawPath.substr(0, rawPath.size() - 2)));
+    const std::string path(sanitize(rawPath.substr(0, rawPath.size() - 2)));
 
     auto listPath = [this](std::string path)->std::string
     {
-        auto http(m_pool.acquire());
         Headers headers(httpPostHeaders());
 
         Json::Value request;
@@ -269,7 +264,7 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
         std::string f = toSanitizedString(request);
 
         std::vector<char> postData(f.begin(), f.end());
-        HttpResponse res(http.post(listUrl, postData, headers));
+        Response res(Http::internalPost(listUrl, postData, headers));
 
         if (res.ok())
         {
@@ -341,30 +336,6 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
     }
 
     return results;
-}
-
-
-
-// These functions allow a caller to directly pass additional headers into
-// their GET request.  This is only applicable when using the Dropbox driver
-// directly, as these are not available through the Arbiter.
-
-std::vector<char> Dropbox::getBinary(std::string rawPath, Headers headers) const
-{
-    std::vector<char> data;
-    const std::string stripped(Arbiter::stripType(rawPath));
-    if (!buildRequestAndGet(stripped, data, headers))
-    {
-        throw ArbiterError("Couldn't Dropbox GET " + rawPath);
-    }
-
-    return data;
-}
-
-std::string Dropbox::get(std::string rawPath, Headers headers) const
-{
-    std::vector<char> data(getBinary(rawPath, headers));
-    return std::string(data.begin(), data.end());
 }
 
 } // namespace drivers

@@ -12,18 +12,10 @@ namespace ARBITER_CUSTOM_NAMESPACE
 namespace arbiter
 {
 
-std::unique_ptr<std::vector<char>> Driver::tryGetBinary(std::string path) const
+std::string Driver::get(const std::string path) const
 {
-    std::unique_ptr<std::vector<char>> data(new std::vector<char>());
-    if (!get(path, *data)) data.reset();
-    return data;
-}
-
-std::vector<char> Driver::getBinary(std::string path) const
-{
-    std::vector<char> data;
-    if (!get(path, data)) throw ArbiterError("Could not read file " + path);
-    return data;
+    const std::vector<char> data(getBinary(path));
+    return std::string(data.begin(), data.end());
 }
 
 std::unique_ptr<std::string> Driver::tryGet(const std::string path) const
@@ -34,10 +26,18 @@ std::unique_ptr<std::string> Driver::tryGet(const std::string path) const
     return result;
 }
 
-std::string Driver::get(const std::string path) const
+std::vector<char> Driver::getBinary(std::string path) const
 {
-    const std::vector<char> data(getBinary(path));
-    return std::string(data.begin(), data.end());
+    std::vector<char> data;
+    if (!get(path, data)) throw ArbiterError("Could not read file " + path);
+    return data;
+}
+
+std::unique_ptr<std::vector<char>> Driver::tryGetBinary(std::string path) const
+{
+    std::unique_ptr<std::vector<char>> data(new std::vector<char>());
+    if (!get(path, *data)) data.reset();
+    return data;
 }
 
 std::size_t Driver::getSize(const std::string path) const

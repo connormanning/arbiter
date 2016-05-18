@@ -1,6 +1,7 @@
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/arbiter.hpp>
 #include <arbiter/drivers/fs.hpp>
+#include <arbiter/util/util.hpp>
 #endif
 
 #ifndef ARBITER_WINDOWS
@@ -33,16 +34,35 @@ namespace
             std::ofstream::out |
             std::ofstream::trunc);
 
-    void noHome()
+    const std::string home(([]()
     {
-        throw ArbiterError("No home directory found");
-    }
+        std::string s;
+
+#ifndef ARBITER_WINDOWS
+        if (auto home = util::env("HOME")) s = *home;
+#else
+        if (auto userProfile = util::env("USERPROFILE"))
+        {
+            s = *userProfile;
+        }
+        else
+        {
+            auto homeDrive(util::env("HOMEDRIVE"));
+            auto homePath(util::env("HOMEPATH"));
+
+            if (homeDrive && homePath) s = homeDrive + homePath;
+        }
+#endif
+        if (s.empty()) std::cout << "No home directory found" << std::endl;
+
+        return s;
+    })());
 }
 
 namespace drivers
 {
 
-std::unique_ptr<Fs> Fs::create(HttpPool&, const Json::Value&)
+std::unique_ptr<Fs> Fs::create(http::Pool&, const Json::Value&)
 {
     return std::unique_ptr<Fs>(new Fs());
 }
@@ -189,35 +209,7 @@ std::string expandTilde(std::string in)
 
     if (!in.empty() && in.front() == '~')
     {
-#ifndef ARBITER_WINDOWS
-        if (!getenv("HOME"))
-        {
-            noHome();
-        }
-
-        static const std::string home(getenv("HOME"));
-#else
-        char* userProfile(nullptr);
-        char* homePath(nullptr);
-        char* homeDrive(nullptr);
-
-        std::size_t len(0);
-        errno_t err(0);
-
-        err = _dupenv_s(&userProfile, &len, "USERPROFILE");
-        err = _dupenv_s(&homeDrive, &len, "HOMEDRIVE");
-        err = _dupenv_s(&homePath, &len, "HOMEPATH");
-
-        if (!userProfile && !(homeDrive && homePath))
-        {
-            noHome();
-        }
-
-        static const std::string home(
-                userProfile ?
-                    userProfile :
-                    std::string(homeDrive) + std::string(homePath));
-#endif
+        if (home.empty()) throw ArbiterError("No home directory found");
 
         out = home + in.substr(1);
     }

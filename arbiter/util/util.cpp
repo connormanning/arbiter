@@ -42,6 +42,22 @@ std::string getBasename(const std::string fullPath)
     return result;
 }
 
+std::unique_ptr<std::string> env(const std::string& var)
+{
+    std::unique_ptr<std::string> result;
+
+#ifndef ARBITER_WINDOWS
+    if (const char* c = getenv(var.c_str())) result.reset(new std::string(c));
+#else
+    char* c(nullptr);
+    std::size_t size(0);
+
+    if (!_dupenv_s(&c, size, var.c_str())) result.reset(new std::string(c));
+#endif
+
+    return result;
+}
+
 } // namespace util
 } // namespace arbiter
 
