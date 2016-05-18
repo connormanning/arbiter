@@ -89,6 +89,11 @@ namespace util
         return joinImpl(true, path, std::forward<Paths>(paths)...);
     }
 
+    /** @brief Extract an environment variable, if it exists, independent of
+     * platform.
+     */
+    std::unique_ptr<std::string> env(const std::string& var);
+
 } // namespace util
 
 } // namespace arbiter
