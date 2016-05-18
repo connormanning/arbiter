@@ -63,13 +63,15 @@ namespace
 namespace drivers
 {
 
-Dropbox::Dropbox(HttpPool& pool, const DropboxAuth auth)
+using namespace http;
+
+Dropbox::Dropbox(http::Pool& pool, const DropboxAuth auth)
     : Http(pool)
     , m_auth(auth)
 { }
 
 std::unique_ptr<Dropbox> Dropbox::create(
-        HttpPool& pool,
+        http::Pool& pool,
         const Json::Value& json)
 {
     std::unique_ptr<Dropbox> dropbox;
@@ -117,11 +119,11 @@ std::unique_ptr<std::size_t> Dropbox::tryGetSize(
     Headers headers(httpPostHeaders());
 
     Json::Value json;
-    json["path"] = std::string("/" + Http::sanitize(rawPath));
+    json["path"] = std::string("/" + sanitize(rawPath));
     const auto f(toSanitizedString(json));
     const std::vector<char> postData(f.begin(), f.end());
 
-    HttpResponse res(Http::internalPost(metaUrl, postData, headers));
+    Response res(Http::internalPost(metaUrl, postData, headers));
 
     if (res.ok())
     {
@@ -146,7 +148,7 @@ bool Dropbox::get(
         const Headers userHeaders,
         const Query query) const
 {
-    const std::string path(Http::sanitize(rawPath));
+    const std::string path(sanitize(rawPath));
 
     Headers headers(httpGetHeaders());
 
@@ -159,7 +161,7 @@ bool Dropbox::get(
 
     headers.insert(userHeaders.begin(), userHeaders.end());
 
-    HttpResponse res(
+    Response res(
             legacy ?
                 Http::internalGet(getUrlV1 + path, headers, query) :
                 Http::internalGet(getUrlV2, headers, query));
@@ -221,7 +223,7 @@ std::string Dropbox::continueFileInfo(std::string cursor) const
     const std::string f(toSanitizedString(json));
 
     std::vector<char> postData(f.begin(), f.end());
-    HttpResponse res(Http::internalPost(continueListUrl, postData, headers));
+    Response res(Http::internalPost(continueListUrl, postData, headers));
 
     if (res.ok())
     {
@@ -242,8 +244,7 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
 {
     std::vector<std::string> results;
 
-    const std::string path(
-            Http::sanitize(rawPath.substr(0, rawPath.size() - 2)));
+    const std::string path(sanitize(rawPath.substr(0, rawPath.size() - 2)));
 
     auto listPath = [this](std::string path)->std::string
     {
@@ -258,7 +259,7 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
         std::string f = toSanitizedString(request);
 
         std::vector<char> postData(f.begin(), f.end());
-        HttpResponse res(Http::internalPost(listUrl, postData, headers));
+        Response res(Http::internalPost(listUrl, postData, headers));
 
         if (res.ok())
         {

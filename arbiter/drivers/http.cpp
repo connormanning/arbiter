@@ -13,6 +13,9 @@
 #include <iostream>
 #include <numeric>
 
+namespace arbiter
+{
+
 namespace
 {
     struct PutData
@@ -61,7 +64,7 @@ namespace
             const char *buffer,
             std::size_t size,
             std::size_t num,
-            arbiter::Headers* out)
+            http::Headers* out)
     {
         const std::size_t fullBytes(size * num);
 
@@ -121,14 +124,14 @@ namespace
     };
 }
 
-namespace arbiter
-{
 namespace drivers
 {
 
-Http::Http(HttpPool& pool) : m_pool(pool) { }
+using namespace http;
 
-std::unique_ptr<Http> Http::create(HttpPool& pool, const Json::Value&)
+Http::Http(http::Pool& pool) : m_pool(pool) { }
+
+std::unique_ptr<Http> Http::create(http::Pool& pool, const Json::Value&)
 {
     return std::unique_ptr<Http>(new Http(pool));
 }
@@ -138,7 +141,7 @@ std::unique_ptr<std::size_t> Http::tryGetSize(std::string path) const
     std::unique_ptr<std::size_t> size;
 
     auto http(m_pool.acquire());
-    HttpResponse res(http.head(path));
+    http::Response res(http.head(path));
 
     if (res.ok() && res.headers().count("Content-Length"))
     {
@@ -158,7 +161,7 @@ bool Http::get(
     bool good(false);
 
     auto http(m_pool.acquire());
-    HttpResponse res(http.get(path, headers, query));
+    http::Response res(http.get(path, headers, query));
 
     if (res.ok())
     {
@@ -205,7 +208,7 @@ std::vector<char> Http::getBinary(
     return data;
 }
 
-HttpResponse Http::internalGet(
+http::Response Http::internalGet(
         const std::string path,
         const Headers headers,
         const Query query) const
@@ -213,7 +216,7 @@ HttpResponse Http::internalGet(
     return m_pool.acquire().get(path, headers, query);
 }
 
-HttpResponse Http::internalPut(
+http::Response Http::internalPut(
         const std::string path,
         const std::vector<char>& data,
         const Headers headers,
@@ -222,7 +225,7 @@ HttpResponse Http::internalPut(
     return m_pool.acquire().put(path, data, headers, query);
 }
 
-HttpResponse Http::internalHead(
+http::Response Http::internalHead(
         const std::string path,
         const Headers headers,
         const Query query) const
@@ -230,7 +233,7 @@ HttpResponse Http::internalHead(
     return m_pool.acquire().head(path, headers, query);
 }
 
-HttpResponse Http::internalPost(
+http::Response Http::internalPost(
         const std::string path,
         const std::vector<char>& data,
         const Headers headers,
@@ -239,7 +242,12 @@ HttpResponse Http::internalPost(
     return m_pool.acquire().post(path, data, headers, query);
 }
 
-std::string Http::sanitize(const std::string path, const std::string exclusions)
+} // namespace drivers
+
+namespace http
+{
+
+std::string sanitize(const std::string path, const std::string exclusions)
 {
     std::string result;
 
@@ -260,7 +268,7 @@ std::string Http::sanitize(const std::string path, const std::string exclusions)
     return result;
 }
 
-std::string Http::buildQueryString(const Query& query)
+std::string buildQueryString(const Query& query)
 {
     return std::accumulate(
             query.begin(),
@@ -272,8 +280,6 @@ std::string Http::buildQueryString(const Query& query)
                 return out + sep + keyVal.first + '=' + keyVal.second;
             });
 }
-
-} // namespace drivers
 
 Curl::Curl(bool verbose, std::size_t timeout)
     : m_curl(0)
@@ -292,15 +298,17 @@ Curl::~Curl()
     m_headers = 0;
 }
 
-void Curl::init(std::string path, const Headers& headers, const Query& query)
+void Curl::init(
+        const std::string rawPath,
+        const Headers& headers,
+        const Query& query)
 {
     // Reset our curl instance and header list.
     curl_slist_free_all(m_headers);
     m_headers = 0;
 
     // Set path.
-    path = drivers::Http::sanitize(
-            path + drivers::Http::buildQueryString(query));
+    const std::string path(sanitize(rawPath + buildQueryString(query)));
     curl_easy_setopt(m_curl, CURLOPT_URL, path.c_str());
 
     // Needed for multithreaded Curl usage.
@@ -324,7 +332,7 @@ void Curl::init(std::string path, const Headers& headers, const Query& query)
     }
 }
 
-HttpResponse Curl::get(std::string path, Headers headers, Query query)
+Response Curl::get(std::string path, Headers headers, Query query)
 {
     int httpCode(0);
     std::vector<char> data;
@@ -349,10 +357,10 @@ HttpResponse Curl::get(std::string path, Headers headers, Query query)
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     curl_easy_reset(m_curl);
-    return HttpResponse(httpCode, data, receivedHeaders);
+    return Response(httpCode, data, receivedHeaders);
 }
 
-HttpResponse Curl::head(std::string path, Headers headers, Query query)
+Response Curl::head(std::string path, Headers headers, Query query)
 {
     int httpCode(0);
     std::vector<char> data;
@@ -380,10 +388,10 @@ HttpResponse Curl::head(std::string path, Headers headers, Query query)
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     curl_easy_reset(m_curl);
-    return HttpResponse(httpCode, data, receivedHeaders);
+    return Response(httpCode, data, receivedHeaders);
 }
 
-HttpResponse Curl::put(
+Response Curl::put(
         std::string path,
         const std::vector<char>& data,
         Headers headers,
@@ -422,10 +430,10 @@ HttpResponse Curl::put(
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     curl_easy_reset(m_curl);
-    return HttpResponse(httpCode);
+    return Response(httpCode);
 }
 
-HttpResponse Curl::post(
+Response Curl::post(
         std::string path,
         const std::vector<char>& data,
         Headers headers,
@@ -470,14 +478,14 @@ HttpResponse Curl::post(
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     curl_easy_reset(m_curl);
-    HttpResponse response(httpCode, writeData, receivedHeaders);
+    Response response(httpCode, writeData, receivedHeaders);
     return response;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-HttpResource::HttpResource(
-        HttpPool& pool,
+Resource::Resource(
+        Pool& pool,
         Curl& curl,
         const std::size_t id,
         const std::size_t retry)
@@ -487,60 +495,60 @@ HttpResource::HttpResource(
     , m_retry(retry)
 { }
 
-HttpResource::~HttpResource()
+Resource::~Resource()
 {
     m_pool.release(m_id);
 }
 
-HttpResponse HttpResource::get(
+Response Resource::get(
         const std::string path,
         const Headers headers,
         const Query query)
 {
-    return exec([this, path, headers, query]()->HttpResponse
+    return exec([this, path, headers, query]()->Response
     {
         return m_curl.get(path, headers, query);
     });
 }
 
-HttpResponse HttpResource::head(
+Response Resource::head(
         const std::string path,
         const Headers headers,
         const Query query)
 {
-    return exec([this, path, headers, query]()->HttpResponse
+    return exec([this, path, headers, query]()->Response
     {
         return m_curl.head(path, headers, query);
     });
 }
 
-HttpResponse HttpResource::put(
+Response Resource::put(
         std::string path,
         const std::vector<char>& data,
         const Headers headers,
         const Query query)
 {
-    return exec([this, path, &data, headers, query]()->HttpResponse
+    return exec([this, path, &data, headers, query]()->Response
     {
         return m_curl.put(path, data, headers, query);
     });
 }
 
-HttpResponse HttpResource::post(
+Response Resource::post(
         std::string path,
         const std::vector<char>& data,
         const Headers headers,
         const Query query)
 {
-    return exec([this, path, &data, headers, query]()->HttpResponse
+    return exec([this, path, &data, headers, query]()->Response
     {
         return m_curl.post(path, data, headers, query);
     });
 }
 
-HttpResponse HttpResource::exec(std::function<HttpResponse()> f)
+Response Resource::exec(std::function<Response()> f)
 {
-    HttpResponse res;
+    Response res;
     std::size_t tries(0);
 
     do
@@ -554,7 +562,7 @@ HttpResponse HttpResource::exec(std::function<HttpResponse()> f)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-HttpPool::HttpPool(
+Pool::Pool(
         const std::size_t concurrent,
         const std::size_t retry,
         const Json::Value& json)
@@ -579,7 +587,7 @@ HttpPool::HttpPool(
     }
 }
 
-HttpResource HttpPool::acquire()
+Resource Pool::acquire()
 {
     std::unique_lock<std::mutex> lock(m_mutex);
     m_cv.wait(lock, [this]()->bool { return !m_available.empty(); });
@@ -589,10 +597,10 @@ HttpResource HttpPool::acquire()
 
     m_available.pop_back();
 
-    return HttpResource(*this, curl, id, m_retry);
+    return Resource(*this, curl, id, m_retry);
 }
 
-void HttpPool::release(const std::size_t id)
+void Pool::release(const std::size_t id)
 {
     std::unique_lock<std::mutex> lock(m_mutex);
     m_available.push_back(id);
@@ -600,6 +608,8 @@ void HttpPool::release(const std::size_t id)
 
     m_cv.notify_one();
 }
+
+} // namepace http
 
 } // namespace arbiter
 

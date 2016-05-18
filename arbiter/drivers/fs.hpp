@@ -19,6 +19,8 @@
 namespace arbiter
 {
 
+namespace http { class Pool; }
+
 class Arbiter;
 
 /**
@@ -97,7 +99,7 @@ namespace drivers
 class Fs : public Driver
 {
 public:
-    static std::unique_ptr<Fs> create(HttpPool& pool, const Json::Value& json);
+    static std::unique_ptr<Fs> create(http::Pool&, const Json::Value& json);
 
     virtual std::string type() const override { return "file"; }
 

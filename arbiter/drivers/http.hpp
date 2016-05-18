@@ -17,49 +17,68 @@
 namespace arbiter
 {
 
-/** @cond arbiter_internal */
-class HttpResponse
+namespace http
 {
-public:
-    HttpResponse(int code = 0)
-        : m_code(code)
-        , m_data()
-    { }
+    class Pool;
 
-    HttpResponse(int code, std::vector<char> data)
-        : m_code(code)
-        , m_data(data)
-    { }
+    using Headers = std::map<std::string, std::string>;
+    using Query = std::map<std::string, std::string>;
 
-    HttpResponse(
-            int code,
-            const std::vector<char>& data,
-            const Headers& headers)
-        : m_code(code)
-        , m_data(data)
-        , m_headers(headers)
-    { }
+    /** Perform URI percent-encoding, without encoding characters included in
+     * @p exclusions.
+     */
+    std::string sanitize(std::string path, std::string exclusions = "/");
 
-    ~HttpResponse() { }
+    /** Build a query string from key-value pairs.  If @p query is empty, the
+     * result is an empty string.  Otherwise, the result will start with the
+     * '?' character.
+     */
+    std::string buildQueryString(const http::Query& query);
 
-    bool ok() const             { return m_code / 100 == 2; }
-    bool clientError() const    { return m_code / 100 == 4; }
-    bool serverError() const    { return m_code / 100 == 5; }
-    int code() const            { return m_code; }
+    /** @cond arbiter_internal */
+    class Response
+    {
+    public:
+        Response(int code = 0)
+            : m_code(code)
+            , m_data()
+        { }
 
-    std::vector<char> data() const { return m_data; }
-    const Headers& headers() const { return m_headers; }
+        Response(int code, std::vector<char> data)
+            : m_code(code)
+            , m_data(data)
+        { }
 
-private:
-    int m_code;
-    std::vector<char> m_data;
-    Headers m_headers;
-};
+        Response(
+                int code,
+                const std::vector<char>& data,
+                const Headers& headers)
+            : m_code(code)
+            , m_data(data)
+            , m_headers(headers)
+        { }
+
+        ~Response() { }
+
+        bool ok() const             { return m_code / 100 == 2; }
+        bool clientError() const    { return m_code / 100 == 4; }
+        bool serverError() const    { return m_code / 100 == 5; }
+        int code() const            { return m_code; }
+
+        std::vector<char> data() const { return m_data; }
+        const Headers& headers() const { return m_headers; }
+
+    private:
+        int m_code;
+        std::vector<char> m_data;
+        Headers m_headers;
+    };
+} // namespace http
+
 /** @endcond */
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class HttpPool;
 
 namespace drivers
 {
@@ -73,9 +92,9 @@ namespace drivers
 class Http : public Driver
 {
 public:
-    Http(HttpPool& pool);
+    Http(http::Pool& pool);
     static std::unique_ptr<Http> create(
-            HttpPool& pool,
+            http::Pool& pool,
             const Json::Value& json);
 
     // Inherited from Driver.
@@ -91,11 +110,8 @@ public:
             std::string path,
             const std::vector<char>& data) const final override
     {
-        put(path, data, Headers(), Query());
+        put(path, data, http::Headers(), http::Query());
     }
-
-
-
 
     /* HTTP-specific driver methods follow.  Since many drivers (S3, Dropbox,
      * etc.) are built atop HTTP, we'll provide HTTP-specific methods for
@@ -106,26 +122,13 @@ public:
      */
     std::string get(
             std::string path,
-            Headers headers,
-            Query query = Query()) const;
+            http::Headers headers,
+            http::Query query = http::Query()) const;
 
     std::vector<char> getBinary(
             std::string path,
-            Headers headers,
-            Query query = Query()) const;
-
-    // Utility functions.
-
-    /** Perform URI percent-encoding, without encoding characters included in
-     * @p exclusions.
-     */
-    static std::string sanitize(std::string path, std::string exclusions = "/");
-
-    /** Build a query string from key-value pairs.  If @p query is empty, the
-     * result is an empty string.  Otherwise, the result will start with the
-     * '?' character.
-     */
-    static std::string buildQueryString(const Query& query);
+            http::Headers headers,
+            http::Query query = http::Query()) const;
 
     /** HTTP-derived Drivers should override this version of PUT to allow for
      * custom headers and query parameters.
@@ -133,8 +136,8 @@ public:
     virtual void put(
             std::string path,
             const std::vector<char>& data,
-            Headers headers,
-            Query query = Query()) const;
+            http::Headers headers,
+            http::Query query = http::Query()) const;
 
 protected:
     /** HTTP-derived Drivers should override this version of GET to allow for
@@ -143,64 +146,66 @@ protected:
     virtual bool get(
             std::string path,
             std::vector<char>& data,
-            Headers headers,
-            Query query) const;
+            http::Headers headers,
+            http::Query query) const;
 
     /* These operations are other HTTP-specific calls that derived drivers may
      * need for their underlying API use.
      */
-    HttpResponse internalGet(
+    http::Response internalGet(
             std::string path,
-            Headers headers = Headers(),
-            Query query = Query()) const;
+            http::Headers headers = http::Headers(),
+            http::Query query = http::Query()) const;
 
-    HttpResponse internalPut(
+    http::Response internalPut(
             std::string path,
             const std::vector<char>& data,
-            Headers headers = Headers(),
-            Query query = Query()) const;
+            http::Headers headers = http::Headers(),
+            http::Query query = http::Query()) const;
 
-    HttpResponse internalHead(
+    http::Response internalHead(
             std::string path,
-            Headers headers = Headers(),
-            Query query = Query()) const;
+            http::Headers headers = http::Headers(),
+            http::Query query = http::Query()) const;
 
-    HttpResponse internalPost(
+    http::Response internalPost(
             std::string path,
             const std::vector<char>& data,
-            Headers headers = Headers(),
-            Query query = Query()) const;
+            http::Headers headers = http::Headers(),
+            http::Query query = http::Query()) const;
 
 private:
     virtual bool get(
             std::string path,
             std::vector<char>& data) const final override
     {
-        return get(path, data, Headers(), Query());
+        return get(path, data, http::Headers(), http::Query());
     }
 
-    HttpPool& m_pool;
+    http::Pool& m_pool;
 };
 
 } // namespace drivers
 
+namespace http
+{
+
 /** @cond arbiter_internal */
 class Curl
 {
-    // Only HttpPool may create.
-    friend class HttpPool;
+    friend class Pool;
 
 public:
     ~Curl();
 
-    HttpResponse get(std::string path, Headers headers, Query query);
-    HttpResponse head(std::string path, Headers headers, Query query);
-    HttpResponse put(
+    http::Response get(std::string path, Headers headers, Query query);
+    http::Response head(std::string path, Headers headers, Query query);
+    http::Response put(
             std::string path,
             const std::vector<char>& data,
             Headers headers,
             Query query);
-    HttpResponse post(
+    http::Response post(
             std::string path,
             const std::vector<char>& data,
             Headers headers,
@@ -222,55 +227,55 @@ private:
     std::vector<char> m_data;
 };
 
-class HttpResource
+class Resource
 {
 public:
-    HttpResource(HttpPool& pool, Curl& curl, std::size_t id, std::size_t retry);
-    ~HttpResource();
+    Resource(Pool& pool, Curl& curl, std::size_t id, std::size_t retry);
+    ~Resource();
 
-    HttpResponse get(
+    http::Response get(
             std::string path,
             Headers headers = Headers(),
             Query query = Query());
 
-    HttpResponse head(
+    http::Response head(
             std::string path,
             Headers headers = Headers(),
             Query query = Query());
 
-    HttpResponse put(
+    http::Response put(
             std::string path,
             const std::vector<char>& data,
             Headers headers = Headers(),
             Query query = Query());
 
-    HttpResponse post(
+    http::Response post(
             std::string path,
             const std::vector<char>& data,
             Headers headers = Headers(),
             Query query = Query());
 
 private:
-    HttpPool& m_pool;
+    Pool& m_pool;
     Curl& m_curl;
     std::size_t m_id;
     std::size_t m_retry;
 
-    HttpResponse exec(std::function<HttpResponse()> f);
+    http::Response exec(std::function<http::Response()> f);
 };
 
-class HttpPool
+class Pool
 {
     // Only HttpResource may release.
-    friend class HttpResource;
+    friend class Resource;
 
 public:
-    HttpPool(
+    Pool(
             std::size_t concurrent,
             std::size_t retry,
             const Json::Value& json);
 
-    HttpResource acquire();
+    Resource acquire();
 
 private:
     void release(std::size_t id);
@@ -282,6 +287,9 @@ private:
     std::mutex m_mutex;
     std::condition_variable m_cv;
 };
+
+} // namespace http
+
 /** @endcond */
 
 } // namespace arbiter

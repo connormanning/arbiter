@@ -9,9 +9,6 @@
 namespace arbiter
 {
 
-using Headers = std::map<std::string, std::string>;
-using Query = std::map<std::string, std::string>;
-
 class HttpPool;
 
 /** @brief Base class for interacting with a storage type.

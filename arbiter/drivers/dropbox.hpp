@@ -29,28 +29,28 @@ private:
 class Dropbox : public Http
 {
 public:
-    Dropbox(HttpPool& pool, DropboxAuth auth);
+    Dropbox(http::Pool& pool, DropboxAuth auth);
 
     /** Try to construct a %Dropbox Driver.  Searches @p json for the key
      * `token` to construct a DropboxAuth.
      */
     static std::unique_ptr<Dropbox> create(
-            HttpPool& pool,
+            http::Pool& pool,
             const Json::Value& json);
 
     virtual std::string type() const override { return "dropbox"; }
     virtual void put(
             std::string path,
             const std::vector<char>& data,
-            Headers headers,
-            Query query = Query()) const override;
+            http::Headers headers,
+            http::Query query = http::Query()) const override;
 
 private:
     virtual bool get(
             std::string path,
             std::vector<char>& data,
-            Headers headers,
-            Query query = Query()) const override;
+            http::Headers headers,
+            http::Query query = http::Query()) const override;
 
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
@@ -61,8 +61,8 @@ private:
 
     std::string continueFileInfo(std::string cursor) const;
 
-    Headers httpGetHeaders() const;
-    Headers httpPostHeaders() const;
+    http::Headers httpGetHeaders() const;
+    http::Headers httpPostHeaders() const;
 
     DropboxAuth m_auth;
 };

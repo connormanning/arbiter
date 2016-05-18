@@ -133,6 +133,8 @@ namespace
     }
 }
 
+using namespace http;
+
 namespace drivers
 {
 
@@ -217,18 +219,11 @@ std::unique_ptr<AwsAuth> AwsAuth::find(std::string profile)
     return auth;
 }
 
-std::string AwsAuth::access() const
-{
-    return m_access;
-}
-
-std::string AwsAuth::hidden() const
-{
-    return m_hidden;
-}
+std::string AwsAuth::access() const { return m_access; }
+std::string AwsAuth::hidden() const { return m_hidden; }
 
 S3::S3(
-        HttpPool& pool,
+        http::Pool& pool,
         const AwsAuth auth,
         const std::string region,
         const std::string sseKey)
@@ -251,7 +246,7 @@ S3::S3(
     }
 }
 
-std::unique_ptr<S3> S3::create(HttpPool& pool, const Json::Value& json)
+std::unique_ptr<S3> S3::create(http::Pool& pool, const Json::Value& json)
 {
     std::unique_ptr<AwsAuth> auth;
     std::unique_ptr<S3> s3;
@@ -350,7 +345,7 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
             Headers(),
             empty);
 
-    HttpResponse res(Http::internalHead(resource.url(), authV4.headers()));
+    Response res(Http::internalHead(resource.url(), authV4.headers()));
 
     if (res.ok() && res.headers().count("Content-Length"))
     {
@@ -377,7 +372,7 @@ bool S3::get(
             headers,
             empty);
 
-    HttpResponse res(
+    Response res(
             Http::internalGet(
                 resource.url(),
                 authV4.headers(),
@@ -420,7 +415,7 @@ void S3::put(
             headers,
             data);
 
-    HttpResponse res(
+    Response res(
             Http::internalPut(
                 resource.url(),
                 data,
@@ -611,13 +606,13 @@ std::string S3::AuthV4::buildCanonicalRequest(
         const Query& query,
         const std::vector<char>& data) const
 {
-    const std::string canonicalUri(Http::sanitize("/" + resource.object));
+    const std::string canonicalUri(sanitize("/" + resource.object));
 
     auto canonicalizeQuery([](const std::string& s, const Query::value_type& q)
     {
         const std::string keyVal(
-                Http::sanitize(q.first, "") + '=' +
-                Http::sanitize(q.second, ""));
+                sanitize(q.first, "") + '=' +
+                sanitize(q.second, ""));
 
         return s + (s.size() ? "&" : "") + keyVal;
     });
@@ -681,7 +676,7 @@ S3::Resource::Resource(std::string baseUrl, std::string fullPath)
     , bucket()
     , object()
 {
-    fullPath = Http::sanitize(fullPath);
+    fullPath = sanitize(fullPath);
     const std::size_t split(fullPath.find("/"));
 
     bucket = fullPath.substr(0, split);
