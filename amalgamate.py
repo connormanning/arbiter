@@ -108,6 +108,7 @@ def amalgamate_source(source_top_dir=None,
         header.add_file("arbiter/third/xml/rapidxml.hpp")
         header.add_file("arbiter/third/xml/xml.hpp")
 
+    header.add_file("arbiter/util/http.hpp")
     header.add_file("arbiter/util/macros.hpp")
     header.add_file("arbiter/util/md5.hpp")
     header.add_file("arbiter/util/sha256.hpp")
@@ -146,6 +147,7 @@ def amalgamate_source(source_top_dir=None,
     source.add_file("arbiter/drivers/http.cpp")
     source.add_file("arbiter/drivers/s3.cpp")
     source.add_file("arbiter/drivers/dropbox.cpp")
+    source.add_file("arbiter/util/http.cpp")
     source.add_file("arbiter/util/md5.cpp")
     source.add_file("arbiter/util/sha256.cpp")
     source.add_file("arbiter/util/transforms.cpp")
