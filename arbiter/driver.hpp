@@ -38,11 +38,17 @@ public:
      */
     virtual std::string type() const = 0;
 
-    /** Get binary data, if available. */
-    std::unique_ptr<std::vector<char>> tryGetBinary(std::string path) const;
+    /** Get string data. */
+    std::string get(std::string path) const;
+
+    /** Get string data, if available. */
+    std::unique_ptr<std::string> tryGet(std::string path) const;
 
     /** Get binary data. */
     std::vector<char> getBinary(std::string path) const;
+
+    /** Get binary data, if available. */
+    std::unique_ptr<std::vector<char>> tryGetBinary(std::string path) const;
 
     /**
      * Write @p data to the given @p path.
@@ -57,12 +63,6 @@ public:
      * request will download and write this file to the local filesystem.
      */
     virtual bool isRemote() const { return true; }
-
-    /** Get string data, if available. */
-    std::unique_ptr<std::string> tryGet(std::string path) const;
-
-    /** Get string data. */
-    std::string get(std::string path) const;
 
     /** Get the file size in bytes, if available. */
     virtual std::unique_ptr<std::size_t> tryGetSize(std::string path) const = 0;

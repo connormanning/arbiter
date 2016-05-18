@@ -43,6 +43,58 @@ std::unique_ptr<std::size_t> Http::tryGetSize(std::string path) const
     return size;
 }
 
+std::string Http::get(
+        std::string path,
+        http::Headers headers,
+        http::Query query) const
+{
+    const auto data(getBinary(path, headers, query));
+    return std::string(data.begin(), data.end());
+}
+
+std::unique_ptr<std::string> Http::tryGet(
+        std::string path,
+        http::Headers headers,
+        http::Query query) const
+{
+    std::unique_ptr<std::string> result;
+    auto data(tryGetBinary(path, headers, query));
+    if (data) result.reset(new std::string(data->begin(), data->end()));
+    return result;
+}
+
+std::vector<char> Http::getBinary(
+        std::string path,
+        http::Headers headers,
+        http::Query query) const
+{
+    std::vector<char> data;
+    if (!get(path, data, headers, query))
+    {
+        throw ArbiterError("Could not read from " + path);
+    }
+    return data;
+}
+
+std::unique_ptr<std::vector<char>> Http::tryGetBinary(
+        std::string path,
+        http::Headers headers,
+        http::Query query) const
+{
+    std::unique_ptr<std::vector<char>> data(new std::vector<char>());
+    if (!get(path, *data, headers, query)) data.reset();
+    return data;
+}
+
+void Http::put(
+        std::string path,
+        const std::string& data,
+        const Headers headers,
+        const Query query) const
+{
+    put(path, std::vector<char>(data.begin(), data.end()), headers, query);
+}
+
 bool Http::get(
         std::string path,
         std::vector<char>& data,
@@ -75,28 +127,6 @@ void Http::put(
     {
         throw ArbiterError("Couldn't HTTP PUT to " + path);
     }
-}
-
-std::string Http::get(
-        const std::string path,
-        const Headers headers,
-        const Query query) const
-{
-    const auto data(getBinary(path, headers, query));
-    return std::string(data.begin(), data.end());
-}
-
-std::vector<char> Http::getBinary(
-        const std::string path,
-        const Headers headers,
-        const Query query) const
-{
-    std::vector<char> data;
-    if (!get(path, data, headers, query))
-    {
-        throw ArbiterError("Could not read resource " + path);
-    }
-    return data;
 }
 
 http::Response Http::internalGet(

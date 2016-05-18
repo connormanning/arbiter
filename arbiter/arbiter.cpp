@@ -96,6 +96,56 @@ void Arbiter::put(const std::string path, const std::vector<char>& data) const
     return getDriver(path).put(stripType(path), data);
 }
 
+std::string Arbiter::get(
+        const std::string path,
+        const http::Headers headers,
+        const http::Query query) const
+{
+    return getHttpDriver(path).get(stripType(path), headers, query);
+}
+
+std::unique_ptr<std::string> Arbiter::tryGet(
+        const std::string path,
+        const http::Headers headers,
+        const http::Query query) const
+{
+    return getHttpDriver(path).tryGet(stripType(path), headers, query);
+}
+
+std::vector<char> Arbiter::getBinary(
+        const std::string path,
+        const http::Headers headers,
+        const http::Query query) const
+{
+    return getHttpDriver(path).getBinary(stripType(path), headers, query);
+}
+
+std::unique_ptr<std::vector<char>> Arbiter::tryGetBinary(
+        const std::string path,
+        const http::Headers headers,
+        const http::Query query) const
+{
+    return getHttpDriver(path).tryGetBinary(stripType(path), headers, query);
+}
+
+void Arbiter::put(
+        const std::string path,
+        const std::string& data,
+        const http::Headers headers,
+        const http::Query query) const
+{
+    return getHttpDriver(path).put(stripType(path), data, headers, query);
+}
+
+void Arbiter::put(
+        const std::string path,
+        const std::vector<char>& data,
+        const http::Headers headers,
+        const http::Query query) const
+{
+    return getHttpDriver(path).put(stripType(path), data, headers, query);
+}
+
 void Arbiter::copy(const std::string from, const std::string to) const
 {
     const Endpoint outEndpoint(getEndpoint(to));
@@ -115,6 +165,11 @@ bool Arbiter::isRemote(const std::string path) const
 bool Arbiter::isLocal(const std::string path) const
 {
     return !isRemote(path);
+}
+
+bool Arbiter::isHttpDerived(const std::string path) const
+{
+    return tryGetHttpDriver(path) != nullptr;
 }
 
 std::vector<std::string> Arbiter::resolve(
@@ -139,6 +194,17 @@ const Driver& Arbiter::getDriver(const std::string path) const
     }
 
     return *m_drivers.at(type);
+}
+
+const drivers::Http* Arbiter::tryGetHttpDriver(const std::string path) const
+{
+    return dynamic_cast<const drivers::Http*>(&getDriver(path));
+}
+
+const drivers::Http& Arbiter::getHttpDriver(const std::string path) const
+{
+    if (auto d = tryGetHttpDriver(path)) return *d;
+    else throw ArbiterError("Cannot get driver for " + path + " as HTTP");
 }
 
 std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(

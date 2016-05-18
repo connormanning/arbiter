@@ -53,12 +53,28 @@ public:
     std::string get(
             std::string path,
             http::Headers headers,
-            http::Query query = http::Query()) const;
+            http::Query query) const;
+
+    std::unique_ptr<std::string> tryGet(
+            std::string path,
+            http::Headers headers,
+            http::Query query) const;
 
     std::vector<char> getBinary(
             std::string path,
             http::Headers headers,
-            http::Query query = http::Query()) const;
+            http::Query query) const;
+
+    std::unique_ptr<std::vector<char>> tryGetBinary(
+            std::string path,
+            http::Headers headers,
+            http::Query query) const;
+
+    void put(
+            std::string path,
+            const std::string& data,
+            http::Headers headers,
+            http::Query query) const;
 
     /** HTTP-derived Drivers should override this version of PUT to allow for
      * custom headers and query parameters.
