@@ -278,6 +278,14 @@ std::string Arbiter::stripType(const std::string raw)
     return result;
 }
 
+std::string Arbiter::getExtension(const std::string path)
+{
+    const std::size_t pos(path.find_last_of('.'));
+
+    if (pos != std::string::npos) return path.substr(pos + 1);
+    else return std::string();
+}
+
 } // namespace arbiter
 
 #ifdef ARBITER_CUSTOM_NAMESPACE

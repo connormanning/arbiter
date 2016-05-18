@@ -70,14 +70,12 @@ namespace drivers
 
 using namespace http;
 
-Dropbox::Dropbox(http::Pool& pool, const DropboxAuth auth)
+Dropbox::Dropbox(Pool& pool, const DropboxAuth auth)
     : Http(pool)
     , m_auth(auth)
 { }
 
-std::unique_ptr<Dropbox> Dropbox::create(
-        http::Pool& pool,
-        const Json::Value& json)
+std::unique_ptr<Dropbox> Dropbox::create(Pool& pool, const Json::Value& json)
 {
     std::unique_ptr<Dropbox> dropbox;
 

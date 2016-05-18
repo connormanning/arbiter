@@ -252,10 +252,14 @@ public:
     /** If no delimiter of "://" is found, returns "file".  Otherwise, returns
      * the substring prior to but not including this delimiter.
      */
-    static std::string getType(const std::string path);
+    static std::string getType(std::string path);
 
     /** Strip the type and delimiter `://`, if they exist. */
     static std::string stripType(std::string path);
+
+    /** Get the characters following the final instance of '.', or an empty
+     * string if there are no '.' characters. */
+    static std::string getExtension(std::string path);
 
     /** Fetch the common HTTP pool, which may be useful when dynamically
      * constructing adding a Driver via Arbiter::addDriver.

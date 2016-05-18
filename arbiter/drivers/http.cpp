@@ -12,6 +12,11 @@
 #include <cstring>
 #include <iostream>
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 namespace drivers
@@ -31,7 +36,7 @@ std::unique_ptr<std::size_t> Http::tryGetSize(std::string path) const
     std::unique_ptr<std::size_t> size;
 
     auto http(m_pool.acquire());
-    http::Response res(http.head(path));
+    Response res(http.head(path));
 
     if (res.ok() && res.headers().count("Content-Length"))
     {
@@ -44,8 +49,8 @@ std::unique_ptr<std::size_t> Http::tryGetSize(std::string path) const
 
 std::string Http::get(
         std::string path,
-        http::Headers headers,
-        http::Query query) const
+        Headers headers,
+        Query query) const
 {
     const auto data(getBinary(path, headers, query));
     return std::string(data.begin(), data.end());
@@ -53,8 +58,8 @@ std::string Http::get(
 
 std::unique_ptr<std::string> Http::tryGet(
         std::string path,
-        http::Headers headers,
-        http::Query query) const
+        Headers headers,
+        Query query) const
 {
     std::unique_ptr<std::string> result;
     auto data(tryGetBinary(path, headers, query));
@@ -64,8 +69,8 @@ std::unique_ptr<std::string> Http::tryGet(
 
 std::vector<char> Http::getBinary(
         std::string path,
-        http::Headers headers,
-        http::Query query) const
+        Headers headers,
+        Query query) const
 {
     std::vector<char> data;
     if (!get(path, data, headers, query))
@@ -77,8 +82,8 @@ std::vector<char> Http::getBinary(
 
 std::unique_ptr<std::vector<char>> Http::tryGetBinary(
         std::string path,
-        http::Headers headers,
-        http::Query query) const
+        Headers headers,
+        Query query) const
 {
     std::unique_ptr<std::vector<char>> data(new std::vector<char>());
     if (!get(path, *data, headers, query)) data.reset();
@@ -103,7 +108,7 @@ bool Http::get(
     bool good(false);
 
     auto http(m_pool.acquire());
-    http::Response res(http.get(path, headers, query));
+    Response res(http.get(path, headers, query));
 
     if (res.ok())
     {
@@ -128,7 +133,7 @@ void Http::put(
     }
 }
 
-http::Response Http::internalGet(
+Response Http::internalGet(
         const std::string path,
         const Headers headers,
         const Query query) const
@@ -136,7 +141,7 @@ http::Response Http::internalGet(
     return m_pool.acquire().get(path, headers, query);
 }
 
-http::Response Http::internalPut(
+Response Http::internalPut(
         const std::string path,
         const std::vector<char>& data,
         const Headers headers,
@@ -145,7 +150,7 @@ http::Response Http::internalPut(
     return m_pool.acquire().put(path, data, headers, query);
 }
 
-http::Response Http::internalHead(
+Response Http::internalHead(
         const std::string path,
         const Headers headers,
         const Query query) const
@@ -153,7 +158,7 @@ http::Response Http::internalHead(
     return m_pool.acquire().head(path, headers, query);
 }
 
-http::Response Http::internalPost(
+Response Http::internalPost(
         const std::string path,
         const std::vector<char>& data,
         const Headers headers,

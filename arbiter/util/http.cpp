@@ -6,6 +6,11 @@
 
 #include <curl/curl.h>
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 namespace http
@@ -482,4 +487,8 @@ void Pool::release(const std::size_t id)
 
 } // namepace http
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

@@ -138,10 +138,10 @@ namespace
     }
 }
 
-using namespace http;
-
 namespace drivers
 {
+
+using namespace http;
 
 AwsAuth::AwsAuth(const std::string access, const std::string hidden)
     : m_access(access)
@@ -228,7 +228,7 @@ std::string AwsAuth::access() const { return m_access; }
 std::string AwsAuth::hidden() const { return m_hidden; }
 
 S3::S3(
-        http::Pool& pool,
+        Pool& pool,
         const AwsAuth auth,
         const std::string region,
         const bool sse)
@@ -246,7 +246,7 @@ S3::S3(
     }
 }
 
-std::unique_ptr<S3> S3::create(http::Pool& pool, const Json::Value& json)
+std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
 {
     std::unique_ptr<AwsAuth> auth;
     std::unique_ptr<S3> s3;
