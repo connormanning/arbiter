@@ -19,22 +19,12 @@ namespace arbiter
 namespace drivers
 {
 
-/** @brief %Dropbox authentication information. */
-class DropboxAuth
-{
-public:
-    explicit DropboxAuth(std::string token) : m_token(token) { }
-    std::string token() const { return m_token; }
-
-private:
-    std::string m_token;
-};
-
 /** @brief %Dropbox driver. */
 class Dropbox : public Http
 {
 public:
-    Dropbox(http::Pool& pool, DropboxAuth auth);
+    class Auth;
+    Dropbox(http::Pool& pool, const Auth& auth);
 
     /** Try to construct a %Dropbox Driver.  Searches @p json for the key
      * `token` to construct a DropboxAuth.
@@ -49,6 +39,17 @@ public:
             const std::vector<char>& data,
             http::Headers headers,
             http::Query query = http::Query()) const override;
+
+    /** @brief %Dropbox authentication information. */
+    class Auth
+    {
+    public:
+        explicit Auth(std::string token) : m_token(token) { }
+        const std::string& token() const { return m_token; }
+
+    private:
+        std::string m_token;
+    };
 
 private:
     virtual bool get(
@@ -69,7 +70,7 @@ private:
     http::Headers httpGetHeaders() const;
     http::Headers httpPostHeaders() const;
 
-    DropboxAuth m_auth;
+    Auth m_auth;
 };
 
 } // namespace drivers

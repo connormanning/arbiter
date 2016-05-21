@@ -19,10 +19,12 @@ namespace drivers
 {
 
 /** @brief HTTP driver.  Intended as both a standalone driver as well as a base
- * for derived drivers build atop HTTP.  Derivers should overload the
- * HTTP-specific put/get methods that accept headers and query parameters
- * rather than Driver::put and Driver::get, which are overridden as `final`
- * here as they will be routed to the more specific methods.
+ * for derived drivers build atop HTTP.
+ *
+ * Derivers should overload the HTTP-specific put/get methods that accept
+ * headers and query parameters rather than Driver::put and Driver::get.
+ *
+ * Internal methods for derivers are provided as protected methods.
  */
 class Http : public Driver
 {

@@ -64,7 +64,7 @@ namespace drivers
 
 using namespace http;
 
-Dropbox::Dropbox(Pool& pool, const DropboxAuth auth)
+Dropbox::Dropbox(Pool& pool, const Dropbox::Auth& auth)
     : Http(pool)
     , m_auth(auth)
 { }
@@ -75,7 +75,7 @@ std::unique_ptr<Dropbox> Dropbox::create(Pool& pool, const Json::Value& json)
 
     if (!json.isNull() && json.isMember("token"))
     {
-        dropbox.reset(new Dropbox(pool, DropboxAuth(json["token"].asString())));
+        dropbox.reset(new Dropbox(pool, Auth(json["token"].asString())));
     }
 
     return dropbox;

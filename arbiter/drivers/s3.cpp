@@ -143,93 +143,9 @@ namespace drivers
 
 using namespace http;
 
-AwsAuth::AwsAuth(const std::string access, const std::string hidden)
-    : m_access(access)
-    , m_hidden(hidden)
-{ }
-
-std::unique_ptr<AwsAuth> AwsAuth::find(std::string profile)
-{
-    std::unique_ptr<AwsAuth> auth;
-
-    const std::string credFile("~/.aws/credentials");
-
-    // First, try reading credentials file.
-    if (std::unique_ptr<std::string> cred = fsDriver.tryGet(credFile))
-    {
-        const std::vector<std::string> lines(condense(split(*cred)));
-
-        if (lines.size() >= 3)
-        {
-            std::size_t i(0);
-
-            const std::string profileFind("[" + profile + "]");
-            const std::string accessFind("aws_access_key_id=");
-            const std::string hiddenFind("aws_secret_access_key=");
-
-            while (i < lines.size() - 2 && !auth)
-            {
-                if (lines[i].find(profileFind) != std::string::npos)
-                {
-                    const std::string& accessLine(lines[i + 1]);
-                    const std::string& hiddenLine(lines[i + 2]);
-
-                    std::size_t accessPos(accessLine.find(accessFind));
-                    std::size_t hiddenPos(hiddenLine.find(hiddenFind));
-
-                    if (
-                            accessPos != std::string::npos &&
-                            hiddenPos != std::string::npos)
-                    {
-                        const std::string access(
-                                accessLine.substr(
-                                    accessPos + accessFind.size(),
-                                    accessLine.find(';')));
-
-                        const std::string hidden(
-                                hiddenLine.substr(
-                                    hiddenPos + hiddenFind.size(),
-                                    hiddenLine.find(';')));
-
-                        auth.reset(new AwsAuth(access, hidden));
-                    }
-                }
-
-                ++i;
-            }
-        }
-    }
-
-    // Fall back to environment settings.
-    if (!auth)
-    {
-        if (getenv("AWS_ACCESS_KEY_ID") && getenv("AWS_SECRET_ACCESS_KEY"))
-        {
-            auth.reset(
-                    new AwsAuth(
-                        getenv("AWS_ACCESS_KEY_ID"),
-                        getenv("AWS_SECRET_ACCESS_KEY")));
-        }
-        else if (
-                getenv("AMAZON_ACCESS_KEY_ID") &&
-                getenv("AMAZON_SECRET_ACCESS_KEY"))
-        {
-            auth.reset(
-                    new AwsAuth(
-                        getenv("AMAZON_ACCESS_KEY_ID"),
-                        getenv("AMAZON_SECRET_ACCESS_KEY")));
-        }
-    }
-
-    return auth;
-}
-
-std::string AwsAuth::access() const { return m_access; }
-std::string AwsAuth::hidden() const { return m_hidden; }
-
 S3::S3(
         Pool& pool,
-        const AwsAuth auth,
+        const S3::Auth& auth,
         const std::string region,
         const bool sse)
     : Http(pool)
@@ -248,7 +164,7 @@ S3::S3(
 
 std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
 {
-    std::unique_ptr<AwsAuth> auth;
+    std::unique_ptr<Auth> auth;
     std::unique_ptr<S3> s3;
 
     const std::string profile(extractProfile(json));
@@ -257,13 +173,13 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
     if (!json.isNull() && json.isMember("access") & json.isMember("hidden"))
     {
         auth.reset(
-                new AwsAuth(
+                new Auth(
                     json["access"].asString(),
                     json["hidden"].asString()));
     }
     else
     {
-        auth = AwsAuth::find(profile);
+        auth = Auth::find(profile);
     }
 
     if (!auth) return s3;
@@ -357,7 +273,7 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
     std::unique_ptr<std::size_t> size;
 
     const Resource resource(m_baseUrl, rawPath);
-    const AuthV4 authV4(
+    const ApiV4 apiV4(
             "HEAD",
             m_region,
             resource,
@@ -366,7 +282,7 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
             Headers(),
             empty);
 
-    Response res(Http::internalHead(resource.url(), authV4.headers()));
+    Response res(Http::internalHead(resource.url(), apiV4.headers()));
 
     if (res.ok() && res.headers().count("Content-Length"))
     {
@@ -384,7 +300,7 @@ bool S3::get(
         const Query query) const
 {
     const Resource resource(m_baseUrl, rawPath);
-    const AuthV4 authV4(
+    const ApiV4 apiV4(
             "GET",
             m_region,
             resource,
@@ -396,8 +312,8 @@ bool S3::get(
     Response res(
             Http::internalGet(
                 resource.url(),
-                authV4.headers(),
-                authV4.query()));
+                apiV4.headers(),
+                apiV4.query()));
 
     if (res.ok())
     {
@@ -423,7 +339,7 @@ void S3::put(
     Headers headers(m_baseHeaders);
     headers.insert(userHeaders.begin(), userHeaders.end());
 
-    const AuthV4 authV4(
+    const ApiV4 apiV4(
             "PUT",
             m_region,
             resource,
@@ -436,8 +352,8 @@ void S3::put(
             Http::internalPut(
                 resource.url(),
                 data,
-                authV4.headers(),
-                authV4.query()));
+                apiV4.headers(),
+                apiV4.query()));
 
     if (!res.ok())
     {
@@ -547,11 +463,11 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
     return results;
 }
 
-S3::AuthV4::AuthV4(
+S3::ApiV4::ApiV4(
         const std::string verb,
         const std::string& region,
         const Resource& resource,
-        const AwsAuth& auth,
+        const S3::Auth& auth,
         const Query& query,
         const Headers& headers,
         const std::vector<char>& data)
@@ -617,7 +533,7 @@ S3::AuthV4::AuthV4(
             getAuthHeader(m_signedHeadersString, signature);
 }
 
-std::string S3::AuthV4::buildCanonicalRequest(
+std::string S3::ApiV4::buildCanonicalRequest(
         const std::string verb,
         const Resource& resource,
         const Query& query,
@@ -650,7 +566,7 @@ std::string S3::AuthV4::buildCanonicalRequest(
         crypto::encodeAsHex(crypto::sha256(data));
 }
 
-std::string S3::AuthV4::buildStringToSign(
+std::string S3::ApiV4::buildStringToSign(
         const std::string& canonicalRequest) const
 {
     return
@@ -660,7 +576,7 @@ std::string S3::AuthV4::buildStringToSign(
         crypto::encodeAsHex(crypto::sha256(canonicalRequest));
 }
 
-std::string S3::AuthV4::calculateSignature(
+std::string S3::ApiV4::calculateSignature(
         const std::string& stringToSign) const
 {
     const std::string kDate(
@@ -676,7 +592,7 @@ std::string S3::AuthV4::calculateSignature(
     return crypto::encodeAsHex(crypto::hmacSha256(kSigning, stringToSign));
 }
 
-std::string S3::AuthV4::getAuthHeader(
+std::string S3::ApiV4::getAuthHeader(
         const std::string& signedHeadersString,
         const std::string& signature) const
 {
@@ -737,6 +653,91 @@ std::string S3::FormattedTime::formatTime(const std::string& format) const
         throw ArbiterError("Could not format time");
     }
 }
+
+S3::Auth::Auth(const std::string access, const std::string hidden)
+    : m_access(access)
+    , m_hidden(hidden)
+{ }
+
+std::unique_ptr<S3::Auth> S3::Auth::find(std::string profile)
+{
+    std::unique_ptr<S3::Auth> auth;
+
+    const std::string credFile("~/.aws/credentials");
+
+    // First, try reading credentials file.
+    if (std::unique_ptr<std::string> cred = fsDriver.tryGet(credFile))
+    {
+        const std::vector<std::string> lines(condense(split(*cred)));
+
+        if (lines.size() >= 3)
+        {
+            std::size_t i(0);
+
+            const std::string profileFind("[" + profile + "]");
+            const std::string accessFind("aws_access_key_id=");
+            const std::string hiddenFind("aws_secret_access_key=");
+
+            while (i < lines.size() - 2 && !auth)
+            {
+                if (lines[i].find(profileFind) != std::string::npos)
+                {
+                    const std::string& accessLine(lines[i + 1]);
+                    const std::string& hiddenLine(lines[i + 2]);
+
+                    std::size_t accessPos(accessLine.find(accessFind));
+                    std::size_t hiddenPos(hiddenLine.find(hiddenFind));
+
+                    if (
+                            accessPos != std::string::npos &&
+                            hiddenPos != std::string::npos)
+                    {
+                        const std::string access(
+                                accessLine.substr(
+                                    accessPos + accessFind.size(),
+                                    accessLine.find(';')));
+
+                        const std::string hidden(
+                                hiddenLine.substr(
+                                    hiddenPos + hiddenFind.size(),
+                                    hiddenLine.find(';')));
+
+                        auth.reset(new S3::Auth(access, hidden));
+                    }
+                }
+
+                ++i;
+            }
+        }
+    }
+
+    // Fall back to environment settings.
+    if (!auth)
+    {
+        if (getenv("AWS_ACCESS_KEY_ID") && getenv("AWS_SECRET_ACCESS_KEY"))
+        {
+            auth.reset(
+                    new S3::Auth(
+                        getenv("AWS_ACCESS_KEY_ID"),
+                        getenv("AWS_SECRET_ACCESS_KEY")));
+        }
+        else if (
+                getenv("AMAZON_ACCESS_KEY_ID") &&
+                getenv("AMAZON_SECRET_ACCESS_KEY"))
+        {
+            auth.reset(
+                    new S3::Auth(
+                        getenv("AMAZON_ACCESS_KEY_ID"),
+                        getenv("AMAZON_SECRET_ACCESS_KEY")));
+        }
+    }
+
+    return auth;
+}
+
+std::string S3::Auth::access() const { return m_access; }
+std::string S3::Auth::hidden() const { return m_hidden; }
+
 } // namespace drivers
 } // namespace arbiter
 
