@@ -19,8 +19,9 @@
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/third/xml/xml.hpp>
 #include <arbiter/util/md5.hpp>
-#include <arbiter/util/transforms.hpp>
 #include <arbiter/util/sha256.hpp>
+#include <arbiter/util/transforms.hpp>
+#include <arbiter/util/util.hpp>
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
@@ -188,7 +189,19 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
     std::string region("us-east-1");
     bool regionFound(false);
 
-    if (std::unique_ptr<std::string> config = fsDriver.tryGet("~/.aws/config"))
+    if (auto p = util::env("AWS_REGION"))
+    {
+        region = *p;
+        regionFound = true;
+    }
+    else if (!json.isNull() && json.isMember("region"))
+    {
+        region = json["region"].asString();
+        regionFound = true;
+    }
+    else if (
+            std::unique_ptr<std::string> config =
+                fsDriver.tryGet("~/.aws/config"))
     {
         const std::vector<std::string> lines(condense(split(*config)));
 
@@ -255,7 +268,11 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
 
 std::string S3::extractProfile(const Json::Value& json)
 {
-    if (
+    if (auto p = util::env("AWS_PROFILE"))
+    {
+        return *p;
+    }
+    else if (
             !json.isNull() &&
             json.isMember("profile") &&
             json["profile"].asString().size())
@@ -264,7 +281,7 @@ std::string S3::extractProfile(const Json::Value& json)
     }
     else
     {
-        return getenv("AWS_PROFILE") ? getenv("AWS_PROFILE") : "default";
+        return "default";
     }
 }
 
@@ -663,6 +680,24 @@ std::unique_ptr<S3::Auth> S3::Auth::find(std::string profile)
 {
     std::unique_ptr<S3::Auth> auth;
 
+    auto access(util::env("AWS_ACCESS_KEY_ID"));
+    auto hidden(util::env("AWS_SECRET_ACCESS_KEY"));
+
+    if (access && hidden)
+    {
+        auth.reset(new S3::Auth(*access, *hidden));
+        return auth;
+    }
+
+    access = util::env("AMAZON_ACCESS_KEY_ID");
+    hidden = util::env("AMAZON_SECRET_ACCESS_KEY");
+
+    if (access && hidden)
+    {
+        auth.reset(new S3::Auth(*access, *hidden));
+        return auth;
+    }
+
     const std::string credFile("~/.aws/credentials");
 
     // First, try reading credentials file.
@@ -708,27 +743,6 @@ std::unique_ptr<S3::Auth> S3::Auth::find(std::string profile)
 
                 ++i;
             }
-        }
-    }
-
-    // Fall back to environment settings.
-    if (!auth)
-    {
-        if (getenv("AWS_ACCESS_KEY_ID") && getenv("AWS_SECRET_ACCESS_KEY"))
-        {
-            auth.reset(
-                    new S3::Auth(
-                        getenv("AWS_ACCESS_KEY_ID"),
-                        getenv("AWS_SECRET_ACCESS_KEY")));
-        }
-        else if (
-                getenv("AMAZON_ACCESS_KEY_ID") &&
-                getenv("AMAZON_SECRET_ACCESS_KEY"))
-        {
-            auth.reset(
-                    new S3::Auth(
-                        getenv("AMAZON_ACCESS_KEY_ID"),
-                        getenv("AMAZON_SECRET_ACCESS_KEY")));
         }
     }
 

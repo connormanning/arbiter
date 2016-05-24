@@ -220,10 +220,10 @@ std::string expandTilde(std::string in)
 std::string getTempPath()
 {
 #ifndef ARBITER_WINDOWS
-    if (const char* t = getenv("TMPDIR"))   return t;
-    if (const char* t = getenv("TMP"))      return t;
-    if (const char* t = getenv("TEMP"))     return t;
-    if (const char* t = getenv("TEMPDIR"))  return t;
+    if (const auto t = util::env("TMPDIR"))     return *t;
+    if (const auto t = util::env("TMP"))        return *t;
+    if (const auto t = util::env("TEMP"))       return *t;
+    if (const auto t = util::env("TEMPDIR"))    return *t;
     return "/tmp";
 #else
     std::vector<char> path(MAX_PATH, '\0');
