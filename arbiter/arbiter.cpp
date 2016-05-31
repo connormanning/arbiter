@@ -158,7 +158,7 @@ void Arbiter::copy(const std::string from, const std::string to) const
 
     for (const auto& path : paths)
     {
-        outEndpoint.putSubpath(util::getBasename(path), getBinary(path));
+        outEndpoint.put(util::getBasename(path), getBinary(path));
     }
 }
 
@@ -230,7 +230,7 @@ std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
         std::replace(name.begin(), name.end(), '\\', '-');
         std::replace(name.begin(), name.end(), ':', '_');
 
-        tempEndpoint.putSubpath(name, getBinary(path));
+        tempEndpoint.put(name, getBinary(path));
 
         localHandle.reset(
                 new fs::LocalHandle(tempEndpoint.root() + name, true));

@@ -4,6 +4,12 @@
 #include <vector>
 #include <memory>
 
+#ifndef ARBITER_IS_AMALGAMATION
+
+#include <arbiter/util/http.hpp>
+
+#endif
+
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
 {
@@ -11,6 +17,8 @@ namespace ARBITER_CUSTOM_NAMESPACE
 
 namespace arbiter
 {
+
+namespace drivers { class Http; }
 
 class Driver;
 
@@ -35,6 +43,8 @@ public:
      */
     std::string root() const;
 
+    // Driver passthroughs.
+
     /** Passthrough to Driver::type. */
     std::string type() const;
 
@@ -44,26 +54,86 @@ public:
     /** Negation of Endpoint::isRemote. */
     bool isLocal() const;
 
+    /** See Arbiter::isHttpDerived. */
+    bool isHttpDerived() const;
+
     /** Passthrough to Driver::get. */
-    std::string getSubpath(std::string subpath) const;
+    std::string get(std::string subpath) const;
 
     /** Passthrough to Driver::tryGet. */
-    std::unique_ptr<std::string> tryGetSubpath(std::string subpath) const;
+    std::unique_ptr<std::string> tryGet(std::string subpath) const;
 
     /** Passthrough to Driver::getBinary. */
-    std::vector<char> getSubpathBinary(std::string subpath) const;
+    std::vector<char> getBinary(std::string subpath) const;
 
     /** Passthrough to Driver::tryGetBinary. */
-    std::unique_ptr<std::vector<char>> tryGetSubpathBinary(
-            std::string subpath) const;
+    std::unique_ptr<std::vector<char>> tryGetBinary(std::string subpath) const;
+
+    /** Passthrough to Driver::getSize. */
+    std::size_t getSize(std::string subpath) const;
+
+    /** Passthrough to Driver::tryGetSize. */
+    std::unique_ptr<std::size_t> tryGetSize(std::string subpath) const;
 
     /** Passthrough to Driver::put(std::string, const std::string&) const. */
-    void putSubpath(std::string subpath, const std::string& data) const;
+    void put(std::string subpath, const std::string& data) const;
 
     /** Passthrough to
      * Driver::put(std::string, const std::vector<char>&) const.
      */
-    void putSubpath(std::string subpath, const std::vector<char>& data) const;
+    void put(std::string subpath, const std::vector<char>& data) const;
+
+    // HTTP-specific passthroughs.
+
+    /** Passthrough to
+     * drivers::Http::get(std::string, http::Headers, http::Query) const. */
+    std::string get(
+            std::string subpath,
+            http::Headers headers,
+            http::Query = http::Query()) const;
+
+    /** Passthrough to
+     * drivers::Http::tryGet(std::string, http::Headers, http::Query) const. */
+    std::unique_ptr<std::string> tryGet(
+            std::string subpath,
+            http::Headers headers,
+            http::Query = http::Query()) const;
+
+    /** Passthrough to
+     * drivers::Http::getBinary(std::string, http::Headers, http::Query) const.
+     */
+    std::vector<char> getBinary(
+            std::string path,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Passthrough to
+     * drivers::Http::tryGetBinary(std::string, http::Headers, http::Query) const.
+     */
+    std::unique_ptr<std::vector<char>> tryGetBinary(
+            std::string path,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Passthrough to
+     * drivers::Http::put(std::string, const std::string&, http::Headers, http::Query) const.
+     */
+    void put(
+            std::string path,
+            const std::string& data,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Passthrough to
+     * drivers::Http::put(std::string, const std::vector<char>&, http::Headers, http::Query) const.
+     */
+    void put(
+            std::string path,
+            const std::vector<char>& data,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    // Endpoint specifics.
 
     /** Get the full path corresponding to this subpath.  The path will not
      * be prefixed with the driver type or the `://` delimiter.
@@ -75,6 +145,9 @@ public:
 
 private:
     Endpoint(const Driver& driver, std::string root);
+
+    const drivers::Http* tryGetHttpDriver() const;
+    const drivers::Http& getHttpDriver() const;
 
     const Driver& m_driver;
     std::string m_root;

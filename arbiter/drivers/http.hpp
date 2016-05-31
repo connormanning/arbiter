@@ -57,26 +57,32 @@ public:
      * Specifically, we'll add POST/HEAD calls, and allow headers and query
      * parameters to be passed as well.
      */
+
+    /** Perform an HTTP GET request. */
     std::string get(
             std::string path,
             http::Headers headers,
             http::Query query) const;
 
+    /** Perform an HTTP GET request. */
     std::unique_ptr<std::string> tryGet(
             std::string path,
             http::Headers headers,
             http::Query query) const;
 
+    /** Perform an HTTP GET request. */
     std::vector<char> getBinary(
             std::string path,
             http::Headers headers,
             http::Query query) const;
 
+    /** Perform an HTTP GET request. */
     std::unique_ptr<std::vector<char>> tryGetBinary(
             std::string path,
             http::Headers headers,
             http::Query query) const;
 
+    /** Perform an HTTP PUT request. */
     void put(
             std::string path,
             const std::string& data,
@@ -86,6 +92,8 @@ public:
     /** HTTP-derived Drivers should override this version of PUT to allow for
      * custom headers and query parameters.
      */
+
+    /** Perform an HTTP PUT request. */
     virtual void put(
             std::string path,
             const std::vector<char>& data,
