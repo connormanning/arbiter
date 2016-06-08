@@ -189,6 +189,10 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
     std::string region("us-east-1");
     bool regionFound(false);
 
+    const std::string configPath(
+            util::env("AWS_CONFIG_FILE") ?
+                *util::env("AWS_CONFIG_FILE") : "~/.aws/config");
+
     if (auto p = util::env("AWS_REGION"))
     {
         region = *p;
@@ -204,9 +208,7 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
         region = json["region"].asString();
         regionFound = true;
     }
-    else if (
-            std::unique_ptr<std::string> config =
-                fsDriver.tryGet("~/.aws/config"))
+    else if (std::unique_ptr<std::string> config = fsDriver.tryGet(configPath))
     {
         const std::vector<std::string> lines(condense(split(*config)));
 
