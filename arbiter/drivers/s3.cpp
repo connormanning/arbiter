@@ -194,6 +194,11 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
         region = *p;
         regionFound = true;
     }
+    else if (auto p = util::env("AWS_DEFAULT_REGION"))
+    {
+        region = *p;
+        regionFound = true;
+    }
     else if (!json.isNull() && json.isMember("region"))
     {
         region = json["region"].asString();
@@ -269,6 +274,10 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
 std::string S3::extractProfile(const Json::Value& json)
 {
     if (auto p = util::env("AWS_PROFILE"))
+    {
+        return *p;
+    }
+    else if (auto p = util::env("AWS_DEFAULT_PROFILE"))
     {
         return *p;
     }
