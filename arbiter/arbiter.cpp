@@ -172,6 +172,11 @@ bool Arbiter::isLocal(const std::string path) const
     return !isRemote(path);
 }
 
+bool Arbiter::exists(const std::string path) const
+{
+    return tryGetSize(path).get() != nullptr;
+}
+
 bool Arbiter::isHttpDerived(const std::string path) const
 {
     return tryGetHttpDriver(path) != nullptr;

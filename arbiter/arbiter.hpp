@@ -162,6 +162,15 @@ public:
      */
     bool isLocal(std::string path) const;
 
+    /** Returns true if this path exists.  Equivalent to :
+     * @code
+     * tryGetSize(path).get() != nullptr
+     * @endcode
+     *
+     * @note This means that an existing file of size zero will return true.
+     */
+    bool exists(std::string path) const;
+
     /** Returns true if the protocol for this driver is build on HTTP, like the
      * S3 and Dropbox drivers are.  If this returns true, http::Headers and
      * http::Query parameter methods may be used for this path.
