@@ -12,6 +12,7 @@
 #include <arbiter/driver.hpp>
 #include <arbiter/endpoint.hpp>
 #include <arbiter/drivers/fs.hpp>
+#include <arbiter/drivers/test.hpp>
 #include <arbiter/drivers/http.hpp>
 #include <arbiter/drivers/s3.hpp>
 #include <arbiter/drivers/dropbox.hpp>

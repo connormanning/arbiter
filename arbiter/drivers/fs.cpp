@@ -62,7 +62,7 @@ namespace
 namespace drivers
 {
 
-std::unique_ptr<Fs> Fs::create(http::Pool&, const Json::Value&)
+std::unique_ptr<Fs> Fs::create(const Json::Value&)
 {
     return std::unique_ptr<Fs>(new Fs());
 }

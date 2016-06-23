@@ -42,8 +42,11 @@ void Arbiter::init(const Json::Value& json)
 {
     using namespace drivers;
 
-    auto fs(Fs::create(m_pool, json["file"]));
+    auto fs(Fs::create(json["file"]));
     if (fs) m_drivers[fs->type()] = std::move(fs);
+
+    auto test(Test::create(json["test"]));
+    if (test) m_drivers[test->type()] = std::move(test);
 
     auto http(Http::create(m_pool, json["http"]));
     if (http) m_drivers[http->type()] = std::move(http);

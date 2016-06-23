@@ -15,6 +15,7 @@ set(
     "${BASE}/dropbox.hpp"
     "${BASE}/fs.hpp"
     "${BASE}/s3.hpp"
+    "${BASE}/test.hpp"
 )
 
 install(FILES ${HEADERS} DESTINATION include/arbiter/${MODULE})
