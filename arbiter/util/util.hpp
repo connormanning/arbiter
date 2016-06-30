@@ -60,11 +60,17 @@ namespace util
             std::string current,
             Paths&&... paths)
     {
+        const bool currentIsDir(current.size() && isSlash(current.back()));
         std::string next(joinImpl(false, std::forward<Paths>(paths)...));
+
+        // Strip slashes from the front of our remainder.
         while (next.size() && isSlash(next.front())) next = next.substr(1);
 
         if (first)
         {
+            // If this is the first component, strip a single trailing slash if
+            // one exists - but do not strip a double trailing slash since we
+            // want to retain Windows paths like "C://".
             if (
                     current.size() > 1 &&
                     isSlash(current.back()) &&
@@ -82,9 +88,23 @@ namespace util
             if (current.empty()) return next;
         }
 
-        const std::string sep(
-                next.size() && (current.empty() || !isSlash(current.back())) ?
-                    "/" : "");
+        std::string sep;
+
+        if (next.size() && (current.empty() || !isSlash(current.back())))
+        {
+            // We are going to join current with a populated subpath, so make
+            // sure they are separated by a slash.
+            sep = "/";
+        }
+        else if (next.empty() && currentIsDir)
+        {
+            // We are at the end of the chain, and the last component was a
+            // directory.  Retain its trailing slash.
+            if (current.size() && !isSlash(current.back()))
+            {
+                sep = "/";
+            }
+        }
 
         return current + sep + next;
     }
