@@ -1,5 +1,7 @@
 #pragma once
 
+#include <numeric>
+
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/drivers/fs.hpp>
 #endif
@@ -30,6 +32,16 @@ public:
 
     virtual std::string type() const override { return "test"; }
     virtual bool isRemote() const override { return true; }
+
+private:
+    virtual std::vector<std::string> glob(
+            std::string path,
+            bool verbose) const override
+    {
+        auto results(Fs::glob(path, verbose));
+        for (auto& p : results) p = type() + "://" + p;
+        return results;
+    }
 };
 
 } // namespace drivers

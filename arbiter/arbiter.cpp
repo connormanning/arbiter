@@ -58,6 +58,11 @@ void Arbiter::init(const Json::Value& json)
     if (dropbox) m_drivers[dropbox->type()] = std::move(dropbox);
 }
 
+bool Arbiter::hasDriver(const std::string path) const
+{
+    return m_drivers.count(getType(path));
+}
+
 void Arbiter::addDriver(const std::string type, std::unique_ptr<Driver> driver)
 {
     if (!driver) throw ArbiterError("Cannot add empty driver for " + type);
@@ -154,14 +159,91 @@ void Arbiter::put(
     return getHttpDriver(path).put(stripType(path), data, headers, query);
 }
 
-void Arbiter::copy(const std::string from, const std::string to) const
+void Arbiter::copy(
+        const std::string src,
+        const std::string dst,
+        const bool verbose) const
 {
-    const Endpoint outEndpoint(getEndpoint(to));
-    const auto paths(resolve(from));
+    if (src.empty()) throw ArbiterError("Cannot copy from empty source");
+    if (dst.empty()) throw ArbiterError("Cannot copy to empty destination");
 
-    for (const auto& path : paths)
+    // Globify the source path if it's a directory.  In this case, the source
+    // already ends with a slash.
+    const std::string srcToResolve(src + (util::isDirectory(src) ? "**" : ""));
+
+    if (srcToResolve.back() != '*')
     {
-        outEndpoint.put(util::getBasename(path), getBinary(path));
+        // The source is a single file.
+        copyFile(src, dst, verbose);
+    }
+    else
+    {
+        // We'll need this to mirror the directory structure in the output.
+        // All resolved paths will contain this common prefix, so we can
+        // determine any nested paths from recursive resolutions by stripping
+        // that common portion.
+        const Endpoint& srcEndpoint(getEndpoint(util::stripPostfixing(src)));
+        const std::string commonPrefix(srcEndpoint.prefixedRoot());
+
+        const Endpoint dstEndpoint(getEndpoint(dst));
+
+        int i(0);
+        const auto paths(resolve(srcToResolve, verbose));
+
+        for (const auto& path : paths)
+        {
+            const std::string subpath(path.substr(commonPrefix.size()));
+
+            if (verbose)
+            {
+                std::cout <<
+                    ++i << " / " << paths.size() << ": " <<
+                    path << " -> " << dstEndpoint.fullPath(subpath) <<
+                    std::endl;
+            }
+
+            if (dstEndpoint.isLocal())
+            {
+                fs::mkdirp(util::getNonBasename(dstEndpoint.fullPath(subpath)));
+            }
+
+            dstEndpoint.put(subpath, getBinary(path));
+        }
+    }
+}
+
+void Arbiter::copyFile(
+        const std::string file,
+        const std::string dst,
+        const bool verbose) const
+{
+    if (dst.empty()) throw ArbiterError("Cannot copy to empty destination");
+
+    const Endpoint dstEndpoint(getEndpoint(dst));
+
+    if (util::isDirectory(dst))
+    {
+        // If the destination is a directory, maintain the basename of the
+        // source file.
+        const std::string basename(util::getBasename(file));
+        if (verbose)
+        {
+            std::cout <<
+                file << " -> " <<
+                dstEndpoint.type() + "://" + dstEndpoint.fullPath(basename) <<
+                std::endl;
+        }
+
+        if (dstEndpoint.isLocal()) fs::mkdirp(dst);
+
+        dstEndpoint.put(util::getBasename(file), getBinary(file));
+    }
+    else
+    {
+        if (verbose) std::cout << file << " -> " << dst << std::endl;
+
+        if (dstEndpoint.isLocal()) fs::mkdirp(util::getNonBasename(dst));
+        put(dst, getBinary(file));
     }
 }
 

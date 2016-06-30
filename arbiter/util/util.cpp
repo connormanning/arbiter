@@ -14,11 +14,9 @@ namespace arbiter
 namespace util
 {
 
-std::string getBasename(const std::string fullPath)
+std::string stripPostfixing(const std::string path)
 {
-    std::string result(fullPath);
-
-    std::string stripped(Arbiter::stripType(fullPath));
+    std::string stripped(path);
 
     for (std::size_t i(0); i < 2; ++i)
     {
@@ -30,6 +28,15 @@ std::string getBasename(const std::string fullPath)
     // Pop trailing slash, in which case the result is the innermost directory.
     while (!stripped.empty() && isSlash(stripped.back())) stripped.pop_back();
 
+    return stripped;
+}
+
+std::string getBasename(const std::string fullPath)
+{
+    std::string result(fullPath);
+
+    const std::string stripped(stripPostfixing(Arbiter::stripType(fullPath)));
+
     // Now do the real slash searching.
     const std::size_t pos(stripped.rfind('/'));
 
@@ -37,6 +44,24 @@ std::string getBasename(const std::string fullPath)
     {
         const std::string sub(stripped.substr(pos + 1));
         if (!sub.empty()) result = sub;
+    }
+
+    return result;
+}
+
+std::string getNonBasename(const std::string fullPath)
+{
+    std::string result("");
+
+    const std::string stripped(stripPostfixing(Arbiter::stripType(fullPath)));
+
+    // Now do the real slash searching.
+    const std::size_t pos(stripped.rfind('/'));
+
+    if (pos != std::string::npos)
+    {
+        const std::string sub(stripped.substr(0, pos));
+        result = sub;
     }
 
     return result;

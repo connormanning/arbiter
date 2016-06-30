@@ -43,6 +43,12 @@ public:
      */
     std::string root() const;
 
+    /** Returns root directory name ending with the character `/`.  If
+     * `isRemote` is `true`, then the path will be prefixed with
+     * `type() + "://"`.
+     */
+    std::string prefixedRoot() const;
+
     // Driver passthroughs.
 
     /** Passthrough to Driver::type. */
@@ -140,11 +146,20 @@ public:
      */
     std::string fullPath(const std::string& subpath) const;
 
+    /** Get the full path corresponding to this subpath.  If `isRemote` is
+     * `true`, then the path will be prefixed with `type() + "://"`.
+     */
+    std::string prefixedFullPath(const std::string& subpath) const;
+
     /** Get a further nested subpath relative to this Endpoint's root. */
     Endpoint getSubEndpoint(std::string subpath) const;
 
 private:
     Endpoint(const Driver& driver, std::string root);
+
+    // If `isRemote()`, returns the type and delimiter, otherwise returns an
+    // empty string.
+    std::string softPrefix() const;
 
     const drivers::Http* tryGetHttpDriver() const;
     const drivers::Http& getHttpDriver() const;

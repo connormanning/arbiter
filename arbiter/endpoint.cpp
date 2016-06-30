@@ -33,6 +33,11 @@ std::string Endpoint::root() const
     return m_root;
 }
 
+std::string Endpoint::prefixedRoot() const
+{
+    return softPrefix() + root();
+}
+
 std::string Endpoint::type() const
 {
     return m_driver.type();
@@ -153,9 +158,19 @@ std::string Endpoint::fullPath(const std::string& subpath) const
     return m_root + subpath;
 }
 
+std::string Endpoint::prefixedFullPath(const std::string& subpath) const
+{
+     return softPrefix() + fullPath(subpath);
+}
+
 Endpoint Endpoint::getSubEndpoint(std::string subpath) const
 {
     return Endpoint(m_driver, m_root + subpath);
+}
+
+std::string Endpoint::softPrefix() const
+{
+    return isRemote() ? type() + "://" : "";
 }
 
 const drivers::Http* Endpoint::tryGetHttpDriver() const

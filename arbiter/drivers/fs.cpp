@@ -14,9 +14,9 @@
 #include <windows.h>
 #endif
 
+#include <algorithm>
 #include <cstdlib>
 #include <fstream>
-#include <stdexcept>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -122,17 +122,27 @@ void Fs::put(std::string path, const std::vector<char>& data) const
     }
 }
 
-std::vector<std::string> Fs::glob(std::string path, bool) const
+std::vector<std::string> Fs::glob(std::string path, bool verbose) const
 {
     std::vector<std::string> results;
 
-#ifndef ARBITER_WINDOWS
     path = fs::expandTilde(path);
 
+    const bool recursive(([&path]()
+    {
+        if (path.size() > 2 && path[path.size() - 2] == '*')
+        {
+            path.pop_back();
+            return true;
+        }
+        else return false;
+    })());
+
+#ifndef ARBITER_WINDOWS
     glob_t buffer;
     struct stat info;
 
-    ::glob(path.c_str(), GLOB_NOSORT | GLOB_TILDE, 0, &buffer);
+    ::glob(path.c_str(), GLOB_NOSORT | GLOB_MARK, 0, &buffer);
 
     for (std::size_t i(0); i < buffer.gl_pathc; ++i)
     {
@@ -142,7 +152,17 @@ std::vector<std::string> Fs::glob(std::string path, bool) const
         {
             if (S_ISREG(info.st_mode))
             {
+                if (verbose && results.size() % 10000 == 0)
+                {
+                    std::cout << "." << std::flush;
+                }
+
                 results.push_back(val);
+            }
+            else if (recursive && S_ISDIR(info.st_mode))
+            {
+                const auto nested(glob(val + "**", verbose));
+                results.insert(results.end(), nested.begin(), nested.end());
             }
         }
         else
@@ -167,6 +187,7 @@ std::vector<std::string> Fs::glob(std::string path, bool) const
             {
                 results.push_back(converter.to_bytes(data->cFileName));
             }
+            // TODO Recurse if necessary.
         }
         while (FindNextFileW(hFind, data));
     }
@@ -180,13 +201,37 @@ std::vector<std::string> Fs::glob(std::string path, bool) const
 namespace fs
 {
 
-bool mkdirp(std::string dir)
+bool mkdirp(std::string raw)
 {
-    dir = expandTilde(dir);
-
 #ifndef ARBITER_WINDOWS
-    const bool err(::mkdir(dir.c_str(), S_IRWXU | S_IRGRP | S_IROTH));
-    return (!err || errno == EEXIST);
+    const std::string dir(([&raw]()
+    {
+        std::string s(expandTilde(raw));
+
+        // Remove consecutive slashes.  For Windows, we'll need to be careful
+        // not to remove drive letters like C:\\.
+        const auto end = std::unique(s.begin(), s.end(), [](char l, char r){
+            return util::isSlash(l) && util::isSlash(r);
+        });
+
+        return std::string(s.begin(), end);
+    })());
+
+    auto it(dir.begin());
+    const auto end(dir.cend());
+
+    do
+    {
+        it = std::find_if(++it, end, util::isSlash);
+
+        const std::string cur(dir.begin(), it);
+        const bool err(::mkdir(cur.c_str(), S_IRWXU | S_IRGRP | S_IROTH));
+        if (err && errno != EEXIST) return false;
+    }
+    while (it != end);
+
+    return true;
+
 #else
     throw ArbiterError("Windows mkdirp not done yet.");
 #endif

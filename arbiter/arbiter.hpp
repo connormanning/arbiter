@@ -67,6 +67,9 @@ public:
     /** @brief Construct an Arbiter with driver configurations. */
     Arbiter(const Json::Value& json);
 
+    /** True if a Driver has been registered for this file type. */
+    bool hasDriver(std::string path) const;
+
     /** @brief Add a custom driver for the supplied type.
      *
      * After this operation completes, future requests into arbiter beginning
@@ -148,10 +151,27 @@ public:
             http::Headers headers,
             http::Query query = http::Query()) const;
 
-    /** Copy data from @p from to @p to.  @p from will be resolved with
+    /** Copy data from @p src to @p dst.  @p src will be resolved with
      * Arbiter::resolve prior to the copy, so globbed directories are supported.
+     * If @p src ends with a slash, it will be resolved with a recursive glob,
+     * in which case any nested directory structure will be recreated in @p dst.
+     *
+     * If @p dst is a filesystem path, fs::mkdirp will be called prior to the
+     * start of copying.  If @p src is a recursive glob, `fs::mkdirp` will
+     * be repeatedly called during copying to ensure that any nested directories
+     * are reproduced.
      */
-    void copy(std::string from, std::string to) const;
+    void copy(std::string src, std::string dst, bool verbose = false) const;
+
+    /** Copy the single file @p file to the destination @p to.  If @p to ends
+     * with a `/` or '\' character, then @p file will be copied into the
+     * directory @p to with the basename of @p file.  If @p does not end with a
+     * slash character, then @p to will be interpreted as a file path.
+     *
+     * If @p to is a local filesystem path, then `fs::mkdirp` will be called
+     * prior to copying.
+     */
+    void copyFile(std::string file, std::string to, bool verbose = false) const;
 
     /** Returns true if this path is a remote path, or false if it is on the
      * local filesystem.
@@ -163,7 +183,7 @@ public:
      */
     bool isLocal(std::string path) const;
 
-    /** Returns true if this path exists.  Equivalent to :
+    /** Returns true if this path exists.  Equivalent to:
      * @code
      * tryGetSize(path).get() != nullptr
      * @endcode

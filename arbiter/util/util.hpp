@@ -13,6 +13,11 @@ namespace arbiter
 /** General utilities. */
 namespace util
 {
+    /** Returns @p path, less any trailing glob indicators (one or two
+     * asterisks) as well as any possible trailing slash.
+     */
+    std::string stripPostfixing(std::string path);
+
     /** Returns the portion of @p fullPath following the last instance of the
      * character `/`, if any instances exist aside from possibly the delimiter
      * `://`.  If there are no other instances of `/`, then @p fullPath itself
@@ -23,10 +28,30 @@ namespace util
      * logic above, thus the innermost directory in the full path will be
      * returned.
      */
-    std::string getBasename(const std::string fullPath);
+    std::string getBasename(std::string fullPath);
+
+    /** Returns everything besides the basename, as determined by `getBasename`.
+     * For file paths, this corresponds to the directory path above the file.
+     * For directory paths, this corresponds to all directories above the
+     * innermost directory.
+     */
+    std::string getNonBasename(std::string fullPath);
 
     /** @cond arbiter_internal */
     inline bool isSlash(char c) { return c == '/' || c == '\\'; }
+
+    /** Returns true if the last character is an asterisk. */
+    inline bool isGlob(std::string path)
+    {
+        return path.size() && path.back() == '*';
+    }
+
+    /** Returns true if the last character is a slash or an asterisk. */
+    inline bool isDirectory(std::string path)
+    {
+        return (path.size() && isSlash(path.back())) || isGlob(path);
+    }
+
     inline std::string joinImpl(bool first = false) { return std::string(); }
 
     template <typename ...Paths>

@@ -93,7 +93,9 @@ protected:
     /** @brief Resolve a wildcard path.
      *
      * This operation should return a non-recursive resolution of the files
-     * matching the given wildcard @p path (no directories).
+     * matching the given wildcard @p path (no directories).  With the exception
+     * of the filesystem Driver, results should be prefixed with
+     * `type() + "://"`.
      *
      * @note The default behavior is to throw ArbiterError, so derived classes
      * may optionally override if they can perform this behavior.
