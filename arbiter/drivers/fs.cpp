@@ -214,7 +214,9 @@ bool mkdirp(std::string raw)
             return util::isSlash(l) && util::isSlash(r);
         });
 
-        return std::string(s.begin(), end);
+        s = std::string(s.begin(), end);
+        if (s.size() && util::isSlash(s.back())) s.pop_back();
+        return s;
     })());
 
     auto it(dir.begin());

@@ -187,6 +187,11 @@ void Arbiter::copy(
 
         const Endpoint dstEndpoint(getEndpoint(dst));
 
+        if (srcEndpoint.prefixedRoot() == dstEndpoint.prefixedRoot())
+        {
+            throw ArbiterError("Cannot copy directory to itself");
+        }
+
         int i(0);
         const auto paths(resolve(srcToResolve, verbose));
 
