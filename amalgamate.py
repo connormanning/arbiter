@@ -125,6 +125,7 @@ def amalgamate_source(source_top_dir=None,
     header.add_file("arbiter/util/util.hpp")
     header.add_file("arbiter/drivers/s3.hpp")
     header.add_file("arbiter/drivers/dropbox.hpp")
+    header.add_file("arbiter/drivers/test.hpp")
     header.add_file("arbiter/endpoint.hpp")
     header.add_file("arbiter/arbiter.hpp")
 
