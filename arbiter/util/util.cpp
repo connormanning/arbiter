@@ -77,7 +77,7 @@ std::unique_ptr<std::string> env(const std::string& var)
     char* c(nullptr);
     std::size_t size(0);
 
-    if (!_dupenv_s(&c, size, var.c_str())) result.reset(new std::string(c));
+    if (!_dupenv_s(&c, &size, var.c_str())) result.reset(new std::string(c));
 #endif
 
     return result;

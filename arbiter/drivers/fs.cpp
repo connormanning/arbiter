@@ -50,7 +50,7 @@ namespace
             auto homeDrive(util::env("HOMEDRIVE"));
             auto homePath(util::env("HOMEPATH"));
 
-            if (homeDrive && homePath) s = homeDrive + homePath;
+            if (homeDrive && homePath) s = *homeDrive + *homePath;
         }
 #endif
         if (s.empty()) std::cout << "No home directory found" << std::endl;
