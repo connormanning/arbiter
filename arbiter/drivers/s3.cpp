@@ -256,13 +256,13 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
             }
         }
     }
-    else
+    else if (json["verbose"].asBool())
     {
         std::cout <<
             "~/.aws/config not found - using region us-east-1" << std::endl;
     }
 
-    if (!regionFound)
+    if (!regionFound && json["verbose"].asBool())
     {
         std::cout <<
             "Region not found in ~/.aws/config - using us-east-1" << std::endl;
