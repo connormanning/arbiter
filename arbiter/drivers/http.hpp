@@ -146,6 +146,24 @@ private:
     http::Pool& m_pool;
 };
 
+/** @brief HTTPS driver.  Identical to the HTTP driver except for its type
+ * string.
+ */
+class Https : public Http
+{
+public:
+    Https(http::Pool& pool) : Http(pool) { }
+
+    static std::unique_ptr<Https> create(
+            http::Pool& pool,
+            const Json::Value& json)
+    {
+        return std::unique_ptr<Https>(new Https(pool));
+    }
+
+    virtual std::string type() const override { return "https"; }
+};
+
 } // namespace drivers
 } // namespace arbiter
 

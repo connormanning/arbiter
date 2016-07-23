@@ -51,6 +51,9 @@ void Arbiter::init(const Json::Value& json)
     auto http(Http::create(m_pool, json["http"]));
     if (http) m_drivers[http->type()] = std::move(http);
 
+    auto https(Https::create(m_pool, json["http"]));
+    if (https) m_drivers[https->type()] = std::move(https);
+
     auto s3(S3::create(m_pool, json["s3"]));
     if (s3) m_drivers[s3->type()] = std::move(s3);
 
