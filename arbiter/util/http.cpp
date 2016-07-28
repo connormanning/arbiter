@@ -2,6 +2,7 @@
 #include <arbiter/util/http.hpp>
 #endif
 
+#include <iostream>
 #include <numeric>
 
 #include <curl/curl.h>
@@ -208,10 +209,16 @@ void Curl::init(
     }
 }
 
-Response Curl::get(std::string path, Headers headers, Query query)
+Response Curl::get(
+        std::string path,
+        Headers headers,
+        Query query,
+        const std::size_t reserve)
 {
     int httpCode(0);
     std::vector<char> data;
+
+    if (reserve) data.reserve(reserve);
 
     init(path, headers, query);
     if (m_verbose) curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
@@ -379,11 +386,12 @@ Resource::~Resource()
 Response Resource::get(
         const std::string path,
         const Headers headers,
-        const Query query)
+        const Query query,
+        const std::size_t reserve)
 {
-    return exec([this, path, headers, query]()->Response
+    return exec([this, path, headers, query, reserve]()->Response
     {
-        return m_curl.get(path, headers, query);
+        return m_curl.get(path, headers, query, reserve);
     });
 }
 

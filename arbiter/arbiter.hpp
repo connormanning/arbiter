@@ -297,9 +297,6 @@ public:
     http::Pool& httpPool() { return m_pool; }
 
 private:
-    // Registers all available default Driver instances.
-    void init(const Json::Value& json);
-
     const drivers::Http* tryGetHttpDriver(std::string path) const;
     const drivers::Http& getHttpDriver(std::string path) const;
 

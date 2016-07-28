@@ -29,7 +29,8 @@ public:
             http::Pool& pool,
             const Auth& auth,
             std::string region = "us-east-1",
-            bool sse = false);
+            bool sse = false,
+            bool precheck = false);
 
     /** Try to construct an S3 Driver.  Searches @p json primarily for the keys
      * `access` and `hidden` to construct an S3::Auth.  If not found, common
@@ -178,6 +179,7 @@ private:
     std::string m_region;
     std::string m_baseUrl;
     http::Headers m_baseHeaders;
+    bool m_precheck;
 };
 
 } // namespace drivers

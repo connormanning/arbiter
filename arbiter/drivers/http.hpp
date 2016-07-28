@@ -116,7 +116,8 @@ protected:
     http::Response internalGet(
             std::string path,
             http::Headers headers = http::Headers(),
-            http::Query query = http::Query()) const;
+            http::Query query = http::Query(),
+            std::size_t reserve = 0) const;
 
     http::Response internalPut(
             std::string path,

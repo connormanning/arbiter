@@ -136,9 +136,10 @@ void Http::put(
 Response Http::internalGet(
         const std::string path,
         const Headers headers,
-        const Query query) const
+        const Query query,
+        const std::size_t reserve) const
 {
-    return m_pool.acquire().get(path, headers, query);
+    return m_pool.acquire().get(path, headers, query, reserve);
 }
 
 Response Http::internalPut(

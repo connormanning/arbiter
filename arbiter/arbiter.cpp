@@ -24,21 +24,11 @@ namespace
     const std::size_t httpRetryCount(8);
 }
 
-Arbiter::Arbiter()
-    : m_drivers()
-    , m_pool(concurrentHttpReqs, httpRetryCount, Json::Value())
-{
-    init(Json::Value());
-}
+Arbiter::Arbiter() : Arbiter(Json::Value()) { }
 
 Arbiter::Arbiter(const Json::Value& json)
     : m_drivers()
     , m_pool(concurrentHttpReqs, httpRetryCount, json)
-{
-    init(json);
-}
-
-void Arbiter::init(const Json::Value& json)
 {
     using namespace drivers;
 

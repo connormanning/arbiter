@@ -64,6 +64,9 @@ std::string getNonBasename(const std::string fullPath)
         result = sub;
     }
 
+    const std::string type(Arbiter::getType(fullPath));
+    if (type != "file") result = type + "://" + result;
+
     return result;
 }
 

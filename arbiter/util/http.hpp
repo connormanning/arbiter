@@ -95,13 +95,20 @@ class Curl
 public:
     ~Curl();
 
-    http::Response get(std::string path, Headers headers, Query query);
+    http::Response get(
+            std::string path,
+            Headers headers,
+            Query query,
+            std::size_t reserve);
+
     http::Response head(std::string path, Headers headers, Query query);
+
     http::Response put(
             std::string path,
             const std::vector<char>& data,
             Headers headers,
             Query query);
+
     http::Response post(
             std::string path,
             const std::vector<char>& data,
@@ -133,7 +140,8 @@ public:
     http::Response get(
             std::string path,
             Headers headers = Headers(),
-            Query query = Query());
+            Query query = Query(),
+            std::size_t reserve = 0);
 
     http::Response head(
             std::string path,

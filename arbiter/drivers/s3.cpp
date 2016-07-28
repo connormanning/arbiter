@@ -148,12 +148,14 @@ S3::S3(
         Pool& pool,
         const S3::Auth& auth,
         const std::string region,
-        const bool sse)
+        const bool sse,
+        const bool precheck)
     : Http(pool)
     , m_auth(auth)
     , m_region(region)
     , m_baseUrl(getBaseUrl(region))
     , m_baseHeaders()
+    , m_precheck(precheck)
 {
     if (sse)
     {
@@ -170,6 +172,7 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
 
     const std::string profile(extractProfile(json));
     const bool sse(json["sse"].asBool());
+    const bool precheck(json["precheck"].asBool());
 
     if (!json.isNull() && json.isMember("access") & json.isMember("hidden"))
     {
@@ -268,7 +271,7 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
             "Region not found in ~/.aws/config - using us-east-1" << std::endl;
     }
 
-    s3.reset(new S3(pool, *auth, region, sse));
+    s3.reset(new S3(pool, *auth, region, sse, precheck));
 
     return s3;
 }
@@ -327,6 +330,10 @@ bool S3::get(
         const Headers headers,
         const Query query) const
 {
+    std::unique_ptr<std::size_t> size(
+            m_precheck && !headers.count("Range") ?
+                tryGetSize(rawPath) : nullptr);
+
     const Resource resource(m_baseUrl, rawPath);
     const ApiV4 apiV4(
             "GET",
@@ -341,7 +348,8 @@ bool S3::get(
             Http::internalGet(
                 resource.url(),
                 apiV4.headers(),
-                apiV4.query()));
+                apiV4.query(),
+                size ? *size : 0));
 
     if (res.ok())
     {
