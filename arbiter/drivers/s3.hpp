@@ -58,6 +58,8 @@ public:
             http::Headers headers,
             http::Query query) const override;
 
+    virtual void copy(std::string src, std::string dst) const override;
+
     /** @brief AWS authentication information. */
     class Auth
     {

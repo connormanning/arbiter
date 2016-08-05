@@ -212,7 +212,7 @@ void Arbiter::copy(
 
 void Arbiter::copyFile(
         const std::string file,
-        const std::string dst,
+        std::string dst,
         const bool verbose) const
 {
     if (dst.empty()) throw ArbiterError("Cannot copy to empty destination");
@@ -223,24 +223,22 @@ void Arbiter::copyFile(
     {
         // If the destination is a directory, maintain the basename of the
         // source file.
-        const std::string basename(util::getBasename(file));
-        if (verbose)
-        {
-            std::cout <<
-                file << " -> " <<
-                dstEndpoint.type() + "://" + dstEndpoint.fullPath(basename) <<
-                std::endl;
-        }
+        dst += util::getBasename(file);
+    }
 
-        if (dstEndpoint.isLocal()) fs::mkdirp(dst);
+    if (verbose) std::cout << file << " -> " << dst << std::endl;
 
-        dstEndpoint.put(util::getBasename(file), getBinary(file));
+    if (dstEndpoint.isLocal()) fs::mkdirp(util::getNonBasename(dst));
+
+    if (getEndpoint(file).type() == dstEndpoint.type())
+    {
+        // If this copy is within the same driver domain, defer to the
+        // hopefully specialized copy method.
+        getDriver(file).copy(stripType(file), stripType(dst));
     }
     else
     {
-        if (verbose) std::cout << file << " -> " << dst << std::endl;
-
-        if (dstEndpoint.isLocal()) fs::mkdirp(util::getNonBasename(dst));
+        // Otherwise do a GET/PUT for the copy.
         put(dst, getBinary(file));
     }
 }

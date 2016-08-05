@@ -119,6 +119,8 @@ public:
 
     virtual bool isRemote() const override { return false; }
 
+    virtual void copy(std::string src, std::string dst) const override;
+
 protected:
     virtual bool get(std::string path, std::vector<char>& data) const override;
 };

@@ -17,6 +17,8 @@
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
+#include <ios>
+#include <istream>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -120,6 +122,27 @@ void Fs::put(std::string path, const std::vector<char>& data) const
     {
         throw ArbiterError("Error occurred while writing " + path);
     }
+}
+
+void Fs::copy(std::string src, std::string dst) const
+{
+    src = fs::expandTilde(src);
+    dst = fs::expandTilde(dst);
+
+    std::ifstream instream(src, std::ifstream::in | std::ifstream::binary);
+    if (!instream.good())
+    {
+        throw ArbiterError("Could not open " + src + " for reading");
+    }
+    instream >> std::noskipws;
+
+    std::ofstream outstream(dst, binaryTruncMode);
+    if (!outstream.good())
+    {
+        throw ArbiterError("Could not open " + dst + " for writing");
+    }
+
+    outstream << instream.rdbuf();
 }
 
 std::vector<std::string> Fs::glob(std::string path, bool verbose) const

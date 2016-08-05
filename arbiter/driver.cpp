@@ -51,6 +51,11 @@ void Driver::put(std::string path, const std::string& data) const
     put(path, std::vector<char>(data.begin(), data.end()));
 }
 
+void Driver::copy(std::string src, std::string dst) const
+{
+    put(dst, getBinary(src));
+}
+
 std::vector<std::string> Driver::resolve(
         std::string path,
         const bool verbose) const

@@ -399,6 +399,14 @@ void S3::put(
     }
 }
 
+void S3::copy(const std::string src, const std::string dst) const
+{
+    Headers headers;
+    const Resource resource(m_baseUrl, src);
+    headers["x-amz-copy-source"] = resource.bucket + '/' + resource.object;
+    put(dst, std::vector<char>(), headers, Query());
+}
+
 std::vector<std::string> S3::glob(std::string path, bool verbose) const
 {
     std::vector<std::string> results;

@@ -81,6 +81,11 @@ public:
     /** Write string data. */
     void put(std::string path, const std::string& data) const;
 
+    /** Copy a file, where @p src and @p dst must both be of this driver
+     * type.  Type-prefixes must be stripped from the input parameters.
+     */
+    virtual void copy(std::string src, std::string dst) const;
+
     /** @brief Resolve a possibly globbed path.
      *
      * See Arbiter::resolve for details.
