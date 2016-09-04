@@ -58,7 +58,7 @@ namespace
                 in.begin(),
                 in.end(),
                 std::string(),
-                [](const std::string& out, const char c)
+                [](const std::string& out, const char c) -> std::string
                 {
                     return out + static_cast<char>(::tolower(c));
                 });
@@ -72,7 +72,7 @@ namespace
                 in.begin(),
                 in.end(),
                 std::string(),
-                [](const std::string& out, const char c)
+                [](const std::string& out, const char c) -> std::string
                 {
                     if (
                         std::isspace(c) &&
