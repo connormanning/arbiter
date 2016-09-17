@@ -40,8 +40,8 @@ namespace
     std::string getBaseUrl(const std::string& region)
     {
         // https://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
-        if (region == "us-east-1") return ".s3.amazonaws.com/";
-        else return ".s3-" + region + ".amazonaws.com/";
+        if (region == "us-east-1") return "s3.amazonaws.com/";
+        else return "s3-" + region + ".amazonaws.com/";
     }
 
     drivers::Fs fsDriver;
@@ -403,7 +403,7 @@ void S3::copy(const std::string src, const std::string dst) const
 {
     Headers headers;
     const Resource resource(m_baseUrl, src);
-    headers["x-amz-copy-source"] = resource.bucket + '/' + resource.object;
+    headers["x-amz-copy-source"] = resource.bucket() + '/' + resource.object();
     put(dst, std::vector<char>(), headers, Query());
 }
 
@@ -417,8 +417,8 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
 
     // https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketGET.html
     const Resource resource(m_baseUrl, path);
-    const std::string& bucket(resource.bucket);
-    const std::string& object(resource.object);
+    const std::string& bucket(resource.bucket());
+    const std::string& object(resource.object());
 
     Query query;
 
@@ -431,9 +431,9 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
     {
         if (verbose) std::cout << "." << std::flush;
 
-        if (!get(resource.bucket + "/", data, Headers(), query))
+        if (!get(resource.bucket() + "/", data, Headers(), query))
         {
-            throw ArbiterError("Couldn't S3 GET " + resource.bucket);
+            throw ArbiterError("Couldn't S3 GET " + resource.bucket());
         }
 
         data.push_back('\0');
@@ -583,7 +583,7 @@ std::string S3::ApiV4::buildCanonicalRequest(
         const Query& query,
         const std::vector<char>& data) const
 {
-    const std::string canonicalUri(sanitize("/" + resource.object));
+    const std::string canonicalUri(sanitize("/" + resource.object()));
 
     auto canonicalizeQuery([](const std::string& s, const Query::value_type& q)
     {
@@ -649,29 +649,61 @@ std::string S3::ApiV4::getAuthHeader(
 }
 
 S3::Resource::Resource(std::string baseUrl, std::string fullPath)
-    : baseUrl(baseUrl)
-    , bucket()
-    , object()
+    : m_baseUrl(baseUrl)
+    , m_bucket()
+    , m_object()
+    , m_virtualHosted(true)
 {
     fullPath = sanitize(fullPath);
     const std::size_t split(fullPath.find("/"));
 
-    bucket = fullPath.substr(0, split);
+    m_bucket = fullPath.substr(0, split);
 
     if (split != std::string::npos)
     {
-        object = fullPath.substr(split + 1);
+        m_object = fullPath.substr(split + 1);
     }
+
+    m_virtualHosted = m_bucket.find_first_of('.') == std::string::npos;
 }
 
 std::string S3::Resource::url() const
 {
-    return "https://" + bucket + baseUrl + object;
+    // We can't use virtual-host style paths if the bucket contains dots.
+    if (m_virtualHosted)
+    {
+        return "https://" + m_bucket + "." + m_baseUrl + m_object;
+    }
+    else
+    {
+        return "https://" + m_baseUrl + m_bucket + "/" + m_object;
+    }
+}
+
+std::string S3::Resource::object() const
+{
+    // We can't use virtual-host style paths if the bucket contains dots.
+    if (m_virtualHosted)
+    {
+        return m_object;
+    }
+    else
+    {
+        return m_bucket + "/" + m_object;
+    }
 }
 
 std::string S3::Resource::host() const
 {
-    return bucket + baseUrl.substr(0, baseUrl.size() - 1); // Pop slash.
+    if (m_virtualHosted)
+    {
+        // Pop slash.
+        return m_bucket + "." + m_baseUrl.substr(0, m_baseUrl.size() - 1);
+    }
+    else
+    {
+        return m_baseUrl.substr(0, m_baseUrl.size() - 1);
+    }
 }
 
 S3::FormattedTime::FormattedTime()

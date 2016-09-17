@@ -223,7 +223,7 @@ Response Curl::get(
     init(path, headers, query);
     if (m_verbose) curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
-    // Register callback function and date pointer to consume the result.
+    // Register callback function and data pointer to consume the result.
     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
     curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &data);
 
@@ -251,7 +251,7 @@ Response Curl::head(std::string path, Headers headers, Query query)
     init(path, headers, query);
     if (m_verbose) curl_easy_setopt(m_curl, CURLOPT_VERBOSE, 1L);
 
-    // Register callback function and date pointer to consume the result.
+    // Register callback function and data pointer to consume the result.
     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
     curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &data);
 

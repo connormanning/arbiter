@@ -103,10 +103,15 @@ private:
 
         std::string url() const;
         std::string host() const;
+        std::string baseUrl() const { return m_baseUrl; }
+        std::string bucket() const { return m_bucket; }
+        std::string object() const;
 
-        std::string baseUrl;
-        std::string bucket;
-        std::string object;
+    private:
+        std::string m_baseUrl;
+        std::string m_bucket;
+        std::string m_object;
+        bool m_virtualHosted;
     };
 
     class FormattedTime
