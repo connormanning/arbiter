@@ -47,6 +47,9 @@ namespace fs
     /** @brief Get temporary path from environment. */
     std::string getTempPath();
 
+    /** @brief Resolve a possible wildcard path. */
+    std::vector<std::string> glob(std::string path);
+
     /** @brief A scoped local filehandle for a possibly remote path.
      *
      * This is an RAII style pseudo-filehandle.  It manages the scope of a

@@ -147,76 +147,7 @@ void Fs::copy(std::string src, std::string dst) const
 
 std::vector<std::string> Fs::glob(std::string path, bool verbose) const
 {
-    std::vector<std::string> results;
-
-    path = fs::expandTilde(path);
-
-    const bool recursive(([&path]()
-    {
-        if (path.size() > 2 && path[path.size() - 2] == '*')
-        {
-            path.pop_back();
-            return true;
-        }
-        else return false;
-    })());
-
-#ifndef ARBITER_WINDOWS
-    glob_t buffer;
-    struct stat info;
-
-    ::glob(path.c_str(), GLOB_NOSORT | GLOB_MARK, 0, &buffer);
-
-    for (std::size_t i(0); i < buffer.gl_pathc; ++i)
-    {
-        const std::string val(buffer.gl_pathv[i]);
-
-        if (stat(val.c_str(), &info) == 0)
-        {
-            if (S_ISREG(info.st_mode))
-            {
-                if (verbose && results.size() % 10000 == 0)
-                {
-                    std::cout << "." << std::flush;
-                }
-
-                results.push_back(val);
-            }
-            else if (recursive && S_ISDIR(info.st_mode))
-            {
-                const auto nested(glob(val + "**", verbose));
-                results.insert(results.end(), nested.begin(), nested.end());
-            }
-        }
-        else
-        {
-            throw ArbiterError("Error globbing - POSIX stat failed");
-        }
-    }
-
-    globfree(&buffer);
-#else
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    const std::wstring wide(converter.from_bytes(path));
-
-    LPWIN32_FIND_DATAW data{};
-    HANDLE hFind(FindFirstFileW(wide.c_str(), data));
-
-    if (hFind != INVALID_HANDLE_VALUE)
-    {
-        do
-        {
-            if ((data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
-            {
-                results.push_back(converter.to_bytes(data->cFileName));
-            }
-            // TODO Recurse if necessary.
-        }
-        while (FindNextFileW(hFind, data));
-    }
-#endif
-
-    return results;
+    return fs::glob(path);
 }
 
 } // namespace drivers
@@ -271,6 +202,120 @@ bool remove(std::string filename)
 #else
     throw ArbiterError("Windows remove not done yet.");
 #endif
+}
+
+namespace
+{
+    struct Globs
+    {
+        std::vector<std::string> files;
+        std::vector<std::string> dirs;
+    };
+
+    Globs globOne(std::string path)
+    {
+        Globs results;
+
+#ifndef ARBITER_WINDOWS
+        glob_t buffer;
+        struct stat info;
+
+        ::glob(path.c_str(), GLOB_NOSORT | GLOB_MARK, 0, &buffer);
+
+        for (std::size_t i(0); i < buffer.gl_pathc; ++i)
+        {
+            const std::string val(buffer.gl_pathv[i]);
+
+            if (stat(val.c_str(), &info) == 0)
+            {
+                if (S_ISREG(info.st_mode)) results.files.push_back(val);
+                else if (S_ISDIR(info.st_mode)) results.dirs.push_back(val);
+            }
+            else
+            {
+                throw ArbiterError("Error globbing - POSIX stat failed");
+            }
+        }
+
+        globfree(&buffer);
+#else
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+        const std::wstring wide(converter.from_bytes(path));
+
+        LPWIN32_FIND_DATAW data{};
+        HANDLE hFind(FindFirstFileW(wide.c_str(), data));
+
+        if (hFind != INVALID_HANDLE_VALUE)
+        {
+            do
+            {
+                if ((data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0)
+                {
+                    results.files.push_back(
+                            converter.to_bytes(data->cFileName));
+                }
+                else
+                {
+                    results.dirs.push_back(converter.to_bytes(data->cFileName));
+                }
+            }
+            while (FindNextFileW(hFind, data));
+        }
+#endif
+
+        return results;
+    }
+
+    std::vector<std::string> walk(std::string dir)
+    {
+        std::vector<std::string> paths;
+        paths.push_back(dir);
+
+        for (const auto& dir : globOne(dir + '*').dirs)
+        {
+            const auto next(walk(dir));
+            paths.insert(paths.end(), next.begin(), next.end());
+        }
+
+        return paths;
+    }
+}
+
+std::vector<std::string> glob(std::string path)
+{
+    std::vector<std::string> results;
+
+    path = fs::expandTilde(path);
+
+    if (path.find('*') == std::string::npos)
+    {
+        results.push_back(path);
+        return results;
+    }
+
+    std::vector<std::string> dirs;
+
+    const std::size_t recPos(path.find("**"));
+    if (recPos != std::string::npos)
+    {
+        // Convert this recursive glob into multiple non-recursive ones.
+        const auto pre(path.substr(0, recPos));     // Cut off before the '*'.
+        const auto post(path.substr(recPos + 1));   // Includes the second '*'.
+
+        for (const auto d : walk(pre)) dirs.push_back(d + post);
+    }
+    else
+    {
+        dirs.push_back(path);
+    }
+
+    for (const auto& p : dirs)
+    {
+        Globs globs(globOne(p));
+        results.insert(results.end(), globs.files.begin(), globs.files.end());
+    }
+
+    return results;
 }
 
 std::string expandTilde(std::string in)
