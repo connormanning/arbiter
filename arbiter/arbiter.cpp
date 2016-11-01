@@ -20,15 +20,19 @@ namespace
 {
     const std::string delimiter("://");
 
+#ifdef ARBITER_CURL
     const std::size_t concurrentHttpReqs(32);
     const std::size_t httpRetryCount(8);
+#endif
 }
 
 Arbiter::Arbiter() : Arbiter(Json::Value()) { }
 
 Arbiter::Arbiter(const Json::Value& json)
     : m_drivers()
-    , m_pool(concurrentHttpReqs, httpRetryCount, json)
+#ifdef ARBITER_CURL
+    , m_pool(new http::Pool(concurrentHttpReqs, httpRetryCount, json))
+#endif
 {
     using namespace drivers;
 
@@ -38,17 +42,19 @@ Arbiter::Arbiter(const Json::Value& json)
     auto test(Test::create(json["test"]));
     if (test) m_drivers[test->type()] = std::move(test);
 
-    auto http(Http::create(m_pool, json["http"]));
+#ifdef ARBITER_CURL
+    auto http(Http::create(*m_pool, json["http"]));
     if (http) m_drivers[http->type()] = std::move(http);
 
-    auto https(Https::create(m_pool, json["http"]));
+    auto https(Https::create(*m_pool, json["http"]));
     if (https) m_drivers[https->type()] = std::move(https);
 
-    auto s3(S3::create(m_pool, json["s3"]));
+    auto s3(S3::create(*m_pool, json["s3"]));
     if (s3) m_drivers[s3->type()] = std::move(s3);
 
-    auto dropbox(Dropbox::create(m_pool, json["dropbox"]));
+    auto dropbox(Dropbox::create(*m_pool, json["dropbox"]));
     if (dropbox) m_drivers[dropbox->type()] = std::move(dropbox);
+#endif
 }
 
 bool Arbiter::hasDriver(const std::string path) const

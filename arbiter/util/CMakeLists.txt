@@ -3,22 +3,26 @@ set(BASE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(
     SOURCES
+    "${BASE}/curl.cpp"
     "${BASE}/http.cpp"
-    "${BASE}/transforms.cpp"
     "${BASE}/md5.cpp"
     "${BASE}/sha256.cpp"
+    "${BASE}/transforms.cpp"
     "${BASE}/util.cpp"
 )
 
 set(
     HEADERS
+    "${BASE}/curl.hpp"
     "${BASE}/http.hpp"
-    "${BASE}/transforms.hpp"
     "${BASE}/macros.hpp"
     "${BASE}/md5.hpp"
     "${BASE}/sha256.hpp"
+    "${BASE}/transforms.hpp"
+    "${BASE}/types.hpp"
     "${BASE}/util.hpp"
 )
+
 
 if (WIN32)
     add_library(${MODULE} OBJECT ${SOURCES} ${HEADERS})

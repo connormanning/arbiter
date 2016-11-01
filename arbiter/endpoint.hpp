@@ -6,7 +6,7 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 
-#include <arbiter/util/http.hpp>
+#include <arbiter/util/types.hpp>
 
 #endif
 
@@ -19,6 +19,7 @@ namespace arbiter
 {
 
 namespace drivers { class Http; }
+namespace http { class Pool; }
 
 class Driver;
 

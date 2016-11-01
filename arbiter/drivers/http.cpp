@@ -24,7 +24,13 @@ namespace drivers
 
 using namespace http;
 
-Http::Http(Pool& pool) : m_pool(pool) { }
+Http::Http(Pool& pool)
+    : m_pool(pool)
+{
+#ifndef ARBITER_CURL
+    throw ArbiterError("Cannot create HTTP driver - no curl support was built");
+#endif
+}
 
 std::unique_ptr<Http> Http::create(Pool& pool, const Json::Value&)
 {

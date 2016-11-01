@@ -55,7 +55,8 @@ def amalgamate_source(source_top_dir=None,
                        header_include_path=None,
                        include_json=True,
                        include_xml=True,
-                       custom_namespace=None):
+                       custom_namespace=None,
+                       define_curl=True):
     """Produces amalgamated source.
        Parameters:
            source_top_dir: top-directory
@@ -108,6 +109,14 @@ def amalgamate_source(source_top_dir=None,
     if include_json:
         header.add_file("arbiter/third/json/json.hpp")
 
+    if define_curl:
+        header.add_text("\n#pragma once")
+        header.add_text("#define ARBITER_CURL")
+    else:
+        print "NOT #defining ARBITER_CURL"
+
+    header.add_file("arbiter/util/types.hpp")
+    header.add_file("arbiter/util/curl.hpp")
     header.add_file("arbiter/util/http.hpp")
 
     header.add_file("arbiter/driver.hpp")
@@ -157,6 +166,7 @@ def amalgamate_source(source_top_dir=None,
     source.add_file("arbiter/drivers/http.cpp")
     source.add_file("arbiter/drivers/s3.cpp")
     source.add_file("arbiter/drivers/dropbox.cpp")
+    source.add_file("arbiter/util/curl.cpp")
     source.add_file("arbiter/util/http.cpp")
     source.add_file("arbiter/util/md5.cpp")
     source.add_file("arbiter/util/sha256.cpp")
@@ -175,8 +185,7 @@ Generate a single amalgamated source and header file from the sources.
     parser.allow_interspersed_args = False
 
     parser.add_option(
-            "-s",
-            "--source",
+            "-s", "--source",
             dest="target_source_path",
             action="store",
             default="dist/arbiter.cpp",
@@ -190,30 +199,32 @@ Generate a single amalgamated source and header file from the sources.
             help="""Header include path. Used to include the header from the amalgamated source file. [Default: %default]""")
 
     parser.add_option(
-            "-t",
-            "--top-dir",
+            "-t", "--top-dir",
             dest="top_dir",
             action="store",
             default=os.getcwd(),
             help="""Source top-directory. [Default: %default]""")
 
     parser.add_option(
-            "-j",
-            "--no-include-json",
+            "-j", "--no-include-json",
             dest="include_json",
             action="store_false",
             default=True)
 
     parser.add_option(
-            "-x",
-            "--no-include-xml",
+            "-x", "--no-include-xml",
             dest="include_xml",
             action="store_false",
             default=True)
 
     parser.add_option(
-            "-c",
-            "--custom-namespace",
+            "-d", "--define-curl",
+            dest="define_curl",
+            action="store_true",
+            default=False)
+
+    parser.add_option(
+            "-c", "--custom-namespace",
             dest="custom_namespace",
             action="store",
             default=None)
@@ -226,7 +237,8 @@ Generate a single amalgamated source and header file from the sources.
                              header_include_path=options.header_include_path,
                              include_json=options.include_json,
                              include_xml=options.include_xml,
-                             custom_namespace=options.custom_namespace)
+                             custom_namespace=options.custom_namespace,
+                             define_curl=options.define_curl)
     if msg:
         sys.stderr.write(msg + "\n")
         sys.exit(1)

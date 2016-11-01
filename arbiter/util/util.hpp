@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE

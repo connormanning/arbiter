@@ -5,8 +5,18 @@ project(arbiter)
 
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-find_package(Threads REQUIRED)
-find_package(Curl REQUIRED)
+find_package(Curl)
+
+if (CURL_FOUND)
+    message("Found curl")
+    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+    find_package(Threads REQUIRED)
+    include_directories(${CURL_INCLUDE_DIRS})
+    set(ARBITER_CURL TRUE)
+    add_definitions("-DARBITER_CURL")
+else()
+    message("Curl NOT found")
+endif()
 
 MESSAGE(${CMAKE_CXX_COMPILER_ID})
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
@@ -25,7 +35,10 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
 endif()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
-include_directories("${CURL_INCLUDE_DIR}")
+
+if (${ARBITER_CURL})
+    include_directories("${CURL_INCLUDE_DIR}")
+endif()
 
 add_subdirectory(arbiter)
 
@@ -36,7 +49,10 @@ set(OBJS
     $<TARGET_OBJECTS:util>)
 
 add_library(arbiter SHARED ${OBJS})
-target_link_libraries(arbiter ${CURL_LIBRARIES})
+
+if (${ARBITER_CURL})
+    target_link_libraries(arbiter ${CURL_LIBRARIES})
+endif()
 
 install(TARGETS arbiter DESTINATION lib)
 

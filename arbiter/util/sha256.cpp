@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 
 #ifndef ARBITER_IS_AMALGAMATION
@@ -151,7 +152,7 @@ void sha256_final(Sha256Context *ctx, uint8_t hash[])
         }
 
         sha256_transform(ctx, ctx->data);
-        memset(ctx->data, 0, 56);
+        std::memset(ctx->data, 0, 56);
     }
 
     // Append to the padding the total message's length in bits and transform.

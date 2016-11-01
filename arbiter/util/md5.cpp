@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <cstdlib>
+#include <cstring>
 #include <memory>
 
 #ifndef ARBITER_IS_AMALGAMATION
@@ -158,7 +159,7 @@ void md5_final(Md5Context *ctx, uint8_t hash[])
         while (i < 64)
             ctx->data[i++] = 0x00;
         md5_transform(ctx, ctx->data);
-        memset(ctx->data, 0, 56);
+        std::memset(ctx->data, 0, 56);
     }
 
     // Append to the padding the total message's length in bits and transform.

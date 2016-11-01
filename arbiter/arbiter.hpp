@@ -16,6 +16,7 @@
 #include <arbiter/drivers/http.hpp>
 #include <arbiter/drivers/s3.hpp>
 #include <arbiter/drivers/dropbox.hpp>
+#include <arbiter/util/types.hpp>
 
 #ifndef ARBITER_EXTERNAL_JSON
 #include <arbiter/third/json/json.hpp>
@@ -37,12 +38,7 @@ namespace ARBITER_CUSTOM_NAMESPACE
 namespace arbiter
 {
 
-/** @brief Exception class for all internally thrown runtime errors. */
-class ArbiterError : public std::runtime_error
-{
-public:
-    ArbiterError(std::string msg) : std::runtime_error(msg) { }
-};
+namespace http { class Pool; }
 
 /** @brief The primary interface for storage abstraction.
  *
@@ -294,14 +290,14 @@ public:
     /** Fetch the common HTTP pool, which may be useful when dynamically
      * constructing adding a Driver via Arbiter::addDriver.
      */
-    http::Pool& httpPool() { return m_pool; }
+    http::Pool& httpPool() { return *m_pool; }
 
 private:
     const drivers::Http* tryGetHttpDriver(std::string path) const;
     const drivers::Http& getHttpDriver(std::string path) const;
 
     DriverMap m_drivers;
-    http::Pool m_pool;
+    std::unique_ptr<http::Pool> m_pool;
 };
 
 } // namespace arbiter
