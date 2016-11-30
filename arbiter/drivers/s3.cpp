@@ -44,8 +44,6 @@ namespace
         else return "s3-" + region + ".amazonaws.com/";
     }
 
-    drivers::Fs fsDriver;
-
     std::string line(const std::string& data) { return data + "\n"; }
     const std::vector<char> empty;
 
@@ -196,6 +194,7 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
             util::env("AWS_CONFIG_FILE") ?
                 *util::env("AWS_CONFIG_FILE") : "~/.aws/config");
 
+    drivers::Fs fsDriver;
     if (auto p = util::env("AWS_REGION"))
     {
         region = *p;
@@ -760,6 +759,7 @@ std::unique_ptr<S3::Auth> S3::Auth::find(std::string profile)
     const std::string credFile("~/.aws/credentials");
 
     // First, try reading credentials file.
+    drivers::Fs fsDriver;
     if (std::unique_ptr<std::string> cred = fsDriver.tryGet(credFile))
     {
         const std::vector<std::string> lines(condense(split(*cred)));
