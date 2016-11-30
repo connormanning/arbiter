@@ -141,8 +141,10 @@ void Curl::init(
     // Substantially faster DNS lookups without IPv6.
     curl_easy_setopt(m_curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 
-    // Don't wait forever.
-    curl_easy_setopt(m_curl, CURLOPT_TIMEOUT, m_timeout);
+    // Don't wait forever.  Use the low-speed options instead of the timeout
+    // option to make the timeout a sliding window instead of an absolute.
+    curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_LIMIT, 1L);
+    curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_TIME, m_timeout);
 
     // Configuration options.
     if (followRedirect) curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1L);

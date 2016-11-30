@@ -36,7 +36,7 @@ namespace
             std::ofstream::out |
             std::ofstream::trunc);
 
-    const std::string home(([]()
+    std::string getHome()
     {
         std::string s;
 
@@ -58,7 +58,7 @@ namespace
         if (s.empty()) std::cout << "No home directory found" << std::endl;
 
         return s;
-    })());
+    }
 }
 
 namespace drivers
@@ -321,11 +321,10 @@ std::vector<std::string> glob(std::string path)
 std::string expandTilde(std::string in)
 {
     std::string out(in);
-
+    static std::string home(getHome());
     if (!in.empty() && in.front() == '~')
     {
         if (home.empty()) throw ArbiterError("No home directory found");
-
         out = home + in.substr(1);
     }
 

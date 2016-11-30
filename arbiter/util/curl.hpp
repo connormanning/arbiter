@@ -63,7 +63,7 @@ private:
     void* m_curl;
     curl_slist* m_headers;
     const bool m_verbose;
-    const std::size_t m_timeout;
+    const long m_timeout;
 
     std::vector<char> m_data;
 };
