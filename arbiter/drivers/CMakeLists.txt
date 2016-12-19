@@ -3,18 +3,19 @@ set(BASE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(
     SOURCES
+    "${BASE}/http.cpp"
     "${BASE}/dropbox.cpp"
     "${BASE}/fs.cpp"
-    "${BASE}/http.cpp"
     "${BASE}/s3.cpp"
 )
 
 set(
     HEADERS
+    "${BASE}/http.hpp"
     "${BASE}/dropbox.hpp"
     "${BASE}/fs.hpp"
-    "${BASE}/http.hpp"
     "${BASE}/s3.hpp"
+    "${BASE}/test.hpp"
 )
 
 install(FILES ${HEADERS} DESTINATION include/arbiter/${MODULE})

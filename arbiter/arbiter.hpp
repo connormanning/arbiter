@@ -12,6 +12,7 @@
 #include <arbiter/driver.hpp>
 #include <arbiter/endpoint.hpp>
 #include <arbiter/drivers/fs.hpp>
+#include <arbiter/drivers/test.hpp>
 #include <arbiter/drivers/http.hpp>
 #include <arbiter/drivers/s3.hpp>
 #include <arbiter/drivers/dropbox.hpp>
@@ -26,6 +27,11 @@
 
 #ifdef ARBITER_EXTERNAL_JSON
 #include <json/json.h>
+#endif
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
 #endif
 
 namespace arbiter
@@ -60,6 +66,9 @@ public:
 
     /** @brief Construct an Arbiter with driver configurations. */
     Arbiter(const Json::Value& json);
+
+    /** True if a Driver has been registered for this file type. */
+    bool hasDriver(std::string path) const;
 
     /** @brief Add a custom driver for the supplied type.
      *
@@ -98,10 +107,71 @@ public:
     /** Write data to path. */
     void put(std::string path, const std::vector<char>& data) const;
 
-    /** Copy data from @p from to @p to.  @p from will be resolved with
+    /** Get data with additional HTTP-specific parameters.  Throws if
+     * isHttpDerived is false for this path. */
+    std::string get(
+            std::string path,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Get data with additional HTTP-specific parameters.  Throws if
+     * isHttpDerived is false for this path. */
+    std::unique_ptr<std::string> tryGet(
+            std::string path,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Get data in binary form with additional HTTP-specific parameters.
+     * Throws if isHttpDerived is false for this path. */
+    std::vector<char> getBinary(
+            std::string path,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Get data in binary form with additional HTTP-specific parameters.
+     * Throws if isHttpDerived is false for this path. */
+    std::unique_ptr<std::vector<char>> tryGetBinary(
+            std::string path,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Write data to path with additional HTTP-specific parameters.
+     * Throws if isHttpDerived is false for this path. */
+    void put(
+            std::string path,
+            const std::string& data,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Write data to path with additional HTTP-specific parameters.
+     * Throws if isHttpDerived is false for this path. */
+    void put(
+            std::string path,
+            const std::vector<char>& data,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /** Copy data from @p src to @p dst.  @p src will be resolved with
      * Arbiter::resolve prior to the copy, so globbed directories are supported.
+     * If @p src ends with a slash, it will be resolved with a recursive glob,
+     * in which case any nested directory structure will be recreated in @p dst.
+     *
+     * If @p dst is a filesystem path, fs::mkdirp will be called prior to the
+     * start of copying.  If @p src is a recursive glob, `fs::mkdirp` will
+     * be repeatedly called during copying to ensure that any nested directories
+     * are reproduced.
      */
-    void copy(std::string from, std::string to) const;
+    void copy(std::string src, std::string dst, bool verbose = false) const;
+
+    /** Copy the single file @p file to the destination @p to.  If @p to ends
+     * with a `/` or '\' character, then @p file will be copied into the
+     * directory @p to with the basename of @p file.  If @p does not end with a
+     * slash character, then @p to will be interpreted as a file path.
+     *
+     * If @p to is a local filesystem path, then `fs::mkdirp` will be called
+     * prior to copying.
+     */
+    void copyFile(std::string file, std::string to, bool verbose = false) const;
 
     /** Returns true if this path is a remote path, or false if it is on the
      * local filesystem.
@@ -112,6 +182,21 @@ public:
      * remote.
      */
     bool isLocal(std::string path) const;
+
+    /** Returns true if this path exists.  Equivalent to:
+     * @code
+     * tryGetSize(path).get() != nullptr
+     * @endcode
+     *
+     * @note This means that an existing file of size zero will return true.
+     */
+    bool exists(std::string path) const;
+
+    /** Returns true if the protocol for this driver is build on HTTP, like the
+     * S3 and Dropbox drivers are.  If this returns true, http::Headers and
+     * http::Query parameter methods may be used for this path.
+     */
+    bool isHttpDerived(std::string path) const;
 
     /** @brief Resolve a possibly globbed path.
      *
@@ -197,35 +282,30 @@ public:
     /** If no delimiter of "://" is found, returns "file".  Otherwise, returns
      * the substring prior to but not including this delimiter.
      */
-    static std::string getType(const std::string path);
+    static std::string getType(std::string path);
 
     /** Strip the type and delimiter `://`, if they exist. */
     static std::string stripType(std::string path);
 
-    /** Returns the portion of @p fullPath following the last instance of the
-     * character `/`, if any instances exist aside from possibly the delimiter
-     * `://`.  If there are no other instances of `/`, then @p fullPath itself
-     * will be returned.
-     *
-     * If @p fullPath ends with a trailing `/` or a glob indication (i.e. is a
-     * directory), these trailing characters will be stripped prior to the
-     * logic above, thus the innermost directory in the full path will be
-     * returned.
-     */
-    static std::string getTerminus(const std::string fullPath);
+    /** Get the characters following the final instance of '.', or an empty
+     * string if there are no '.' characters. */
+    static std::string getExtension(std::string path);
 
     /** Fetch the common HTTP pool, which may be useful when dynamically
      * constructing adding a Driver via Arbiter::addDriver.
      */
-    HttpPool& httpPool() { return m_pool; }
+    http::Pool& httpPool() { return m_pool; }
 
 private:
-    // Registers all available default Driver instances.
-    void init(const Json::Value& json);
+    const drivers::Http* tryGetHttpDriver(std::string path) const;
+    const drivers::Http& getHttpDriver(std::string path) const;
 
     DriverMap m_drivers;
-    HttpPool m_pool;
+    http::Pool m_pool;
 };
 
 } // namespace arbiter
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif

@@ -54,7 +54,8 @@ def amalgamate_source(source_top_dir=None,
                        target_source_path=None,
                        header_include_path=None,
                        include_json=True,
-                       include_xml=True):
+                       include_xml=True,
+                       custom_namespace=None):
     """Produces amalgamated source.
        Parameters:
            source_top_dir: top-directory
@@ -93,13 +94,22 @@ def amalgamate_source(source_top_dir=None,
     header.add_text("/// to prevent private header inclusion.")
     header.add_text("#define ARBITER_IS_AMALGAMATION")
 
+    if custom_namespace:
+        print "Using custom namespace: " + custom_namespace
+        header.add_text("#define ARBITER_CUSTOM_NAMESPACE " + custom_namespace)
+
     if not include_json:
+        print "NOT bundling JSON"
         header.add_text("#define ARBITER_EXTERNAL_JSON")
     if not include_xml:
+        print "NOT bundling XML"
         header.add_text("#define ARBITER_EXTERNAL_XML")
 
     if include_json:
         header.add_file("arbiter/third/json/json.hpp")
+
+    header.add_file("arbiter/util/http.hpp")
+
     header.add_file("arbiter/driver.hpp")
     header.add_file("arbiter/drivers/fs.hpp")
     header.add_file("arbiter/drivers/http.hpp")
@@ -108,9 +118,14 @@ def amalgamate_source(source_top_dir=None,
         header.add_file("arbiter/third/xml/rapidxml.hpp")
         header.add_file("arbiter/third/xml/xml.hpp")
 
-    header.add_file("arbiter/util/crypto.hpp")
+    header.add_file("arbiter/util/macros.hpp")
+    header.add_file("arbiter/util/md5.hpp")
+    header.add_file("arbiter/util/sha256.hpp")
+    header.add_file("arbiter/util/transforms.hpp")
+    header.add_file("arbiter/util/util.hpp")
     header.add_file("arbiter/drivers/s3.hpp")
     header.add_file("arbiter/drivers/dropbox.hpp")
+    header.add_file("arbiter/drivers/test.hpp")
     header.add_file("arbiter/endpoint.hpp")
     header.add_file("arbiter/arbiter.hpp")
 
@@ -142,7 +157,11 @@ def amalgamate_source(source_top_dir=None,
     source.add_file("arbiter/drivers/http.cpp")
     source.add_file("arbiter/drivers/s3.cpp")
     source.add_file("arbiter/drivers/dropbox.cpp")
-    source.add_file("arbiter/util/crypto.cpp")
+    source.add_file("arbiter/util/http.cpp")
+    source.add_file("arbiter/util/md5.cpp")
+    source.add_file("arbiter/util/sha256.cpp")
+    source.add_file("arbiter/util/transforms.cpp")
+    source.add_file("arbiter/util/util.cpp")
 
     print("Writing amalgamated source to %r" % target_source_path)
     source.write_to(target_source_path)
@@ -154,14 +173,51 @@ Generate a single amalgamated source and header file from the sources.
     from optparse import OptionParser
     parser = OptionParser(usage=usage)
     parser.allow_interspersed_args = False
-    parser.add_option("-s", "--source", dest="target_source_path", action="store", default="dist/arbiter.cpp",
-        help="""Output .cpp source path. [Default: %default]""")
-    parser.add_option("-i", "--include", dest="header_include_path", action="store", default="arbiter.hpp",
-        help="""Header include path. Used to include the header from the amalgamated source file. [Default: %default]""")
-    parser.add_option("-t", "--top-dir", dest="top_dir", action="store", default=os.getcwd(),
-        help="""Source top-directory. [Default: %default]""")
-    parser.add_option("-j", "--no-include-json", dest="include_json", action="store_false", default=True)
-    parser.add_option("-x", "--no-include-xml", dest="include_xml", action="store_false", default=True)
+
+    parser.add_option(
+            "-s",
+            "--source",
+            dest="target_source_path",
+            action="store",
+            default="dist/arbiter.cpp",
+            help="""Output .cpp source path. [Default: %default]""")
+
+    parser.add_option(
+            "-i", "--include",
+            dest="header_include_path",
+            action="store",
+            default="arbiter.hpp",
+            help="""Header include path. Used to include the header from the amalgamated source file. [Default: %default]""")
+
+    parser.add_option(
+            "-t",
+            "--top-dir",
+            dest="top_dir",
+            action="store",
+            default=os.getcwd(),
+            help="""Source top-directory. [Default: %default]""")
+
+    parser.add_option(
+            "-j",
+            "--no-include-json",
+            dest="include_json",
+            action="store_false",
+            default=True)
+
+    parser.add_option(
+            "-x",
+            "--no-include-xml",
+            dest="include_xml",
+            action="store_false",
+            default=True)
+
+    parser.add_option(
+            "-c",
+            "--custom-namespace",
+            dest="custom_namespace",
+            action="store",
+            default=None)
+
     parser.enable_interspersed_args()
     options, args = parser.parse_args()
 
@@ -169,7 +225,8 @@ Generate a single amalgamated source and header file from the sources.
                              target_source_path=options.target_source_path,
                              header_include_path=options.header_include_path,
                              include_json=options.include_json,
-                             include_xml=options.include_xml)
+                             include_xml=options.include_xml,
+                             custom_namespace=options.custom_namespace)
     if msg:
         sys.stderr.write(msg + "\n")
         sys.exit(1)

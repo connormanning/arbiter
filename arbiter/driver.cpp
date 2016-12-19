@@ -4,21 +4,18 @@
 #include <arbiter/arbiter.hpp>
 #endif
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 
-std::unique_ptr<std::vector<char>> Driver::tryGetBinary(std::string path) const
+std::string Driver::get(const std::string path) const
 {
-    std::unique_ptr<std::vector<char>> data(new std::vector<char>());
-    if (!get(path, *data)) data.reset();
-    return data;
-}
-
-std::vector<char> Driver::getBinary(std::string path) const
-{
-    std::vector<char> data;
-    if (!get(path, data)) throw ArbiterError("Could not read file " + path);
-    return data;
+    const std::vector<char> data(getBinary(path));
+    return std::string(data.begin(), data.end());
 }
 
 std::unique_ptr<std::string> Driver::tryGet(const std::string path) const
@@ -29,10 +26,18 @@ std::unique_ptr<std::string> Driver::tryGet(const std::string path) const
     return result;
 }
 
-std::string Driver::get(const std::string path) const
+std::vector<char> Driver::getBinary(std::string path) const
 {
-    const std::vector<char> data(getBinary(path));
-    return std::string(data.begin(), data.end());
+    std::vector<char> data;
+    if (!get(path, data)) throw ArbiterError("Could not read file " + path);
+    return data;
+}
+
+std::unique_ptr<std::vector<char>> Driver::tryGetBinary(std::string path) const
+{
+    std::unique_ptr<std::vector<char>> data(new std::vector<char>());
+    if (!get(path, *data)) data.reset();
+    return data;
 }
 
 std::size_t Driver::getSize(const std::string path) const
@@ -44,6 +49,11 @@ std::size_t Driver::getSize(const std::string path) const
 void Driver::put(std::string path, const std::string& data) const
 {
     put(path, std::vector<char>(data.begin(), data.end()));
+}
+
+void Driver::copy(std::string src, std::string dst) const
+{
+    put(dst, getBinary(src));
 }
 
 std::vector<std::string> Driver::resolve(
@@ -70,7 +80,8 @@ std::vector<std::string> Driver::resolve(
     }
     else
     {
-        if (type() != "fs") path = type() + "://" + path;
+        if (isRemote()) path = type() + "://" + path;
+        else path = fs::expandTilde(path);
 
         results.push_back(path);
     }
@@ -84,4 +95,8 @@ std::vector<std::string> Driver::glob(std::string path, bool verbose) const
 }
 
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

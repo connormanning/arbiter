@@ -16,6 +16,11 @@
 #include <json/json.h>
 #endif
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
 
@@ -41,6 +46,9 @@ namespace fs
 
     /** @brief Get temporary path from environment. */
     std::string getTempPath();
+
+    /** @brief Resolve a possible wildcard path. */
+    std::vector<std::string> glob(std::string path);
 
     /** @brief A scoped local filehandle for a possibly remote path.
      *
@@ -97,7 +105,7 @@ namespace drivers
 class Fs : public Driver
 {
 public:
-    static std::unique_ptr<Fs> create(HttpPool& pool, const Json::Value& json);
+    static std::unique_ptr<Fs> create(const Json::Value& json);
 
     virtual std::string type() const override { return "file"; }
 
@@ -114,6 +122,8 @@ public:
 
     virtual bool isRemote() const override { return false; }
 
+    virtual void copy(std::string src, std::string dst) const override;
+
 protected:
     virtual bool get(std::string path, std::vector<char>& data) const override;
 };
@@ -121,4 +131,8 @@ protected:
 } // namespace drivers
 
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 

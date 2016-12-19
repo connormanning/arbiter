@@ -6,10 +6,13 @@
 #include <string>
 #include <vector>
 
+#ifdef ARBITER_CUSTOM_NAMESPACE
+namespace ARBITER_CUSTOM_NAMESPACE
+{
+#endif
+
 namespace arbiter
 {
-
-typedef std::map<std::string, std::string> Headers;
 
 class HttpPool;
 
@@ -22,8 +25,11 @@ class HttpPool;
  * Derived classes must override Driver::type,
  * Driver::put(std::string, const std::vector<char>&) const, and
  * Driver::get(std::string, std::vector<char>&) const,
- * Driver::size(std::string) const - and may optionally
+ * Driver::getSize(std::string) const - and may optionally
  * override Driver::glob if possible.
+ *
+ * HTTP-derived classes should override the PUT and GET versions that accept
+ * http::Headers and http::Query parameters instead.
  */
 class Driver
 {
@@ -40,11 +46,17 @@ public:
      */
     virtual std::string type() const = 0;
 
-    /** Get binary data, if available. */
-    std::unique_ptr<std::vector<char>> tryGetBinary(std::string path) const;
+    /** Get string data. */
+    std::string get(std::string path) const;
+
+    /** Get string data, if available. */
+    std::unique_ptr<std::string> tryGet(std::string path) const;
 
     /** Get binary data. */
     std::vector<char> getBinary(std::string path) const;
+
+    /** Get binary data, if available. */
+    std::unique_ptr<std::vector<char>> tryGetBinary(std::string path) const;
 
     /**
      * Write @p data to the given @p path.
@@ -60,12 +72,6 @@ public:
      */
     virtual bool isRemote() const { return true; }
 
-    /** Get string data, if available. */
-    std::unique_ptr<std::string> tryGet(std::string path) const;
-
-    /** Get string data. */
-    std::string get(std::string path) const;
-
     /** Get the file size in bytes, if available. */
     virtual std::unique_ptr<std::size_t> tryGetSize(std::string path) const = 0;
 
@@ -74,6 +80,11 @@ public:
 
     /** Write string data. */
     void put(std::string path, const std::string& data) const;
+
+    /** Copy a file, where @p src and @p dst must both be of this driver
+     * type.  Type-prefixes must be stripped from the input parameters.
+     */
+    virtual void copy(std::string src, std::string dst) const;
 
     /** @brief Resolve a possibly globbed path.
      *
@@ -87,7 +98,9 @@ protected:
     /** @brief Resolve a wildcard path.
      *
      * This operation should return a non-recursive resolution of the files
-     * matching the given wildcard @p path (no directories).
+     * matching the given wildcard @p path (no directories).  With the exception
+     * of the filesystem Driver, results should be prefixed with
+     * `type() + "://"`.
      *
      * @note The default behavior is to throw ArbiterError, so derived classes
      * may optionally override if they can perform this behavior.
@@ -107,25 +120,11 @@ protected:
     virtual bool get(std::string path, std::vector<char>& data) const = 0;
 };
 
-class CustomHeaderDriver : public Driver
-{
-    using Driver::get;
-
-public:
-    /** A GET method allowing user-defined headers. Accessible only via the
-     * Arbiter::getDriver directly, and not through the Arbiter.
-     */
-    virtual std::string get(std::string path, Headers headers) const = 0;
-
-    /** A GET method allowing user-defined headers. Accessible only via the
-     * Arbiter::getDriver directly, and not through the Arbiter.
-     */
-    virtual std::vector<char> getBinary(
-            std::string path,
-            Headers headers) const = 0;
-};
-
 typedef std::map<std::string, std::unique_ptr<Driver>> DriverMap;
 
 } // namespace arbiter
+
+#ifdef ARBITER_CUSTOM_NAMESPACE
+}
+#endif
 
