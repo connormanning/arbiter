@@ -582,7 +582,7 @@ std::string S3::ApiV4::buildCanonicalRequest(
         const Query& query,
         const std::vector<char>& data) const
 {
-    const std::string canonicalUri(sanitize("/" + resource.object()));
+    const std::string canonicalUri("/" + resource.object());
 
     auto canonicalizeQuery([](const std::string& s, const Query::value_type& q)
     {

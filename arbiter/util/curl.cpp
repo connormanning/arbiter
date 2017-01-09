@@ -132,7 +132,7 @@ void Curl::init(
     m_headers = nullptr;
 
     // Set path.
-    const std::string path(sanitize(rawPath + buildQueryString(query)));
+    const std::string path(rawPath + buildQueryString(query));
     curl_easy_setopt(m_curl, CURLOPT_URL, path.c_str());
 
     // Needed for multithreaded Curl usage.
@@ -159,6 +159,18 @@ void Curl::init(
 #else
     throw ArbiterError(fail);
 #endif
+}
+
+void Curl::perform()
+{
+    const auto code(curl_easy_perform(m_curl));
+
+    if (code != CURLE_OK)
+    {
+        throw ArbiterError(
+                "Curl failed with code: " + std::to_string(code) +
+                " - see: https://curl.haxx.se/libcurl/c/libcurl-errors.html");
+    }
 }
 
 Response Curl::get(
@@ -189,7 +201,7 @@ Response Curl::get(
     curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &receivedHeaders);
 
     // Run the command.
-    curl_easy_perform(m_curl);
+    perform();
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     curl_easy_reset(m_curl);
@@ -224,7 +236,7 @@ Response Curl::head(std::string path, Headers headers, Query query)
     curl_easy_setopt(m_curl, CURLOPT_NOBODY, 1L);
 
     // Run the command.
-    curl_easy_perform(m_curl);
+    perform();
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     curl_easy_reset(m_curl);
@@ -270,7 +282,7 @@ Response Curl::put(
     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, eatLogging);
 
     // Run the command.
-    curl_easy_perform(m_curl);
+    perform();
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     curl_easy_reset(m_curl);
@@ -322,7 +334,7 @@ Response Curl::post(
             static_cast<curl_off_t>(data.size()));
 
     // Run the command.
-    curl_easy_perform(m_curl);
+    perform();
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
     curl_easy_reset(m_curl);

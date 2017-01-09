@@ -56,6 +56,7 @@ private:
     Curl(bool verbose, std::size_t timeout);
 
     void init(std::string path, const Headers& headers, const Query& query);
+    void perform();
 
     Curl(const Curl&);
     Curl& operator=(const Curl&);

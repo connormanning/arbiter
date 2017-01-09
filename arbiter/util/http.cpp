@@ -2,8 +2,12 @@
 #include <arbiter/util/http.hpp>
 #endif
 
+#include <cctype>
+#include <iomanip>
 #include <iostream>
 #include <numeric>
+#include <set>
+#include <sstream>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -17,57 +21,33 @@ namespace http
 
 namespace
 {
-    const std::map<char, std::string> sanitizers
-    {
-        { ' ', "%20" },
-        { '!', "%21" },
-        { '"', "%22" },
-        { '#', "%23" },
-        { '$', "%24" },
-        { '\'', "%27" },
-        { '(', "%28" },
-        { ')', "%29" },
-        { '*', "%2A" },
-        { '+', "%2B" },
-        { ',', "%2C" },
-        { '/', "%2F" },
-        { ';', "%3B" },
-        { '<', "%3C" },
-        { '>', "%3E" },
-        { '@', "%40" },
-        { '[', "%5B" },
-        { '\\', "%5C" },
-        { ']', "%5D" },
-        { '^', "%5E" },
-        { '`', "%60" },
-        { '{', "%7B" },
-        { '|', "%7C" },
-        { '}', "%7D" },
-        { '~', "%7E" }
-    };
+    const std::size_t defaultHttpTimeout(10);
+}
 
-    const std::size_t defaultHttpTimeout(60 * 5);
-} // unnamed namespace
-
-std::string sanitize(const std::string path, const std::string exclusions)
+std::string sanitize(const std::string path, const std::string excStr)
 {
-    std::string result;
+    static const std::set<char> unreserved = { '-', '.', '_', '~' };
+    const std::set<char> exclusions(excStr.begin(), excStr.end());
+    std::ostringstream result;
+    result.fill('0');
+    result << std::hex;
 
     for (const auto c : path)
     {
-        const auto it(sanitizers.find(c));
-
-        if (it == sanitizers.end() || exclusions.find(c) != std::string::npos)
+        if (std::isalnum(c) || unreserved.count(c) || exclusions.count(c))
         {
-            result += c;
+            result << c;
         }
         else
         {
-            result += it->second;
+            result << std::uppercase;
+            result << '%' << std::setw(2) <<
+                static_cast<int>(static_cast<uint8_t>(c));
+            result << std::nouppercase;
         }
     }
 
-    return result;
+    return result.str();
 }
 
 std::string buildQueryString(const Query& query)

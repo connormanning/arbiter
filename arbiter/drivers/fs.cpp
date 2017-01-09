@@ -164,7 +164,8 @@ bool mkdirp(std::string raw)
 
         // Remove consecutive slashes.  For Windows, we'll need to be careful
         // not to remove drive letters like C:\\.
-        const auto end = std::unique(s.begin(), s.end(), [](char l, char r){
+        const auto end = std::unique(s.begin(), s.end(), [](char l, char r)
+        {
             return util::isSlash(l) && util::isSlash(r);
         });
 
