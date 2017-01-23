@@ -95,6 +95,7 @@ public:
             std::size_t concurrent,
             std::size_t retry,
             const Json::Value& json);
+    ~Pool();
 
     Resource acquire();
 

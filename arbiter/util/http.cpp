@@ -2,6 +2,10 @@
 #include <arbiter/util/http.hpp>
 #endif
 
+#ifdef ARBITER_CURL
+#include <curl/curl.h>
+#endif
+
 #include <cctype>
 #include <iomanip>
 #include <iostream>
@@ -152,6 +156,8 @@ Pool::Pool(
     , m_mutex()
     , m_cv()
 {
+    curl_global_init(CURL_GLOBAL_ALL);
+
     const bool verbose(
             json.isMember("arbiter") ?
                 json["arbiter"]["verbose"].asBool() : false);
@@ -165,6 +171,11 @@ Pool::Pool(
         m_available[i] = i;
         m_curls[i].reset(new Curl(verbose, timeout));
     }
+}
+
+Pool::~Pool()
+{
+    curl_global_cleanup();
 }
 
 Resource Pool::acquire()

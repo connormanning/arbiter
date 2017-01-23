@@ -172,7 +172,7 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
     const bool sse(json["sse"].asBool());
     const bool precheck(json["precheck"].asBool());
 
-    if (!json.isNull() && json.isMember("access") & json.isMember("hidden"))
+    if (!json.isNull() && json.isMember("access") && json.isMember("hidden"))
     {
         auth.reset(
                 new Auth(

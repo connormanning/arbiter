@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstring>
 
 #ifndef ARBITER_IS_AMALGAMATION
