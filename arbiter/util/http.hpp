@@ -2,6 +2,7 @@
 
 #include <condition_variable>
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
