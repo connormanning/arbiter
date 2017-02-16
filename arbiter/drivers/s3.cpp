@@ -512,6 +512,10 @@ S3::ApiV4::ApiV4(
 {
     m_headers["Host"] = resource.host();
     m_headers["X-Amz-Date"] = m_time.str(Time::iso8601NoSeparators);
+    if (m_auth.token().size())
+    {
+        m_headers["X-Amz-Security-Token"] = m_auth.token();
+    }
     m_headers["X-Amz-Content-Sha256"] =
             crypto::encodeAsHex(crypto::sha256(data));
 
@@ -794,11 +798,14 @@ std::unique_ptr<S3::Auth> S3::Auth::find(
     return auth;
 }
 
-S3::Auth::Auth(const std::string access, const std::string hidden)
+S3::Auth::Auth(
+        const std::string access,
+        const std::string hidden,
+        const std::string token)
     : m_access(access)
     , m_hidden(hidden)
+    , m_token(token)
 { }
-
 
 S3::Auth::Auth(const std::string iamRole)
     : m_iamRole(iamRole)
@@ -807,6 +814,7 @@ S3::Auth::Auth(const std::string iamRole)
 S3::Auth::Auth(const Auth& other)
     : m_access(other.m_access)
     , m_hidden(other.m_hidden)
+    , m_token(other.m_token)
     , m_iamRole(other.m_iamRole)
     , m_expiration(other.m_expiration ? new Time(*other.m_expiration) : nullptr)
 { }
@@ -821,6 +829,12 @@ std::string S3::Auth::hidden() const
 {
     if (m_expiration) throw ArbiterError("Must use S3::Auth::getStatic");
     return m_hidden;
+}
+
+std::string S3::Auth::token() const
+{
+    if (m_expiration) throw ArbiterError("Must use S3::Auth::getStatic");
+    return m_token;
 }
 
 S3::Auth S3::Auth::getStatic() const
@@ -847,7 +861,7 @@ S3::Auth S3::Auth::getStatic() const
         }
     }
 
-    return S3::Auth(m_access, m_hidden);
+    return S3::Auth(m_access, m_hidden, m_token);
 }
 
 } // namespace drivers

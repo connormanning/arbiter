@@ -92,7 +92,7 @@ private:
 class S3::Auth
 {
 public:
-    Auth(std::string access, std::string hidden);
+    Auth(std::string access, std::string hidden, std::string token = "");
     Auth(std::string iamRole);
     Auth(const Auth&);
 
@@ -114,10 +114,12 @@ public:
 
     std::string access() const;
     std::string hidden() const;
+    std::string token() const;
 
 private:
     mutable std::string m_access;
     mutable std::string m_hidden;
+    mutable std::string m_token;
 
     std::string m_iamRole;
     mutable std::unique_ptr<Time> m_expiration;
