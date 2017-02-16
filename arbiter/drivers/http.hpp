@@ -61,14 +61,14 @@ public:
     /** Perform an HTTP GET request. */
     std::string get(
             std::string path,
-            http::Headers headers,
-            http::Query query) const;
+            http::Headers headers = http::Headers(),
+            http::Query query = http::Query()) const;
 
     /** Perform an HTTP GET request. */
     std::unique_ptr<std::string> tryGet(
             std::string path,
-            http::Headers headers,
-            http::Query query) const;
+            http::Headers headers = http::Headers(),
+            http::Query query = http::Query()) const;
 
     /** Perform an HTTP GET request. */
     std::vector<char> getBinary(

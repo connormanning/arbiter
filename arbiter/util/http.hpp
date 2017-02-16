@@ -93,9 +93,9 @@ class Pool
 
 public:
     Pool(
-            std::size_t concurrent,
-            std::size_t retry,
-            const Json::Value& json);
+            std::size_t concurrent = 4,
+            std::size_t retry = 4,
+            Json::Value json = Json::Value());
     ~Pool();
 
     Resource acquire();

@@ -12,6 +12,7 @@
 #include <functional>
 #include <iostream>
 #include <numeric>
+#include <sstream>
 #include <thread>
 
 #ifndef ARBITER_IS_AMALGAMATION
@@ -34,8 +35,14 @@ namespace arbiter
 
 namespace
 {
-    const std::string dateFormat("%Y%m%d");
-    const std::string timeFormat("%H%M%S");
+    const int64_t reauthSeconds(120);
+    http::Pool pool;
+    drivers::Http httpDriver(pool);
+
+    // See: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    const std::string credIp("http://169.254.169.254/");
+    const std::string credBase(
+            credIp + "latest/meta-data/iam/security-credentials/");
 
     std::string getBaseUrl(const std::string& region)
     {
@@ -149,7 +156,7 @@ S3::S3(
         const bool sse,
         const bool precheck)
     : Http(pool)
-    , m_auth(auth)
+    , m_auth(new Auth(auth))
     , m_region(region)
     , m_baseUrl(getBaseUrl(region))
     , m_baseHeaders()
@@ -165,26 +172,14 @@ S3::S3(
 
 std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
 {
-    std::unique_ptr<Auth> auth;
     std::unique_ptr<S3> s3;
 
     const std::string profile(extractProfile(json));
+    auto auth = S3::Auth::find(json, profile);
+    if (!auth) return s3;
+
     const bool sse(json["sse"].asBool());
     const bool precheck(json["precheck"].asBool());
-
-    if (!json.isNull() && json.isMember("access") && json.isMember("hidden"))
-    {
-        auth.reset(
-                new Auth(
-                    json["access"].asString(),
-                    json["hidden"].asString()));
-    }
-    else
-    {
-        auth = Auth::find(profile);
-    }
-
-    if (!auth) return s3;
 
     // Try to get the region from the config file, or default to US standard.
     std::string region("us-east-1");
@@ -247,7 +242,6 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
                         return false;
                     });
 
-
                     const std::string& l1(lines[i + 1]);
                     const std::string& l2(lines[i + 2]);
 
@@ -257,11 +251,6 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
                 ++i;
             }
         }
-    }
-    else if (json["verbose"].asBool())
-    {
-        std::cout <<
-            "~/.aws/config not found - using region us-east-1" << std::endl;
     }
 
     if (!regionFound && json["verbose"].asBool())
@@ -307,7 +296,7 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
             "HEAD",
             m_region,
             resource,
-            m_auth,
+            *m_auth,
             Query(),
             Headers(),
             empty);
@@ -338,7 +327,7 @@ bool S3::get(
             "GET",
             m_region,
             resource,
-            m_auth,
+            *m_auth,
             query,
             headers,
             empty);
@@ -378,7 +367,7 @@ void S3::put(
             "PUT",
             m_region,
             resource,
-            m_auth,
+            *m_auth,
             query,
             headers,
             data);
@@ -514,15 +503,15 @@ S3::ApiV4::ApiV4(
         const Query& query,
         const Headers& headers,
         const std::vector<char>& data)
-    : m_auth(auth)
+    : m_auth(auth.getStatic())
     , m_region(region)
-    , m_formattedTime()
+    , m_time()
     , m_headers(headers)
     , m_query(query)
     , m_signedHeadersString()
 {
     m_headers["Host"] = resource.host();
-    m_headers["X-Amz-Date"] = m_formattedTime.amazonDate();
+    m_headers["X-Amz-Date"] = m_time.str(Time::iso8601NoSeparators);
     m_headers["X-Amz-Content-Sha256"] =
             crypto::encodeAsHex(crypto::sha256(data));
 
@@ -614,8 +603,9 @@ std::string S3::ApiV4::buildStringToSign(
 {
     return
         line("AWS4-HMAC-SHA256") +
-        line(m_formattedTime.amazonDate()) +
-        line(m_formattedTime.date() + "/" + m_region + "/s3/aws4_request") +
+        line(m_time.str(Time::iso8601NoSeparators)) +
+        line(m_time.str(Time::dateNoSeparators) +
+                "/" + m_region + "/s3/aws4_request") +
         crypto::encodeAsHex(crypto::sha256(canonicalRequest));
 }
 
@@ -625,7 +615,7 @@ std::string S3::ApiV4::calculateSignature(
     const std::string kDate(
             crypto::hmacSha256(
                 "AWS4" + m_auth.hidden(),
-                m_formattedTime.date()));
+                m_time.str(Time::dateNoSeparators)));
 
     const std::string kRegion(crypto::hmacSha256(kDate, m_region));
     const std::string kService(crypto::hmacSha256(kRegion, "s3"));
@@ -642,7 +632,8 @@ std::string S3::ApiV4::getAuthHeader(
     return
         std::string("AWS4-HMAC-SHA256 ") +
         "Credential=" + m_auth.access() + '/' +
-            m_formattedTime.date() + "/" + m_region + "/s3/aws4_request, " +
+            m_time.str(Time::dateNoSeparators) + "/" +
+            m_region + "/s3/aws4_request, " +
         "SignedHeaders=" + signedHeadersString + ", " +
         "Signature=" + signature;
 }
@@ -705,38 +696,11 @@ std::string S3::Resource::host() const
     }
 }
 
-S3::FormattedTime::FormattedTime()
-    : m_date(formatTime(dateFormat))
-    , m_time(formatTime(timeFormat))
-{ }
-
-std::string S3::FormattedTime::formatTime(const std::string& format) const
+std::unique_ptr<S3::Auth> S3::Auth::find(
+        const Json::Value& json,
+        const std::string profile)
 {
-    std::time_t time(std::time(nullptr));
-    std::vector<char> buf(80, 0);
-
-    if (std::strftime(
-                buf.data(),
-                buf.size(),
-                format.data(),
-                std::gmtime(&time)))
-    {
-        return std::string(buf.data());
-    }
-    else
-    {
-        throw ArbiterError("Could not format time");
-    }
-}
-
-S3::Auth::Auth(const std::string access, const std::string hidden)
-    : m_access(access)
-    , m_hidden(hidden)
-{ }
-
-std::unique_ptr<S3::Auth> S3::Auth::find(std::string profile)
-{
-    std::unique_ptr<S3::Auth> auth;
+    std::unique_ptr<Auth> auth;
 
     auto access(util::env("AWS_ACCESS_KEY_ID"));
     auto hidden(util::env("AWS_SECRET_ACCESS_KEY"));
@@ -756,11 +720,27 @@ std::unique_ptr<S3::Auth> S3::Auth::find(std::string profile)
         return auth;
     }
 
-    const std::string credFile("~/.aws/credentials");
+    if (
+            !json.isNull() &&
+            json.isMember("access") &&
+            (json.isMember("secret") || json.isMember("hidden")))
+    {
+        auth.reset(
+                new Auth(
+                    json["access"].asString(),
+                    json.isMember("secret") ?
+                        json["secret"].asString() :
+                        json["hidden"].asString()));
+        return auth;
+    }
+
+    const std::string credPath(
+            util::env("AWS_CREDENTIAL_FILE") ?
+                *util::env("AWS_CREDENTIAL_FILE") : "~/.aws/credentials");
 
     // First, try reading credentials file.
     drivers::Fs fsDriver;
-    if (std::unique_ptr<std::string> cred = fsDriver.tryGet(credFile))
+    if (std::unique_ptr<std::string> cred = fsDriver.tryGet(credPath))
     {
         const std::vector<std::string> lines(condense(split(*cred)));
 
@@ -797,6 +777,7 @@ std::unique_ptr<S3::Auth> S3::Auth::find(std::string profile)
                                     hiddenLine.find(';')));
 
                         auth.reset(new S3::Auth(access, hidden));
+                        return auth;
                     }
                 }
 
@@ -805,11 +786,70 @@ std::unique_ptr<S3::Auth> S3::Auth::find(std::string profile)
         }
     }
 
+    if (const auto iamRole = httpDriver.tryGet(credBase))
+    {
+        auth.reset(new S3::Auth(*iamRole));
+    }
+
     return auth;
 }
 
-std::string S3::Auth::access() const { return m_access; }
-std::string S3::Auth::hidden() const { return m_hidden; }
+S3::Auth::Auth(const std::string access, const std::string hidden)
+    : m_access(access)
+    , m_hidden(hidden)
+{ }
+
+
+S3::Auth::Auth(const std::string iamRole)
+    : m_iamRole(iamRole)
+{ }
+
+S3::Auth::Auth(const Auth& other)
+    : m_access(other.m_access)
+    , m_hidden(other.m_hidden)
+    , m_iamRole(other.m_iamRole)
+    , m_expiration(other.m_expiration ? new Time(*other.m_expiration) : nullptr)
+{ }
+
+std::string S3::Auth::access() const
+{
+    if (m_expiration) throw ArbiterError("Must use S3::Auth::getStatic");
+    return m_access;
+}
+
+std::string S3::Auth::hidden() const
+{
+    if (m_expiration) throw ArbiterError("Must use S3::Auth::getStatic");
+    return m_hidden;
+}
+
+S3::Auth S3::Auth::getStatic() const
+{
+    if (m_iamRole.size())
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        const Time now;
+        if (!m_expiration || *m_expiration - now < reauthSeconds)
+        {
+            std::istringstream ss(httpDriver.get(credBase + m_iamRole));
+            Json::Value creds;
+            ss >> creds;
+            m_access = creds["AccessKeyId"].asString();
+            m_hidden = creds["SecretAccessKey"].asString();
+
+            m_expiration.reset(
+                    new Time(creds["Expiration"].asString(), Time::iso8601));
+
+            if (*m_expiration - now < reauthSeconds)
+            {
+                throw ArbiterError("Got invalid instance profile credentials");
+            }
+        }
+    }
+
+    return S3::Auth(m_access, m_hidden);
+}
 
 } // namespace drivers
 } // namespace arbiter
