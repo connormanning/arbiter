@@ -149,7 +149,7 @@ Response Resource::exec(std::function<Response()> f)
 Pool::Pool(
         const std::size_t concurrent,
         const std::size_t retry,
-        const Json::Value& json)
+        const Json::Value json)
     : m_curls(concurrent)
     , m_available(concurrent)
     , m_retry(retry)
@@ -159,11 +159,13 @@ Pool::Pool(
     curl_global_init(CURL_GLOBAL_ALL);
 
     const bool verbose(
-            json.isMember("arbiter") ?
+            !json.isNull() && json.isMember("arbiter") ?
                 json["arbiter"]["verbose"].asBool() : false);
 
     const std::size_t timeout(
-            json.isMember("http") && json["http"]["timeout"].asUInt64() ?
+            !json.isNull() &&
+            json.isMember("http") &&
+            json["http"]["timeout"].asUInt64() ?
                 json["http"]["timeout"].asUInt64() : defaultHttpTimeout);
 
     for (std::size_t i(0); i < concurrent; ++i)

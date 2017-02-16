@@ -7,6 +7,7 @@ set(
     "${BASE}/http.cpp"
     "${BASE}/md5.cpp"
     "${BASE}/sha256.cpp"
+    "${BASE}/time.cpp"
     "${BASE}/transforms.cpp"
     "${BASE}/util.cpp"
 )
@@ -18,6 +19,7 @@ set(
     "${BASE}/macros.hpp"
     "${BASE}/md5.hpp"
     "${BASE}/sha256.hpp"
+    "${BASE}/time.hpp"
     "${BASE}/transforms.hpp"
     "${BASE}/types.hpp"
     "${BASE}/util.hpp"

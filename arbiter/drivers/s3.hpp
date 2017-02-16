@@ -1,10 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
 #ifndef ARBITER_IS_AMALGAMATION
+#include <arbiter/util/time.hpp>
 #include <arbiter/drivers/http.hpp>
 #endif
 
@@ -33,9 +35,9 @@ public:
             bool precheck = false);
 
     /** Try to construct an S3 Driver.  Searches @p json primarily for the keys
-     * `access` and `hidden` to construct an S3::Auth.  If not found, common
-     * filesystem locations and then the environment will be searched (see
-     * S3::Auth::find).
+     * `access` and `hidden`/`secret` to construct an S3::Auth.  If not found,
+     * common filesystem locations and then the environment will be searched
+     * (see S3::Auth::find).
      *
      * Server-side encryption may be enabled by setting key `sse` to `true` in
      * @p json.
@@ -60,30 +62,7 @@ public:
 
     virtual void copy(std::string src, std::string dst) const override;
 
-    /** @brief AWS authentication information. */
-    class Auth
-    {
-    public:
-        Auth(std::string access, std::string hidden);
-
-        /** @brief Search for credentials in some common locations.
-         *
-         * See:
-         * docs.aws.amazon.com/AWSJavaScriptSDK/guide/node-configuring.html
-         *
-         * Uses methods 2 and 3 of "Setting AWS Credentials":
-         *      - Check for them in `~/.aws/credentials`.
-         *      - If not found, try the environment settings.
-         */
-        static std::unique_ptr<Auth> find(std::string profile = "");
-
-        std::string access() const;
-        std::string hidden() const;
-
-    private:
-        std::string m_access;
-        std::string m_hidden;
-    };
+    static std::string findRegion();
 
 private:
     /** Inherited from Drivers::Http. */
@@ -97,96 +76,119 @@ private:
             std::string path,
             bool verbose) const override;
 
-    struct Resource
-    {
-        Resource(std::string baseUrl, std::string fullPath);
+    class ApiV4;
+    class Resource;
+    // class FormattedTime;
 
-        std::string url() const;
-        std::string host() const;
-        std::string baseUrl() const { return m_baseUrl; }
-        std::string bucket() const { return m_bucket; }
-        std::string object() const;
-
-    private:
-        std::string m_baseUrl;
-        std::string m_bucket;
-        std::string m_object;
-        bool m_virtualHosted;
-    };
-
-    class FormattedTime
-    {
-    public:
-        FormattedTime();
-
-        const std::string& date() const { return m_date; }
-        const std::string& time() const { return m_time; }
-
-        std::string amazonDate() const
-        {
-            return date() + 'T' + time() + 'Z';
-        }
-
-    private:
-        std::string formatTime(const std::string& format) const;
-
-        const std::string m_date;
-        const std::string m_time;
-    };
-
-    class ApiV4
-    {
-    public:
-        ApiV4(
-                std::string verb,
-                const std::string& region,
-                const Resource& resource,
-                const S3::Auth& auth,
-                const http::Query& query,
-                const http::Headers& headers,
-                const std::vector<char>& data);
-
-        const http::Headers& headers() const { return m_headers; }
-        const http::Query& query() const { return m_query; }
-
-        const std::string& signedHeadersString() const
-        {
-            return m_signedHeadersString;
-        }
-
-    private:
-        std::string buildCanonicalRequest(
-                std::string verb,
-                const Resource& resource,
-                const http::Query& query,
-                const std::vector<char>& data) const;
-
-        std::string buildStringToSign(
-                const std::string& canonicalRequest) const;
-
-        std::string calculateSignature(
-                const std::string& stringToSign) const;
-
-        std::string getAuthHeader(
-                const std::string& signedHeadersString,
-                const std::string& signature) const;
-
-        const S3::Auth& m_auth;
-        const std::string m_region;
-        const FormattedTime m_formattedTime;
-
-        http::Headers m_headers;
-        http::Query m_query;
-        std::string m_canonicalHeadersString;
-        std::string m_signedHeadersString;
-    };
-
-    Auth m_auth;
+    std::unique_ptr<Auth> m_auth;
 
     std::string m_region;
     std::string m_baseUrl;
     http::Headers m_baseHeaders;
     bool m_precheck;
+};
+
+/** @brief AWS authentication information. */
+class S3::Auth
+{
+public:
+    Auth(std::string access, std::string hidden, std::string token = "");
+    Auth(std::string iamRole);
+    Auth(const Auth&);
+
+    /** @brief Search for credentials in some common locations.
+     *
+     * Check, in order:
+     *      - Environment settings.
+     *      - Arbiter JSON configuration.
+     *      - Config file `~/.aws/credentials` (searching for @p profile).
+     *      - EC2 instance profile.
+     */
+    static std::unique_ptr<Auth> find(
+            const Json::Value& json,
+            std::string profile = "");
+
+    static std::string region();
+
+    Auth getStatic() const;
+
+    std::string access() const;
+    std::string hidden() const;
+    std::string token() const;
+
+private:
+    mutable std::string m_access;
+    mutable std::string m_hidden;
+    mutable std::string m_token;
+
+    std::string m_iamRole;
+    mutable std::unique_ptr<Time> m_expiration;
+    mutable std::mutex m_mutex;
+};
+
+class S3::Resource
+{
+public:
+    Resource(std::string baseUrl, std::string fullPath);
+
+    std::string url() const;
+    std::string host() const;
+    std::string baseUrl() const { return m_baseUrl; }
+    std::string bucket() const { return m_bucket; }
+    std::string object() const;
+
+private:
+    std::string m_baseUrl;
+    std::string m_bucket;
+    std::string m_object;
+    bool m_virtualHosted;
+};
+
+class S3::ApiV4
+{
+public:
+    ApiV4(
+            std::string verb,
+            const std::string& region,
+            const Resource& resource,
+            const S3::Auth& auth,
+            const http::Query& query,
+            const http::Headers& headers,
+            const std::vector<char>& data);
+
+    const http::Headers& headers() const { return m_headers; }
+    const http::Query& query() const { return m_query; }
+
+    const std::string& signedHeadersString() const
+    {
+        return m_signedHeadersString;
+    }
+
+private:
+    std::string buildCanonicalRequest(
+            std::string verb,
+            const Resource& resource,
+            const http::Query& query,
+            const std::vector<char>& data) const;
+
+    std::string buildStringToSign(
+            const std::string& canonicalRequest) const;
+
+    std::string calculateSignature(
+            const std::string& stringToSign) const;
+
+    std::string getAuthHeader(
+            const std::string& signedHeadersString,
+            const std::string& signature) const;
+
+    const S3::Auth m_auth;
+    const std::string m_region;
+    const Time m_time;
+
+    http::Headers m_headers;
+    http::Query m_query;
+    std::string m_canonicalHeadersString;
+    std::string m_signedHeadersString;
 };
 
 } // namespace drivers
