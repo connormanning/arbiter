@@ -35,14 +35,18 @@ namespace arbiter
 
 namespace
 {
-    const int64_t reauthSeconds(120);
     http::Pool pool;
     drivers::Http httpDriver(pool);
 
-    // See: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
+    // See:
+    // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
     const std::string credIp("http://169.254.169.254/");
     const std::string credBase(
             credIp + "latest/meta-data/iam/security-credentials/");
+
+    // Re-fetch credentials when there are less then 4 minutes remaining.  New
+    // ones are guaranteed by AWS to be available within 5 minutes remaining.
+    constexpr int64_t reauthSeconds(60 * 4);
 
     std::string getBaseUrl(const std::string& region)
     {
