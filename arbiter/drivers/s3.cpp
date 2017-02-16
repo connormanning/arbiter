@@ -851,7 +851,7 @@ S3::Auth S3::Auth::getStatic() const
             ss >> creds;
             m_access = creds["AccessKeyId"].asString();
             m_hidden = creds["SecretAccessKey"].asString();
-
+            m_token = creds["Token"].asString();
             m_expiration.reset(new Time(creds["Expiration"].asString()));
 
             if (*m_expiration - now < reauthSeconds)
