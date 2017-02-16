@@ -6,6 +6,10 @@
 #include <mutex>
 #include <sstream>
 
+#ifndef ARBITER_IS_AMALGAMATION
+#include <arbiter/util/types.hpp>
+#endif
+
 namespace arbiter
 {
 
@@ -54,6 +58,10 @@ Time::Time(const std::string& s, const std::string& format)
     auto tm(getTm());
     std::istringstream ss(s);
     ss >> std::get_time(&tm, format.c_str());
+    if (ss.fail())
+    {
+        throw ArbiterError("Failed to parse " + s + " as time: " + format);
+    }
     tm.tm_sec -= utcOffset;
     m_time = std::mktime(&tm);
 }
