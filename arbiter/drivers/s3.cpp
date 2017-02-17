@@ -35,18 +35,20 @@ namespace arbiter
 
 namespace
 {
+#ifdef ARBITER_CURL
     http::Pool pool;
     drivers::Http httpDriver(pool);
+
+    // Re-fetch credentials when there are less then 4 minutes remaining.  New
+    // ones are guaranteed by AWS to be available within 5 minutes remaining.
+    constexpr int64_t reauthSeconds(60 * 4);
+#endif
 
     // See:
     // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
     const std::string credIp("http://169.254.169.254/");
     const std::string credBase(
             credIp + "latest/meta-data/iam/security-credentials/");
-
-    // Re-fetch credentials when there are less then 4 minutes remaining.  New
-    // ones are guaranteed by AWS to be available within 5 minutes remaining.
-    constexpr int64_t reauthSeconds(60 * 4);
 
     std::string getBaseUrl(const std::string& region)
     {
@@ -794,10 +796,12 @@ std::unique_ptr<S3::Auth> S3::Auth::find(
         }
     }
 
+#ifdef ARBITER_CURL
     if (const auto iamRole = httpDriver.tryGet(credBase))
     {
         auth.reset(new S3::Auth(*iamRole));
     }
+#endif
 
     return auth;
 }
@@ -843,6 +847,7 @@ std::string S3::Auth::token() const
 
 S3::Auth S3::Auth::getStatic() const
 {
+#ifdef ARBITER_CURL
     if (m_iamRole.size())
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -864,6 +869,7 @@ S3::Auth S3::Auth::getStatic() const
             }
         }
     }
+#endif
 
     return S3::Auth(m_access, m_hidden, m_token);
 }

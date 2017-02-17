@@ -78,7 +78,6 @@ private:
 
     class ApiV4;
     class Resource;
-    // class FormattedTime;
 
     std::unique_ptr<Auth> m_auth;
 

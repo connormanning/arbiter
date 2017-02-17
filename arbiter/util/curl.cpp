@@ -164,21 +164,19 @@ void Curl::init(
 
 int Curl::perform()
 {
+#ifdef ARBITER_CURL
     long httpCode(0);
 
     const auto code(curl_easy_perform(m_curl));
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
     curl_easy_reset(m_curl);
 
-    if (code != CURLE_OK)
-    {
-        // curl_easy_reset must occur before this throw.
-        throw ArbiterError(
-                "Curl failed with code: " + std::to_string(code) +
-                " - see: https://curl.haxx.se/libcurl/c/libcurl-errors.html");
-    }
+    if (code != CURLE_OK) httpCode = 500;
 
     return httpCode;
+#else
+    throw ArbiterError(fail);
+#endif
 }
 
 Response Curl::get(

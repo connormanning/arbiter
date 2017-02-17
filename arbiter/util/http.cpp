@@ -25,7 +25,9 @@ namespace http
 
 namespace
 {
+#ifdef ARBITER_CURL
     const std::size_t defaultHttpTimeout(10);
+#endif
 }
 
 std::string sanitize(const std::string path, const std::string excStr)
@@ -156,6 +158,7 @@ Pool::Pool(
     , m_mutex()
     , m_cv()
 {
+#ifdef ARBITER_CURL
     curl_global_init(CURL_GLOBAL_ALL);
 
     const bool verbose(
@@ -173,12 +176,10 @@ Pool::Pool(
         m_available[i] = i;
         m_curls[i].reset(new Curl(verbose, timeout));
     }
+#endif
 }
 
-Pool::~Pool()
-{
-    curl_global_cleanup();
-}
+Pool::~Pool() { }
 
 Resource Pool::acquire()
 {
