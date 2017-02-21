@@ -49,9 +49,22 @@ Arbiter::Arbiter(const Json::Value& json)
     auto https(Https::create(*m_pool, json["http"]));
     if (https) m_drivers[https->type()] = std::move(https);
 
-    auto s3(S3::create(*m_pool, json["s3"]));
-    if (s3) m_drivers[s3->type()] = std::move(s3);
+    if (json["s3"].isArray())
+    {
+        for (const auto& sub : json["s3"])
+        {
+            auto s3(S3::create(*m_pool, sub));
+            m_drivers[s3->type()] = std::move(s3);
+        }
+    }
+    else
+    {
+        auto s3(S3::create(*m_pool, json["s3"]));
+        if (s3) m_drivers[s3->type()] = std::move(s3);
+    }
 
+    // Credential-based drivers should probably all do something similar to the
+    // S3 driver to support multiple profiles.
     auto dropbox(Dropbox::create(*m_pool, json["dropbox"]));
     if (dropbox) m_drivers[dropbox->type()] = std::move(dropbox);
 #endif

@@ -293,6 +293,12 @@ std::string S3::extractProfile(const Json::Value& json)
     }
 }
 
+std::string S3::type() const
+{
+    if (!m_auth || m_auth->profile() == "default") return "s3";
+    else return m_auth->profile() + "@s3";
+}
+
 std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
 {
     std::unique_ptr<std::size_t> size;
@@ -717,7 +723,7 @@ std::unique_ptr<S3::Auth> S3::Auth::find(
 
     if (access && hidden)
     {
-        auth.reset(new S3::Auth(*access, *hidden));
+        auth.reset(new S3::Auth(profile, *access, *hidden));
         return auth;
     }
 
@@ -726,7 +732,7 @@ std::unique_ptr<S3::Auth> S3::Auth::find(
 
     if (access && hidden)
     {
-        auth.reset(new S3::Auth(*access, *hidden));
+        auth.reset(new S3::Auth(profile, *access, *hidden));
         return auth;
     }
 
@@ -737,6 +743,7 @@ std::unique_ptr<S3::Auth> S3::Auth::find(
     {
         auth.reset(
                 new Auth(
+                    profile,
                     json["access"].asString(),
                     json.isMember("secret") ?
                         json["secret"].asString() :
@@ -786,7 +793,7 @@ std::unique_ptr<S3::Auth> S3::Auth::find(
                                     hiddenPos + hiddenFind.size(),
                                     hiddenLine.find(';')));
 
-                        auth.reset(new S3::Auth(access, hidden));
+                        auth.reset(new S3::Auth(profile, access, hidden));
                         return auth;
                     }
                 }
@@ -807,10 +814,12 @@ std::unique_ptr<S3::Auth> S3::Auth::find(
 }
 
 S3::Auth::Auth(
+        const std::string profile,
         const std::string access,
         const std::string hidden,
         const std::string token)
-    : m_access(access)
+    : m_profile(profile)
+    , m_access(access)
     , m_hidden(hidden)
     , m_token(token)
 { }
@@ -820,7 +829,8 @@ S3::Auth::Auth(const std::string iamRole)
 { }
 
 S3::Auth::Auth(const Auth& other)
-    : m_access(other.m_access)
+    : m_profile(other.m_profile)
+    , m_access(other.m_access)
     , m_hidden(other.m_hidden)
     , m_token(other.m_token)
     , m_iamRole(other.m_iamRole)
@@ -871,7 +881,7 @@ S3::Auth S3::Auth::getStatic() const
     }
 #endif
 
-    return S3::Auth(m_access, m_hidden, m_token);
+    return S3::Auth(m_profile, m_access, m_hidden, m_token);
 }
 
 } // namespace drivers
