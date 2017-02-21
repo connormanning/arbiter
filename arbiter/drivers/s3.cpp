@@ -804,9 +804,12 @@ std::unique_ptr<S3::Auth> S3::Auth::find(
     }
 
 #ifdef ARBITER_CURL
-    if (const auto iamRole = httpDriver.tryGet(credBase))
+    if (json["allowInstanceProfile"].asBool())
     {
-        auth.reset(new S3::Auth(*iamRole));
+        if (const auto iamRole = httpDriver.tryGet(credBase))
+        {
+            auth.reset(new S3::Auth(*iamRole));
+        }
     }
 #endif
 

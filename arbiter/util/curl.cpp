@@ -147,6 +147,9 @@ void Curl::init(
     curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_LIMIT, 1L);
     curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_TIME, m_timeout);
 
+    curl_easy_setopt(m_curl, CURLOPT_CONNECTTIMEOUT_MS, 2000L);
+    curl_easy_setopt(m_curl, CURLOPT_ACCEPTTIMEOUT_MS, 2000L);
+
     // Configuration options.
     if (followRedirect) curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1L);
 
