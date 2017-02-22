@@ -7,6 +7,7 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/util/time.hpp>
+#include <arbiter/util/util.hpp>
 #include <arbiter/drivers/http.hpp>
 #endif
 
@@ -24,30 +25,30 @@ namespace drivers
 /** @brief Amazon %S3 driver. */
 class S3 : public Http
 {
-public:
     class Auth;
+    class AuthFields;
+    class Config;
 
+public:
     S3(
             http::Pool& pool,
-            const Auth& auth,
-            std::string region = "us-east-1",
-            bool sse = false,
-            bool precheck = false);
+            std::string profile,
+            std::unique_ptr<Auth> auth,
+            std::unique_ptr<Config> config);
 
-    /** Try to construct an S3 Driver.  Searches @p json primarily for the keys
-     * `access` and `hidden`/`secret` to construct an S3::Auth.  If not found,
-     * common filesystem locations and then the environment will be searched
-     * (see S3::Auth::find).
-     *
-     * Server-side encryption may be enabled by setting key `sse` to `true` in
-     * @p json.
+    /** Try to construct an S3 driver.  The configuration/credential discovery
+     * follows, in order:
+     *      - Environment settings.
+     *      - Arbiter JSON configuration.
+     *      - Well-known files or their environment overrides, like
+     *          `~/.aws/credentials` or the file at AWS_CREDENTIAL_FILE.
+     *      - EC2 instance profile.
      */
     static std::unique_ptr<S3> create(
             http::Pool& pool,
             const Json::Value& json);
 
-    static std::string extractProfile(const Json::Value& json);
-
+    // Overrides.
     virtual std::string type() const override;
 
     virtual std::unique_ptr<std::size_t> tryGetSize(
@@ -63,6 +64,12 @@ public:
     virtual void copy(std::string src, std::string dst) const override;
 
 private:
+    static std::string extractProfile(const Json::Value& json);
+
+    static std::unique_ptr<Config> extractConfig(
+            const Json::Value& json,
+            std::string profile);
+
     /** Inherited from Drivers::Http. */
     virtual bool get(
             std::string path,
@@ -77,58 +84,86 @@ private:
     class ApiV4;
     class Resource;
 
+    std::string m_profile;
     std::unique_ptr<Auth> m_auth;
-
-    std::string m_region;
-    std::string m_baseUrl;
-    http::Headers m_baseHeaders;
-    bool m_precheck;
+    std::unique_ptr<Config> m_config;
 };
 
-/** @brief AWS authentication information. */
+class S3::AuthFields
+{
+public:
+    AuthFields(std::string access, std::string hidden, std::string token = "")
+        : m_access(access), m_hidden(hidden), m_token(token)
+    { }
+
+    const std::string& access() const { return m_access; }
+    const std::string& hidden() const { return m_hidden; }
+    const std::string& token() const { return m_token; }
+
+private:
+    std::string m_access;
+    std::string m_hidden;
+    std::string m_token;
+};
+
 class S3::Auth
 {
 public:
-    Auth(
-            std::string profile,
-            std::string access,
-            std::string hidden,
-            std::string token = "");
+    Auth(std::string access, std::string hidden)
+        : m_access(access)
+        , m_hidden(hidden)
+    { }
 
-    Auth(std::string iamRole);
-    Auth(const Auth&);
+    Auth(std::string iamRole)
+        : m_role(util::makeUnique<std::string>(iamRole))
+    { }
 
-    /** @brief Search for credentials in some common locations.
-     *
-     * Check, in order:
-     *      - Environment settings.
-     *      - Arbiter JSON configuration.
-     *      - Config file `~/.aws/credentials` (searching for @p profile).
-     *      - EC2 instance profile.
-     */
-    static std::unique_ptr<Auth> find(
+    static std::unique_ptr<Auth> create(
             const Json::Value& json,
-            std::string profile = "");
+            std::string profile);
 
-    static std::string region();
-
-    Auth getStatic() const;
-
-    std::string profile() const { return m_profile; }
-    std::string access() const;
-    std::string hidden() const;
-    std::string token() const;
+    AuthFields fields() const;
 
 private:
-    mutable std::string m_profile;
     mutable std::string m_access;
     mutable std::string m_hidden;
     mutable std::string m_token;
 
-    std::string m_iamRole;
+    std::unique_ptr<std::string> m_role;
     mutable std::unique_ptr<Time> m_expiration;
     mutable std::mutex m_mutex;
 };
+
+class S3::Config
+{
+public:
+    Config(std::string region, std::string baseUrl, bool sse, bool precheck);
+
+    static std::unique_ptr<Config> create(
+            const Json::Value& json,
+            std::string profile);
+
+    const std::string& region() const { return m_region; }
+    const std::string& baseUrl() const { return m_baseUrl; }
+    const http::Headers& baseHeaders() const { return m_baseHeaders; }
+    bool precheck() const { return m_precheck; }
+
+private:
+    static std::string extractRegion(
+            const Json::Value& json,
+            std::string profile);
+
+    static std::string extractBaseUrl(
+            const Json::Value& json,
+            std::string region);
+
+    const std::string m_region;
+    const std::string m_baseUrl;
+    http::Headers m_baseHeaders;
+    const bool m_precheck;
+};
+
+
 
 class S3::Resource
 {
@@ -155,7 +190,7 @@ public:
             std::string verb,
             const std::string& region,
             const Resource& resource,
-            const S3::Auth& auth,
+            const S3::AuthFields authFields,
             const http::Query& query,
             const http::Headers& headers,
             const std::vector<char>& data);
@@ -185,7 +220,7 @@ private:
             const std::string& signedHeadersString,
             const std::string& signature) const;
 
-    const S3::Auth m_auth;
+    const S3::AuthFields m_authFields;
     const std::string m_region;
     const Time m_time;
 

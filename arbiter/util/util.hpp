@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -145,6 +146,30 @@ namespace util
      */
     std::unique_ptr<std::string> env(const std::string& var);
 
+    /** @brief Split a string on a token. */
+    std::vector<std::string> split(const std::string& s, char delimiter = '\n');
+
+    /** @brief Remove whitespace. */
+    std::string stripWhitespace(const std::string& s);
+
+    template<typename T, typename... Args>
+    std::unique_ptr<T> makeUnique(Args&&... args)
+    {
+        return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+    }
+
+    template<typename T>
+    std::unique_ptr<T> clone(const T& t)
+    {
+        return makeUnique<T>(t);
+    }
+
+    template<typename T>
+    std::unique_ptr<T> maybeClone(const T* t)
+    {
+        if (t) return makeUnique<T>(*t);
+        else return std::unique_ptr<T>();
+    }
 } // namespace util
 
 } // namespace arbiter

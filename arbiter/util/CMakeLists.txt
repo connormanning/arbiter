@@ -5,6 +5,7 @@ set(
     SOURCES
     "${BASE}/curl.cpp"
     "${BASE}/http.cpp"
+    "${BASE}/ini.cpp"
     "${BASE}/md5.cpp"
     "${BASE}/sha256.cpp"
     "${BASE}/time.cpp"
@@ -16,6 +17,7 @@ set(
     HEADERS
     "${BASE}/curl.hpp"
     "${BASE}/http.hpp"
+    "${BASE}/ini.hpp"
     "${BASE}/macros.hpp"
     "${BASE}/md5.hpp"
     "${BASE}/sha256.hpp"

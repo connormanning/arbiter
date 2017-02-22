@@ -93,6 +93,42 @@ std::unique_ptr<std::string> env(const std::string& var)
     return result;
 }
 
+std::vector<std::string> split(const std::string& in, const char delimiter)
+{
+    std::size_t index(0);
+    std::size_t pos(0);
+    std::vector<std::string> lines;
+
+    do
+    {
+        index = in.find(delimiter, pos);
+        std::string line(in.substr(pos, index - pos));
+
+        line.erase(
+                std::remove_if(line.begin(), line.end(), ::isspace),
+                line.end());
+
+        lines.push_back(line);
+
+        pos = index + 1;
+    }
+    while (index != std::string::npos);
+
+    return lines;
+}
+
+std::string stripWhitespace(const std::string& in)
+{
+    std::string out(in);
+    out.erase(
+            std::remove_if(
+                out.begin(),
+                out.end(),
+                [](char c) { return std::isspace(c); }),
+            out.end());
+    return out;
+}
+
 } // namespace util
 } // namespace arbiter
 

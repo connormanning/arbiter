@@ -118,6 +118,7 @@ def amalgamate_source(source_top_dir=None,
     header.add_file("arbiter/util/types.hpp")
     header.add_file("arbiter/util/curl.hpp")
     header.add_file("arbiter/util/http.hpp")
+    header.add_file("arbiter/util/ini.hpp")
     header.add_file("arbiter/util/time.hpp")
 
     header.add_file("arbiter/driver.hpp")
@@ -169,6 +170,7 @@ def amalgamate_source(source_top_dir=None,
     source.add_file("arbiter/drivers/dropbox.cpp")
     source.add_file("arbiter/util/curl.cpp")
     source.add_file("arbiter/util/http.cpp")
+    source.add_file("arbiter/util/ini.cpp")
     source.add_file("arbiter/util/md5.cpp")
     source.add_file("arbiter/util/sha256.cpp")
     source.add_file("arbiter/util/transforms.cpp")
