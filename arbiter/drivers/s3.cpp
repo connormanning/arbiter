@@ -203,7 +203,9 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
     // By default we won't search for this since we don't really want to make
     // an HTTP request on every Arbiter construction - but if we're allowed,
     // see if we can request an instance profile configuration.
-    if (json["allowInstanceProfile"].asBool())
+    if (
+            json["allowInstanceProfile"].asBool() ||
+            env("AWS_ALLOW_INSTANCE_PROFILE"))
     {
         http::Pool pool;
         drivers::Http httpDriver(pool);

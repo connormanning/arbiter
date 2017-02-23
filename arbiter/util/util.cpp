@@ -4,6 +4,8 @@
 #include <arbiter/arbiter.hpp>
 #endif
 
+#include <algorithm>
+
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
 {
