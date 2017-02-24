@@ -322,12 +322,9 @@ std::string S3::Config::extractBaseUrl(
             const auto regions(endpoints.getMemberNames());
             for (const auto& r : regions)
             {
-                if (r == region)
+                if (r == region && endpoints[region].isMember("hostname"))
                 {
-                    if (endpoints[r].isMember("hostname"))
-                    {
-                        return endpoints[r]["hostname"].asString() + '/';
-                    }
+                    return endpoints[region]["hostname"].asString() + '/';
                 }
             }
         }

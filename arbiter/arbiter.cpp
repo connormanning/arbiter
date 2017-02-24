@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <sstream>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -24,9 +25,26 @@ namespace
     const std::size_t concurrentHttpReqs(32);
     const std::size_t httpRetryCount(8);
 #endif
+
+    Json::Value getConfig()
+    {
+        Json::Value config;
+        std::string path("~/.arbiter/config.json");
+
+        if      (auto p = util::env("ARBITER_CONFIG_FILE")) path = *p;
+        else if (auto p = util::env("ARBITER_CONFIG_PATH")) path = *p;
+
+        if (auto data = drivers::Fs().tryGet(path))
+        {
+            std::istringstream ss(*data);
+            ss >> config;
+        }
+
+        return config;
+    }
 }
 
-Arbiter::Arbiter() : Arbiter(Json::Value()) { }
+Arbiter::Arbiter() : Arbiter(getConfig()) { }
 
 Arbiter::Arbiter(const Json::Value& json)
     : m_drivers()
