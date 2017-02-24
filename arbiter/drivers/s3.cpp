@@ -292,9 +292,22 @@ std::string S3::Config::extractBaseUrl(
         const Json::Value& json,
         std::string region)
 {
-    const std::string endpointsPath(
-            util::env("AWS_ENDPOINTS_FILE") ?
-                *util::env("AWS_ENDPOINTS_FILE") : "~/.aws/endpoints.json");
+    if (json.isMember("endpoint") && json["endpoint"].asString().size())
+    {
+        const std::string path(json["endpoint"].asString());
+        return path.back() == '/' ? path : path + '/';
+    }
+
+    std::string endpointsPath("~/.aws/endpoints.json");
+
+    if (const auto e = util::env("AWS_ENDPOINTS_FILE"))
+    {
+        endpointsPath = *e;
+    }
+    else if (json.isMember("endpointsFile"))
+    {
+        endpointsPath = json["endpointsFile"].asString();
+    }
 
     drivers::Fs fsDriver;
     if (std::unique_ptr<std::string> e = fsDriver.tryGet(endpointsPath))
