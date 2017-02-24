@@ -7,6 +7,12 @@
 
 #include <arbiter/util/types.hpp>
 
+#ifdef ARBITER_EXTERNAL_JSON
+#include <json/json.h>
+#else
+#include <arbiter/third/json/json.hpp>
+#endif
+
 #endif
 
 class curl_slist;
@@ -28,6 +34,8 @@ class Pool;
 class Curl
 {
     friend class Pool;
+
+    static constexpr std::size_t defaultHttpTimeout = 5;
 
 public:
     ~Curl();
@@ -53,7 +61,7 @@ public:
             Query query);
 
 private:
-    Curl(bool verbose, std::size_t timeout);
+    Curl(const Json::Value& json = Json::Value());
 
     void init(std::string path, const Headers& headers, const Query& query);
 
@@ -63,10 +71,12 @@ private:
     Curl(const Curl&);
     Curl& operator=(const Curl&);
 
-    void* m_curl;
-    curl_slist* m_headers;
-    const bool m_verbose;
-    const long m_timeout;
+    void* m_curl = nullptr;
+    curl_slist* m_headers = nullptr;
+    bool m_verbose = false;
+    bool m_followRedirect = true;
+    long m_timeout = defaultHttpTimeout;
+    std::unique_ptr<std::string> m_caPath;
 
     std::vector<char> m_data;
 };

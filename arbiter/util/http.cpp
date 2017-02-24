@@ -23,13 +23,6 @@ namespace arbiter
 namespace http
 {
 
-namespace
-{
-#ifdef ARBITER_CURL
-    const std::size_t defaultHttpTimeout(10);
-#endif
-}
-
 std::string sanitize(const std::string path, const std::string excStr)
 {
     static const std::set<char> unreserved = { '-', '.', '_', '~' };
@@ -161,20 +154,10 @@ Pool::Pool(
 #ifdef ARBITER_CURL
     curl_global_init(CURL_GLOBAL_ALL);
 
-    const bool verbose(
-            !json.isNull() && json.isMember("arbiter") ?
-                json["arbiter"]["verbose"].asBool() : false);
-
-    const std::size_t timeout(
-            !json.isNull() &&
-            json.isMember("http") &&
-            json["http"]["timeout"].asUInt64() ?
-                json["http"]["timeout"].asUInt64() : defaultHttpTimeout);
-
     for (std::size_t i(0); i < concurrent; ++i)
     {
         m_available[i] = i;
-        m_curls[i].reset(new Curl(verbose, timeout));
+        m_curls[i].reset(new Curl(json));
     }
 #endif
 }

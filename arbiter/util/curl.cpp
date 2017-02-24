@@ -4,6 +4,7 @@
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/util/curl.hpp>
 #include <arbiter/util/http.hpp>
+#include <arbiter/util/util.hpp>
 #endif
 
 #ifdef ARBITER_CURL
@@ -95,21 +96,46 @@ namespace
         return size * num;
     }
 
-    const bool followRedirect(true);
 #else
     const std::string fail("Arbiter was built without curl");
 #endif // ARBITER_CURL
 } // unnamed namespace
 
-Curl::Curl(bool verbose, std::size_t timeout)
-    : m_curl(nullptr)
-    , m_headers(nullptr)
-    , m_verbose(verbose)
-    , m_timeout(timeout)
-    , m_data()
+Curl::Curl(const Json::Value& json)
 {
 #ifdef ARBITER_CURL
+    using namespace util;
+
     m_curl = curl_easy_init();
+
+    if (!json.isNull())
+    {
+        m_verbose = json["verbose"].asBool();
+
+        const auto h(json["http"]);
+
+        if (!h.isNull())
+        {
+            m_timeout = h["timeout"].asUInt64();
+
+            const std::string frKey("followRedirect");
+            m_followRedirect = h.isMember(frKey) && h[frKey].asBool();
+
+            if (auto ca = util::env("CURL_CA_PATH"))
+            {
+                m_caPath = makeUnique<std::string>(*ca);
+            }
+            else if (auto ca = util::env("ARBITER_CA_PATH"))
+            {
+                m_caPath = makeUnique<std::string>(*ca);
+            }
+            else if (h.isMember("caPath"))
+            {
+                m_caPath = makeUnique<std::string>(h["caPath"].asString());
+            }
+        }
+    }
+
 #endif
 }
 
@@ -151,7 +177,8 @@ void Curl::init(
     curl_easy_setopt(m_curl, CURLOPT_ACCEPTTIMEOUT_MS, 2000L);
 
     // Configuration options.
-    if (followRedirect) curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1L);
+    if (m_followRedirect) curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, 1L);
+    if (m_caPath) curl_easy_setopt(m_curl, CURLOPT_CAPATH, m_caPath->c_str());
 
     // Insert supplied headers.
     for (const auto& h : headers)
