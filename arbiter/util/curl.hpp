@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <string>
+#include <vector>
 
 #ifndef ARBITER_IS_AMALGAMATION
 
