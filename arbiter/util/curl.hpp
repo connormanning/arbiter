@@ -7,12 +7,16 @@
 
 #include <arbiter/util/types.hpp>
 
-#ifdef ARBITER_EXTERNAL_JSON
-#include <json/json.h>
-#else
+#ifndef ARBITER_EXTERNAL_JSON
 #include <arbiter/third/json/json.hpp>
 #endif
 
+#endif
+
+
+
+#ifdef ARBITER_EXTERNAL_JSON
+#include <json/json.h>
 #endif
 
 class curl_slist;

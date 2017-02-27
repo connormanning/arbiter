@@ -738,7 +738,6 @@ S3::Resource::Resource(std::string baseUrl, std::string fullPath)
     , m_object()
     , m_virtualHosted(true)
 {
-    std::cout << "BU " << baseUrl << " " << fullPath << std::endl;
     fullPath = sanitize(fullPath);
     const std::size_t split(fullPath.find("/"));
 
