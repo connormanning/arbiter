@@ -44,7 +44,7 @@ namespace fs
 
     /** @brief Performs tilde expansion to a fully-qualified path, if possible.
      */
-	ARBITER_DLL std::string expandTilde(std::string path);
+    ARBITER_DLL std::string expandTilde(std::string path);
 
     /** @brief Get temporary path from environment. */
     ARBITER_DLL std::string getTempPath();
