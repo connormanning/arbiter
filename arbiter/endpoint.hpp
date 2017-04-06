@@ -3,8 +3,6 @@
 #include <string>
 #include <vector>
 #include <memory>
-<<<<<<< HEAD
-=======
 
 #ifndef ARBITER_IS_AMALGAMATION
 
@@ -16,7 +14,6 @@
 namespace ARBITER_CUSTOM_NAMESPACE
 {
 #endif
->>>>>>> 333088e3eac1056ba6e718984a967cc241c4d385
 
 namespace arbiter
 {

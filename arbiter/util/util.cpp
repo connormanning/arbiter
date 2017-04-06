@@ -5,6 +5,7 @@
 #endif
 
 #include <algorithm>
+#include <cctype>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
