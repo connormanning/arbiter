@@ -16,6 +16,7 @@ set(
 set(
     HEADERS
     "${BASE}/curl.hpp"
+    "${BASE}/exports.hpp"
     "${BASE}/http.hpp"
     "${BASE}/ini.hpp"
     "${BASE}/macros.hpp"
@@ -30,6 +31,9 @@ set(
 
 if (WIN32)
     add_library(${MODULE} OBJECT ${SOURCES} ${HEADERS})
+	set_target_properties(${MODULE}
+		PROPERTIES
+			COMPILE_DEFINITIONS ARBITER_DLL_EXPORT)
 else()
     add_library(${MODULE} OBJECT ${SOURCES})
 endif()

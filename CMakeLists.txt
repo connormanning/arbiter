@@ -36,9 +36,7 @@ endif()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
-if (${ARBITER_CURL})
-    include_directories("${CURL_INCLUDE_DIR}")
-endif()
+
 
 add_subdirectory(arbiter)
 
@@ -48,15 +46,18 @@ set(OBJS
     $<TARGET_OBJECTS:third>
     $<TARGET_OBJECTS:util>)
 
-add_library(arbiter SHARED ${OBJS})
+add_library(arbiter SHARED  ${OBJS})
 
 if (${ARBITER_CURL})
-    target_link_libraries(arbiter ${CURL_LIBRARIES})
+	target_link_libraries(arbiter PUBLIC ${CURL_LIBRARIES})
 endif()
 
-install(TARGETS arbiter DESTINATION lib)
+if (${ARBITER_CURL})
+    target_include_directories(arbiter PRIVATE "${CURL_INCLUDE_DIR}")
+endif()
 
 add_subdirectory(third/gtest-1.7.0)
 include_directories(src third/gtest-1.7.0/include third/gtest-1.7.0)
 add_subdirectory(test)
 
+install(TARGETS arbiter DESTINATION lib)

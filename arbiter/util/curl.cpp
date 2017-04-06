@@ -59,7 +59,7 @@ namespace
             PutData* in)
     {
         const std::size_t fullBytes(
-                std::min(
+                (std::min)(
                     size * num,
                     in->data.size() - in->offset));
         std::memcpy(out, in->data.data() + in->offset, fullBytes);
