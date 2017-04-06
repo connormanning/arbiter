@@ -4,6 +4,12 @@
 #include <ctime>
 #include <string>
 
+#ifndef ARBITER_IS_AMALGAMATION
+#include <arbiter/util/exports.hpp>
+#endif
+
+
+
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
 {
@@ -12,7 +18,7 @@ namespace ARBITER_CUSTOM_NAMESPACE
 namespace arbiter
 {
 
-class Time
+class ARBITER_DLL Time
 {
 public:
     static const std::string iso8601;
@@ -20,9 +26,9 @@ public:
     static const std::string dateNoSeparators;
 
     Time();
-    Time(const std::string& s, const std::string& format = iso8601);
+    Time(const std::string& s, const std::string& format = "%Y-%m-%dT%H:%M:%SZ");
 
-    std::string str(const std::string& format = iso8601) const;
+    std::string str(const std::string& format = "%Y-%m-%dT%H:%M:%SZ") const;
 
     // Return value is in seconds.
     int64_t operator-(const Time& other) const;

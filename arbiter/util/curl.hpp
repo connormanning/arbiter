@@ -8,6 +8,8 @@
 #ifndef ARBITER_IS_AMALGAMATION
 
 #include <arbiter/util/types.hpp>
+#include <arbiter/util/exports.hpp>
+
 
 #ifndef ARBITER_EXTERNAL_JSON
 #include <arbiter/third/json/json.hpp>
@@ -21,7 +23,9 @@
 #include <json/json.h>
 #endif
 
-class curl_slist;
+#ifdef ARBITER_CURL
+#include <curl/curl.h>
+#endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -37,7 +41,7 @@ namespace http
 
 class Pool;
 
-class Curl
+class ARBITER_DLL Curl
 {
     friend class Pool;
 

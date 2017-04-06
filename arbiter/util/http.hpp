@@ -13,6 +13,7 @@
 
 #include <arbiter/util/curl.hpp>
 #include <arbiter/util/types.hpp>
+#include <arbiter/util/exports.hpp>
 
 #ifndef ARBITER_EXTERNAL_JSON
 #include <arbiter/third/json/json.hpp>
@@ -49,9 +50,9 @@ std::string buildQueryString(const http::Query& query);
 
 /** @cond arbiter_internal */
 
-class Pool;
+class ARBITER_DLL Pool;
 
-class Resource
+class ARBITER_DLL Resource
 {
 public:
     Resource(Pool& pool, Curl& curl, std::size_t id, std::size_t retry);
@@ -89,7 +90,7 @@ private:
     http::Response exec(std::function<http::Response()> f);
 };
 
-class Pool
+class ARBITER_DLL Pool
 {
     // Only HttpResource may release.
     friend class Resource;

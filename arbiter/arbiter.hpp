@@ -8,7 +8,7 @@
 #endif
 
 #ifndef ARBITER_IS_AMALGAMATION
-
+#include <arbiter/util/exports.hpp>
 #include <arbiter/driver.hpp>
 #include <arbiter/endpoint.hpp>
 #include <arbiter/drivers/fs.hpp>
@@ -52,7 +52,7 @@ namespace http { class Pool; }
  *
  * All Arbiter operations are thread-safe except unless otherwise noted.
  */
-class Arbiter
+class ARBITER_DLL Arbiter
 {
 public:
     /** Construct a basic Arbiter with only drivers the don't require

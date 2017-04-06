@@ -10,7 +10,9 @@
 #endif
 
 
-
+#ifndef ARBITER_IS_AMALGAMATION
+#include <arbiter/util/exports.hpp>
+#endif
 
 #ifdef ARBITER_EXTERNAL_JSON
 #include <json/json.h>
@@ -35,20 +37,20 @@ class Arbiter;
 namespace fs
 {
     /** @brief Returns true if created, false if already existed. */
-    bool mkdirp(std::string dir);
+    ARBITER_DLL bool mkdirp(std::string dir);
 
     /** @brief Returns true if removed, otherwise false. */
-    bool remove(std::string filename);
+    ARBITER_DLL bool remove(std::string filename);
 
     /** @brief Performs tilde expansion to a fully-qualified path, if possible.
      */
-    std::string expandTilde(std::string path);
+	ARBITER_DLL std::string expandTilde(std::string path);
 
     /** @brief Get temporary path from environment. */
-    std::string getTempPath();
+    ARBITER_DLL std::string getTempPath();
 
     /** @brief Resolve a possible wildcard path. */
-    std::vector<std::string> glob(std::string path);
+    ARBITER_DLL std::vector<std::string> glob(std::string path);
 
     /** @brief A scoped local filehandle for a possibly remote path.
      *
@@ -58,7 +60,7 @@ namespace fs
      *
      * See Arbiter::getLocalHandle for details about construction.
      */
-    class LocalHandle
+    class ARBITER_DLL LocalHandle
     {
         friend class arbiter::Arbiter;
 
@@ -102,7 +104,7 @@ namespace drivers
 {
 
 /** @brief Local filesystem driver. */
-class Fs : public Driver
+class ARBITER_DLL Fs : public Driver
 {
 public:
     static std::unique_ptr<Fs> create(const Json::Value& json);
