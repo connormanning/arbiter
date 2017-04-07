@@ -27,6 +27,8 @@
 #include <curl/curl.h>
 #endif
 
+struct curl_slist;
+
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
 {
