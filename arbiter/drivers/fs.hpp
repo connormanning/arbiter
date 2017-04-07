@@ -107,6 +107,8 @@ namespace drivers
 class ARBITER_DLL Fs : public Driver
 {
 public:
+    Fs() { }
+
     static std::unique_ptr<Fs> create(const Json::Value& json);
 
     virtual std::string type() const override { return "file"; }
