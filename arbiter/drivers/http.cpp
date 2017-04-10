@@ -42,7 +42,7 @@ std::unique_ptr<std::size_t> Http::tryGetSize(std::string path) const
     std::unique_ptr<std::size_t> size;
 
     auto http(m_pool.acquire());
-    Response res(http.head(path));
+    Response res(http.head(typedPath(path)));
 
     if (res.ok() && res.headers().count("Content-Length"))
     {
@@ -114,7 +114,7 @@ bool Http::get(
     bool good(false);
 
     auto http(m_pool.acquire());
-    Response res(http.get(path, headers, query));
+    Response res(http.get(typedPath(path), headers, query));
 
     if (res.ok())
     {
@@ -133,7 +133,7 @@ void Http::put(
 {
     auto http(m_pool.acquire());
 
-    if (!http.put(path, data, headers, query).ok())
+    if (!http.put(typedPath(path), data, headers, query).ok())
     {
         throw ArbiterError("Couldn't HTTP PUT to " + path);
     }
