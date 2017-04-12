@@ -144,6 +144,11 @@ private:
         return get(path, data, http::Headers(), http::Query());
     }
 
+    std::string typedPath(const std::string& p) const
+    {
+        return type() + "://" + p;
+    }
+
     http::Pool& m_pool;
 };
 
