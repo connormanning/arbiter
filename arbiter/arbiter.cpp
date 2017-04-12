@@ -26,7 +26,27 @@ namespace
     const std::size_t httpRetryCount(8);
 #endif
 
-    Json::Value getConfig()
+    // Merge B into A, without overwriting any keys from A.
+    Json::Value merge(const Json::Value& a, const Json::Value& b)
+    {
+        Json::Value out(a);
+
+        if (!b.isNull())
+        {
+            for (const auto& key : b.getMemberNames())
+            {
+                // If A doesn't have this key, then set it to B's value.
+                // If A has the key but it's an object, then recursively merge.
+                // Otherwise A already has a value here that we won't overwrite.
+                if (!out.isMember(key)) out[key] = b[key];
+                else if (out[key].isObject()) merge(out[key], b[key]);
+            }
+        }
+
+        return out;
+    }
+
+    Json::Value getConfig(const Json::Value& in)
     {
         Json::Value config;
         std::string path("~/.arbiter/config.json");
@@ -40,19 +60,21 @@ namespace
             ss >> config;
         }
 
-        return config;
+        return merge(in, config);
     }
 }
 
-Arbiter::Arbiter() : Arbiter(getConfig()) { }
+Arbiter::Arbiter() : Arbiter(Json::nullValue) { }
 
-Arbiter::Arbiter(const Json::Value& json)
+Arbiter::Arbiter(const Json::Value& in)
     : m_drivers()
 #ifdef ARBITER_CURL
-    , m_pool(new http::Pool(concurrentHttpReqs, httpRetryCount, json))
+    , m_pool(new http::Pool(concurrentHttpReqs, httpRetryCount, getConfig(in)))
 #endif
 {
     using namespace drivers;
+
+    const Json::Value json(getConfig(in));
 
     auto fs(Fs::create(json["file"]));
     if (fs) m_drivers[fs->type()] = std::move(fs);

@@ -115,6 +115,7 @@ def amalgamate_source(source_top_dir=None,
     else:
         print "NOT #defining ARBITER_CURL"
 
+    header.add_file("arbiter/util/exports.hpp")
     header.add_file("arbiter/util/types.hpp")
     header.add_file("arbiter/util/curl.hpp")
     header.add_file("arbiter/util/http.hpp")

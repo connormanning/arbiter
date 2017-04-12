@@ -31,9 +31,9 @@ set(
 
 if (WIN32)
     add_library(${MODULE} OBJECT ${SOURCES} ${HEADERS})
-	set_target_properties(${MODULE}
-		PROPERTIES
-			COMPILE_DEFINITIONS ARBITER_DLL_EXPORT)
+    set_target_properties(${MODULE}
+        PROPERTIES
+            COMPILE_DEFINITIONS ARBITER_DLL_EXPORT)
 else()
     add_library(${MODULE} OBJECT ${SOURCES})
 endif()
