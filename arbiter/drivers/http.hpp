@@ -26,7 +26,7 @@ namespace drivers
  *
  * Internal methods for derivers are provided as protected methods.
  */
-class Http : public Driver
+class ARBITER_DLL Http : public Driver
 {
 public:
     Http(http::Pool& pool);
