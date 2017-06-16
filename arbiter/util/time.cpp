@@ -105,7 +105,7 @@ int64_t Time::operator-(const Time& other) const
     return std::difftime(m_time, other.m_time);
 }
 
-int64_t Time::unix() const
+int64_t Time::asUnix() const
 {
     static const Time epoch("1970-01-01T00:00:00Z");
     return *this - epoch;
