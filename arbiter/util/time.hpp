@@ -32,6 +32,7 @@ public:
 
     // Return value is in seconds.
     int64_t operator-(const Time& other) const;
+    int64_t unix() const;
 
 private:
     std::time_t m_time;

@@ -100,13 +100,14 @@ public:
             http::Headers headers,
             http::Query query) const;
 
-protected:
-    /** HTTP-derived Drivers should override this version of GET to allow for
-     * custom headers and query parameters.
-     */
-    virtual bool get(
+    void post(
             std::string path,
-            std::vector<char>& data,
+            const std::string& data,
+            http::Headers headers,
+            http::Query query) const;
+    void post(
+            std::string path,
+            const std::vector<char>& data,
             http::Headers headers,
             http::Query query) const;
 
@@ -136,6 +137,18 @@ protected:
             http::Headers headers = http::Headers(),
             http::Query query = http::Query()) const;
 
+protected:
+    /** HTTP-derived Drivers should override this version of GET to allow for
+     * custom headers and query parameters.
+     */
+    virtual bool get(
+            std::string path,
+            std::vector<char>& data,
+            http::Headers headers,
+            http::Query query) const;
+
+    http::Pool& m_pool;
+
 private:
     virtual bool get(
             std::string path,
@@ -148,8 +161,6 @@ private:
     {
         return type() + "://" + p;
     }
-
-    http::Pool& m_pool;
 };
 
 /** @brief HTTPS driver.  Identical to the HTTP driver except for its type

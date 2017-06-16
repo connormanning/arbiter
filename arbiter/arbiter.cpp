@@ -107,6 +107,12 @@ Arbiter::Arbiter(const Json::Value& in)
     // S3 driver to support multiple profiles.
     auto dropbox(Dropbox::create(*m_pool, json["dropbox"]));
     if (dropbox) m_drivers[dropbox->type()] = std::move(dropbox);
+
+#ifdef ARBITER_OPENSSL
+    auto google(Google::create(*m_pool, json["google"]));
+    if (google) m_drivers[google->type()] = std::move(google);
+#endif
+
 #endif
 }
 

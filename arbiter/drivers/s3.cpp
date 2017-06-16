@@ -1,5 +1,4 @@
 #ifndef ARBITER_IS_AMALGAMATION
-#include <arbiter/arbiter.hpp>
 #include <arbiter/drivers/s3.hpp>
 #endif
 
@@ -363,7 +362,10 @@ S3::AuthFields S3::Auth::fields() const
             m_access = creds["AccessKeyId"].asString();
             m_hidden = creds["SecretAccessKey"].asString();
             m_token = creds["Token"].asString();
-            m_expiration.reset(new Time(creds["Expiration"].asString(), arbiter::Time::iso8601));
+            m_expiration.reset(
+                    new Time(
+                        creds["Expiration"].asString(),
+                        arbiter::Time::iso8601));
 
             if (*m_expiration - now < reauthSeconds)
             {
@@ -445,8 +447,7 @@ bool S3::get(
     }
     else
     {
-        std::cout << std::string(res.data().data(), res.data().size()) <<
-            std::endl;
+        std::cout << res.code() << ": " << res.str() << std::endl;
         return false;
     }
 }

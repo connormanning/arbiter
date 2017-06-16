@@ -11,11 +11,12 @@
 #include <arbiter/util/exports.hpp>
 #include <arbiter/driver.hpp>
 #include <arbiter/endpoint.hpp>
+#include <arbiter/drivers/dropbox.hpp>
 #include <arbiter/drivers/fs.hpp>
-#include <arbiter/drivers/test.hpp>
+#include <arbiter/drivers/google.hpp>
 #include <arbiter/drivers/http.hpp>
 #include <arbiter/drivers/s3.hpp>
-#include <arbiter/drivers/dropbox.hpp>
+#include <arbiter/drivers/test.hpp>
 #include <arbiter/util/types.hpp>
 
 #ifndef ARBITER_EXTERNAL_JSON

@@ -1,5 +1,6 @@
 #include <arbiter/util/time.hpp>
 #include <arbiter/arbiter.hpp>
+#include <arbiter/util/transforms.hpp>
 
 #include "gtest/gtest.h"
 
@@ -36,6 +37,17 @@ TEST(Arbiter, Time)
 
     EXPECT_EQ(y - x, delta);
     EXPECT_EQ(x - y, -delta);
+}
+
+TEST(Arbiter, Base64)
+{
+    EXPECT_EQ(crypto::encodeBase64(""), "");
+    EXPECT_EQ(crypto::encodeBase64("f"), "Zg==");
+    EXPECT_EQ(crypto::encodeBase64("fo"), "Zm8=");
+    EXPECT_EQ(crypto::encodeBase64("foo"), "Zm9v");
+    EXPECT_EQ(crypto::encodeBase64("foob"), "Zm9vYg==");
+    EXPECT_EQ(crypto::encodeBase64("fooba"), "Zm9vYmE=");
+    EXPECT_EQ(crypto::encodeBase64("foobar"), "Zm9vYmFy");
 }
 
 int main(int argc, char** argv)
