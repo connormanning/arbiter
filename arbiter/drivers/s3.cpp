@@ -402,7 +402,8 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
             Headers(),
             empty);
 
-    Response res(Http::internalHead(resource.url(), apiV4.headers()));
+    drivers::Http http(m_pool);
+    Response res(http.internalHead(resource.url(), apiV4.headers()));
 
     if (res.ok() && res.headers().count("Content-Length"))
     {
@@ -433,8 +434,9 @@ bool S3::get(
             headers,
             empty);
 
+    drivers::Http http(m_pool);
     Response res(
-            Http::internalGet(
+            http.internalGet(
                 resource.url(),
                 apiV4.headers(),
                 apiV4.query(),
@@ -472,8 +474,9 @@ void S3::put(
             headers,
             data);
 
+    drivers::Http http(m_pool);
     Response res(
-            Http::internalPut(
+            http.internalPut(
                 resource.url(),
                 data,
                 apiV4.headers(),

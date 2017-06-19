@@ -203,6 +203,12 @@ Response Http::internalPost(
     return m_pool.acquire().post(typedPath(path), data, headers, query);
 }
 
+std::string Http::typedPath(const std::string& p) const
+{
+    if (Arbiter::getType(p) != "file") return p;
+    else return type() + "://" + p;
+}
+
 } // namespace drivers
 
 } // namespace arbiter

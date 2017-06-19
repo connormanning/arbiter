@@ -157,10 +157,7 @@ private:
         return get(path, data, http::Headers(), http::Query());
     }
 
-    std::string typedPath(const std::string& p) const
-    {
-        return type() + "://" + p;
-    }
+    std::string typedPath(const std::string& p) const;
 };
 
 /** @brief HTTPS driver.  Identical to the HTTP driver except for its type
