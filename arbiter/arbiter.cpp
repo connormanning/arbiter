@@ -33,13 +33,22 @@ namespace
 
         if (!b.isNull())
         {
-            for (const auto& key : b.getMemberNames())
+            if (b.isObject())
             {
-                // If A doesn't have this key, then set it to B's value.
-                // If A has the key but it's an object, then recursively merge.
-                // Otherwise A already has a value here that we won't overwrite.
-                if (!out.isMember(key)) out[key] = b[key];
-                else if (out[key].isObject()) merge(out[key], b[key]);
+                for (const auto& key : b.getMemberNames())
+                {
+                    // If A doesn't have this key, then set it to B's value.
+                    // If A has the key but it's an object, then recursively
+                    // merge.
+                    // Otherwise A already has a value here that we won't
+                    // overwrite.
+                    if (!out.isMember(key)) out[key] = b[key];
+                    else if (out[key].isObject()) merge(out[key], b[key]);
+                }
+            }
+            else
+            {
+                out = b;
             }
         }
 

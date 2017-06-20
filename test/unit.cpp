@@ -1,6 +1,10 @@
+#include <numeric>
+
 #include <arbiter/util/time.hpp>
 #include <arbiter/arbiter.hpp>
 #include <arbiter/util/transforms.hpp>
+
+#include "config.hpp"
 
 #include "gtest/gtest.h"
 
@@ -49,6 +53,41 @@ TEST(Arbiter, Base64)
     EXPECT_EQ(crypto::encodeBase64("fooba"), "Zm9vYmE=");
     EXPECT_EQ(crypto::encodeBase64("foobar"), "Zm9vYmFy");
 }
+
+class DriverTest : public ::testing::TestWithParam<std::string> { };
+
+TEST_P(DriverTest, PutGet)
+{
+    Arbiter a;
+
+    const std::string root(GetParam());
+    const std::string path(root + "test.txt");
+    const std::string data("Testing path " + path);
+
+    if (a.isLocal(root)) fs::mkdirp(root);
+
+    EXPECT_NO_THROW(a.put(path, data));
+    EXPECT_EQ(a.get(path), data);
+}
+
+const auto tests = std::accumulate(
+        Config::get().begin(),
+        Config::get().end(),
+        std::vector<std::string>(),
+        [](const std::vector<std::string>& in, const Json::Value& entry)
+        {
+            if (in.empty()) std::cout << "Testing PUT/GET with:" << std::endl;
+            auto out(in);
+            const std::string path(entry.asString());
+            out.push_back(path + (path.back() != '/' ? "/" : ""));
+            std::cout << "\t" << out.back() << std::endl;
+            return out;
+        });
+
+INSTANTIATE_TEST_CASE_P(
+        ConfiguredTests,
+        DriverTest,
+        ::testing::ValuesIn(tests));
 
 int main(int argc, char** argv)
 {

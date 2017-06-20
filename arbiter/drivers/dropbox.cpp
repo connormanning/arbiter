@@ -35,8 +35,9 @@ namespace arbiter
 
 namespace
 {
-    const std::string baseGetUrl("https://content.dropboxapi.com/");
-    const std::string getUrl(baseGetUrl + "2/files/download");
+    const std::string baseUrl("https://content.dropboxapi.com/");
+    const std::string getUrl(baseUrl + "2/files/download");
+    const std::string putUrl(baseUrl + "2/files/upload");
 
     const std::string listUrl("https://api.dropboxapi.com/2/files/list_folder");
     const std::string metaUrl("https://api.dropboxapi.com/2/files/get_metadata");
@@ -63,6 +64,7 @@ namespace drivers
 {
 
 using namespace http;
+using namespace util;
 
 Dropbox::Dropbox(Pool& pool, const Dropbox::Auth& auth)
     : Http(pool)
@@ -71,14 +73,19 @@ Dropbox::Dropbox(Pool& pool, const Dropbox::Auth& auth)
 
 std::unique_ptr<Dropbox> Dropbox::create(Pool& pool, const Json::Value& json)
 {
-    std::unique_ptr<Dropbox> dropbox;
-
-    if (!json.isNull() && json.isMember("token"))
+    if (!json.isNull())
     {
-        dropbox.reset(new Dropbox(pool, Auth(json["token"].asString())));
+        if (json.isObject() && json.isMember("token"))
+        {
+            return makeUnique<Dropbox>(pool, Auth(json["token"].asString()));
+        }
+        else if (json.isString())
+        {
+            return makeUnique<Dropbox>(pool, Auth(json.asString()));
+        }
     }
 
-    return dropbox;
+    return std::unique_ptr<Dropbox>();
 }
 
 Headers Dropbox::httpGetHeaders() const
@@ -214,10 +221,23 @@ bool Dropbox::get(
 void Dropbox::put(
         const std::string rawPath,
         const std::vector<char>& data,
-        const Headers headers,
+        const Headers userHeaders,
         const Query query) const
 {
-    throw ArbiterError("PUT not yet supported for " + type());
+    const std::string path(sanitize(rawPath));
+
+    Headers headers(httpGetHeaders());
+
+    Json::Value json;
+    json["path"] = std::string("/" + path);
+    headers["Dropbox-API-Arg"] = toSanitizedString(json);
+    headers["Content-Type"] = "application/octet-stream";
+
+    headers.insert(userHeaders.begin(), userHeaders.end());
+
+    const Response res(Http::internalPost(putUrl, data, headers, query));
+
+    if (!res.ok()) throw ArbiterError(res.str());
 }
 
 std::string Dropbox::continueFileInfo(std::string cursor) const

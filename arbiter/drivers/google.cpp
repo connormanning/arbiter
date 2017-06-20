@@ -28,25 +28,6 @@ namespace
 {
     std::mutex sslMutex;
 
-    Json::Value parse(const std::string& s)
-    {
-        Json::Reader reader;
-        Json::Value json;
-        if (!reader.parse(s, json))
-        {
-            throw std::runtime_error(
-                    "Parse failure: " + reader.getFormattedErrorMessages());
-        }
-        return json;
-    }
-
-    std::string toFastString(const Json::Value& json)
-    {
-        std::string s = Json::FastWriter().write(json);
-        s.pop_back();   // Strip trailing newline.
-        return s;
-    }
-
     const std::string baseUrl("www.googleapis.com/storage/v1/");
     const std::string uploadUrl("www.googleapis.com/upload/storage/v1/");
     const http::Query altMediaQuery{ { "alt", "media" } };
@@ -209,7 +190,7 @@ std::vector<std::string> Google::glob(std::string path, bool verbose) const
             throw ArbiterError(std::to_string(res.code()) + ": " + res.str());
         }
 
-        const Json::Value json(parse(res.str()));
+        const Json::Value json(util::parse(res.str()));
         for (const auto& item : json["items"])
         {
             results.push_back(
@@ -230,7 +211,7 @@ std::unique_ptr<Google::Auth> Google::Auth::create(const Json::Value& json)
     {
         if (const auto file = drivers::Fs().tryGet(*path))
         {
-            return util::makeUnique<Auth>(parse(*file));
+            return util::makeUnique<Auth>(util::parse(*file));
         }
     }
     else if (json.isString())
@@ -238,7 +219,7 @@ std::unique_ptr<Google::Auth> Google::Auth::create(const Json::Value& json)
         const auto path = json.asString();
         if (const auto file = drivers::Fs().tryGet(path))
         {
-            return util::makeUnique<Auth>(parse(*file));
+            return util::makeUnique<Auth>(util::parse(*file));
         }
     }
 
@@ -277,8 +258,8 @@ void Google::Auth::maybeRefresh() const
     c["iat"] = Json::Int64(now);
     c["exp"] = Json::Int64(now + 3600);
 
-    const std::string header(encodeBase64(toFastString(h)));
-    const std::string claims(encodeBase64(toFastString(c)));
+    const std::string header(encodeBase64(util::toFastString(h)));
+    const std::string claims(encodeBase64(util::toFastString(c)));
 
     const std::string key(m_creds["private_key"].asString());
     const std::string signature(
@@ -299,7 +280,7 @@ void Google::Auth::maybeRefresh() const
 
     if (!res.ok()) throw ArbiterError("Failed to get token: " + res.str());
 
-    const Json::Value token(parse(res.str()));
+    const Json::Value token(util::parse(res.str()));
     m_headers["Authorization"] = "Bearer " + token["access_token"].asString();
     m_expiration = now + token["expires_in"].asInt64();
 }
