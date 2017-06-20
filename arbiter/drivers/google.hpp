@@ -28,7 +28,7 @@ public:
             const Json::Value& json);
 
     // Overrides.
-    virtual std::string type() const override { return "google"; }
+    virtual std::string type() const override { return "gs"; }  // Match gsutil.
 
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
