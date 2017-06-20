@@ -28,7 +28,7 @@ namespace
 {
     std::mutex sslMutex;
 
-    const std::string baseUrl("www.googleapis.com/storage/v1/");
+    const std::string baseGoogleUrl("www.googleapis.com/storage/v1/");
     const std::string uploadUrl("www.googleapis.com/upload/storage/v1/");
     const http::Query altMediaQuery{ { "alt", "media" } };
 
@@ -51,7 +51,7 @@ namespace
 
             // https://cloud.google.com/storage/docs/json_api/v1/
             return
-                baseUrl + "b/" + bucket() +
+                baseGoogleUrl + "b/" + bucket() +
                 "o/" + http::sanitize(object(), exclusions);
         }
 
@@ -62,7 +62,7 @@ namespace
 
         std::string listEndpoint() const
         {
-            return baseUrl + "b/" + bucket() + "o";
+            return baseGoogleUrl + "b/" + bucket() + "o";
         }
 
     private:

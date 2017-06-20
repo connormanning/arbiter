@@ -35,9 +35,9 @@ namespace arbiter
 
 namespace
 {
-    const std::string baseUrl("https://content.dropboxapi.com/");
-    const std::string getUrl(baseUrl + "2/files/download");
-    const std::string putUrl(baseUrl + "2/files/upload");
+    const std::string baseDropboxUrl("https://content.dropboxapi.com/");
+    const std::string getUrl(baseDropboxUrl + "2/files/download");
+    const std::string putUrl(baseDropboxUrl + "2/files/upload");
 
     const std::string listUrl("https://api.dropboxapi.com/2/files/list_folder");
     const std::string metaUrl("https://api.dropboxapi.com/2/files/get_metadata");
