@@ -76,16 +76,11 @@ TEST_P(DriverTest, HttpRange)
     Arbiter a;
 
     const std::string root(GetParam());
-    const std::string path(root + "test.txt");
+    const std::string path(root + "range.txt");
     const std::string data("0123456789");
     const http::Headers headers{ { "Range", "bytes=0-5" } };
 
-    // Dropbox is slow to update files, so we'd get failures here without a
-    // timeout since the old file will often be returned.  Just skip it.
-    if (!a.isHttpDerived(root) || a.getDriver(root).type() == "dropbox")
-    {
-        return;
-    }
+    if (!a.isHttpDerived(root)) return;
 
     EXPECT_NO_THROW(a.put(path, data));
     EXPECT_EQ(a.get(path, headers), "012345");
