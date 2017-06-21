@@ -566,7 +566,8 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
                         // beyond the prefix if recursive is true.
                         if (recursive || !isSubdir)
                         {
-                            results.push_back("s3://" + bucket + "/" + key);
+                            results.push_back(
+                                    type() + "://" + bucket + "/" + key);
                         }
 
                         if (more)

@@ -194,7 +194,8 @@ std::vector<std::string> Google::glob(std::string path, bool verbose) const
         for (const auto& item : json["items"])
         {
             results.push_back(
-                    "google://" + resource.bucket() + item["name"].asString());
+                    type() + "://" +
+                    resource.bucket() + item["name"].asString());
         }
 
         pageToken = json["nextPageToken"].asString();

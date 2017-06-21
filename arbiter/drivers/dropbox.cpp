@@ -309,7 +309,8 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
     bool more(false);
     std::string cursor("");
 
-    auto processPath = [verbose, &results, &more, &cursor](std::string data)
+    auto processPath =
+        [this, verbose, &results, &more, &cursor](std::string data)
     {
         if (data.empty()) return;
 
@@ -342,7 +343,7 @@ std::vector<std::string> Dropbox::glob(std::string rawPath, bool verbose) const
             if (std::equal(tag.begin(), tag.end(), fileTag.begin(), ins))
             {
                 // Results already begin with a slash.
-                results.push_back("dropbox:/" + v["path_lower"].asString());
+                results.push_back(type() + ":/" + v["path_lower"].asString());
             }
         }
     };
