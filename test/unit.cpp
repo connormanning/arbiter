@@ -78,12 +78,18 @@ TEST_P(DriverTest, HttpRange)
     const std::string root(GetParam());
     const std::string path(root + "range.txt");
     const std::string data("0123456789");
-    const http::Headers headers{ { "Range", "bytes=0-5" } };
+
+    const std::size_t x(2);
+    const std::size_t y(8);
+    const http::Headers headers{
+        // The range header is inclusive of the end, so subtract 1 here.
+        { "Range", "bytes=" + std::to_string(x) + "-" + std::to_string(y - 1) }
+    };
 
     if (!a.isHttpDerived(root)) return;
 
     EXPECT_NO_THROW(a.put(path, data));
-    EXPECT_EQ(a.get(path, headers), "012345");
+    EXPECT_EQ(a.get(path, headers), data.substr(x, y - x));
 }
 
 TEST_P(DriverTest, Glob)
