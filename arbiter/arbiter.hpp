@@ -163,8 +163,8 @@ public:
 
     /** Copy the single file @p file to the destination @p to.  If @p to ends
      * with a `/` or '\' character, then @p file will be copied into the
-     * directory @p to with the basename of @p file.  If @p does not end with a
-     * slash character, then @p to will be interpreted as a file path.
+     * directory @p to with the basename of @p file.  If @p to does not end
+     * with a slash character, then @p to will be interpreted as a file path.
      *
      * If @p to is a local filesystem path, then `fs::mkdirp` will be called
      * prior to copying.

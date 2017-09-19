@@ -172,8 +172,8 @@ public:
 
     std::string url() const;
     std::string host() const;
-    std::string baseUrl() const { return m_baseUrl; }
-    std::string bucket() const { return m_bucket; }
+    std::string baseUrl() const;
+    std::string bucket() const;
     std::string object() const;
 
 private:
