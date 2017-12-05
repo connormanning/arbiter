@@ -141,11 +141,7 @@ private:
 class S3::Config
 {
 public:
-    Config(std::string region, std::string baseUrl, bool sse, bool precheck);
-
-    static std::unique_ptr<Config> create(
-            const Json::Value& json,
-            std::string profile);
+    Config(const Json::Value& json, std::string profile);
 
     const std::string& region() const { return m_region; }
     const std::string& baseUrl() const { return m_baseUrl; }
