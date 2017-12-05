@@ -2,6 +2,8 @@
 #include <arbiter/drivers/google.hpp>
 #endif
 
+#include <vector>
+
 #ifdef ARBITER_OPENSSL
 #include <openssl/evp.h>
 #include <openssl/err.h>
@@ -301,8 +303,11 @@ std::string Google::Auth::sign(
 
     auto loadKey([](std::string s, bool isPublic)->EVP_PKEY*
     {
+        // BIO_new_mem_buf needs non-const char*, so use a vector.
+        std::vector<char> vec(s.data(), s.data() + s.size());
+
         EVP_PKEY* key(nullptr);
-        if (BIO* bio = BIO_new_mem_buf(s.data(), -1))
+        if (BIO* bio = BIO_new_mem_buf(vec.data(), vec.size()))
         {
             if (isPublic)
             {

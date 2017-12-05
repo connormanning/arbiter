@@ -109,7 +109,29 @@ S3::S3(
     , m_config(std::move(config))
 { }
 
-std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
+std::vector<std::unique_ptr<S3>> S3::create(Pool& pool, const Json::Value& json)
+{
+    std::vector<std::unique_ptr<S3>> result;
+
+    if (json.isArray())
+    {
+        for (const auto& curr : json)
+        {
+            if (auto s = createOne(pool, curr))
+            {
+                result.push_back(std::move(s));
+            }
+        }
+    }
+    else if (auto s = createOne(pool, json))
+    {
+        result.push_back(std::move(s));
+    }
+
+    return result;
+}
+
+std::unique_ptr<S3> S3::createOne(Pool& pool, const Json::Value& json)
 {
     const std::string profile(extractProfile(json));
 
@@ -124,15 +146,16 @@ std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
 
 std::string S3::extractProfile(const Json::Value& json)
 {
-    if (auto p = util::env("AWS_PROFILE")) return *p;
-    else if (auto p = util::env("AWS_DEFAULT_PROFILE")) return *p;
-    else if (
+    if (
             !json.isNull() &&
             json.isMember("profile") &&
             json["profile"].asString().size())
     {
         return json["profile"].asString();
     }
+
+    if (auto p = util::env("AWS_PROFILE")) return *p;
+    if (auto p = util::env("AWS_DEFAULT_PROFILE")) return *p;
     else return "default";
 }
 
@@ -140,7 +163,20 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
         const Json::Value& json,
         const std::string profile)
 {
-    // Try environment settings first.
+    // Try explicit JSON configuration first.
+    if (
+            !json.isNull() &&
+            json.isMember("access") &&
+            (json.isMember("secret") || json.isMember("hidden")))
+    {
+        return makeUnique<Auth>(
+                json["access"].asString(),
+                json.isMember("secret") ?
+                    json["secret"].asString() :
+                    json["hidden"].asString());
+    }
+
+    // Try environment settings next.
     {
         auto access(util::env("AWS_ACCESS_KEY_ID"));
         auto hidden(util::env("AWS_SECRET_ACCESS_KEY"));
@@ -157,19 +193,6 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
         {
             return makeUnique<Auth>(*access, *hidden);
         }
-    }
-
-    // Try explicit JSON configuration next.
-    if (
-            !json.isNull() &&
-            json.isMember("access") &&
-            (json.isMember("secret") || json.isMember("hidden")))
-    {
-        return makeUnique<Auth>(
-                json["access"].asString(),
-                json.isMember("secret") ?
-                    json["secret"].asString() :
-                    json["hidden"].asString());
     }
 
     const std::string credPath(

@@ -44,7 +44,11 @@ public:
      *          `~/.aws/credentials` or the file at AWS_CREDENTIAL_FILE.
      *      - EC2 instance profile.
      */
-    static std::unique_ptr<S3> create(
+    static std::vector<std::unique_ptr<S3>> create(
+            http::Pool& pool,
+            const Json::Value& json);
+
+    static std::unique_ptr<S3> createOne(
             http::Pool& pool,
             const Json::Value& json);
 
