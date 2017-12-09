@@ -8,15 +8,17 @@
 #endif
 
 #ifndef ARBITER_IS_AMALGAMATION
-#include <arbiter/util/exports.hpp>
-#include <arbiter/driver.hpp>
 #include <arbiter/endpoint.hpp>
+#include <arbiter/driver.hpp>
+#include <arbiter/drivers/dropbox.hpp>
 #include <arbiter/drivers/fs.hpp>
-#include <arbiter/drivers/test.hpp>
+#include <arbiter/drivers/google.hpp>
 #include <arbiter/drivers/http.hpp>
 #include <arbiter/drivers/s3.hpp>
-#include <arbiter/drivers/dropbox.hpp>
+#include <arbiter/drivers/test.hpp>
+#include <arbiter/util/exports.hpp>
 #include <arbiter/util/types.hpp>
+#include <arbiter/util/util.hpp>
 
 #ifndef ARBITER_EXTERNAL_JSON
 #include <arbiter/third/json/json.hpp>
@@ -161,8 +163,8 @@ public:
 
     /** Copy the single file @p file to the destination @p to.  If @p to ends
      * with a `/` or '\' character, then @p file will be copied into the
-     * directory @p to with the basename of @p file.  If @p does not end with a
-     * slash character, then @p to will be interpreted as a file path.
+     * directory @p to with the basename of @p file.  If @p to does not end
+     * with a slash character, then @p to will be interpreted as a file path.
      *
      * If @p to is a local filesystem path, then `fs::mkdirp` will be called
      * prior to copying.

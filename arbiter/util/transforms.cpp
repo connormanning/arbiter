@@ -21,7 +21,7 @@ namespace
     const std::string hexVals("0123456789abcdef");
 } // unnamed namespace
 
-std::string encodeBase64(const std::vector<char>& data)
+std::string encodeBase64(const std::vector<char>& data, const bool pad)
 {
     std::vector<uint8_t> input;
     for (std::size_t i(0); i < data.size(); ++i)
@@ -30,17 +30,18 @@ std::string encodeBase64(const std::vector<char>& data)
         input.push_back(*reinterpret_cast<uint8_t*>(&c));
     }
 
-    std::size_t fullSteps(input.size() / 3);
+    const std::size_t fullSteps(data.size() / 3);
+    const std::size_t remainder(data.size() % 3);
+
     while (input.size() % 3) input.push_back(0);
     uint8_t* pos(input.data());
-    uint8_t* end(input.data() + fullSteps * 3);
 
     std::string output(fullSteps * 4, '_');
     std::size_t outIndex(0);
 
     const uint32_t mask(0x3F);
 
-    while (pos != end)
+    for (std::size_t i(0); i < fullSteps; ++i)
     {
         uint32_t chunk((*pos) << 16 | *(pos + 1) << 8 | *(pos + 2));
 
@@ -52,24 +53,26 @@ std::string encodeBase64(const std::vector<char>& data)
         pos += 3;
     }
 
-    if (end != input.data() + input.size())
+    if (remainder)
     {
-        const std::size_t num(pos - end == 1 ? 2 : 3);
         uint32_t chunk(*(pos) << 16 | *(pos + 1) << 8 | *(pos + 2));
 
         output.push_back(base64Vals[(chunk >> 18) & mask]);
         output.push_back(base64Vals[(chunk >> 12) & mask]);
-        if (num == 3) output.push_back(base64Vals[(chunk >> 6) & mask]);
-    }
+        if (remainder == 2) output.push_back(base64Vals[(chunk >> 6) & mask]);
 
-    while (output.size() % 4) output.push_back('=');
+        if (pad)
+        {
+            while (output.size() % 4) output.push_back('=');
+        }
+    }
 
     return output;
 }
 
-std::string encodeBase64(const std::string& input)
+std::string encodeBase64(const std::string& input, const bool pad)
 {
-    return encodeBase64(std::vector<char>(input.begin(), input.end()));
+    return encodeBase64(std::vector<char>(input.begin(), input.end()), pad);
 }
 
 std::string encodeAsHex(const std::vector<char>& input)

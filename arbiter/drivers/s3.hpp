@@ -44,7 +44,11 @@ public:
      *          `~/.aws/credentials` or the file at AWS_CREDENTIAL_FILE.
      *      - EC2 instance profile.
      */
-    static std::unique_ptr<S3> create(
+    static std::vector<std::unique_ptr<S3>> create(
+            http::Pool& pool,
+            const Json::Value& json);
+
+    static std::unique_ptr<S3> createOne(
             http::Pool& pool,
             const Json::Value& json);
 
@@ -137,11 +141,7 @@ private:
 class S3::Config
 {
 public:
-    Config(std::string region, std::string baseUrl, bool sse, bool precheck);
-
-    static std::unique_ptr<Config> create(
-            const Json::Value& json,
-            std::string profile);
+    Config(const Json::Value& json, std::string profile);
 
     const std::string& region() const { return m_region; }
     const std::string& baseUrl() const { return m_baseUrl; }
@@ -172,8 +172,8 @@ public:
 
     std::string url() const;
     std::string host() const;
-    std::string baseUrl() const { return m_baseUrl; }
-    std::string bucket() const { return m_bucket; }
+    std::string baseUrl() const;
+    std::string bucket() const;
     std::string object() const;
 
 private:

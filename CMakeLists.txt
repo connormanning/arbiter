@@ -3,13 +3,13 @@ cmake_minimum_required(VERSION 2.8.8)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" ${CMAKE_MODULE_PATH} )
 project(arbiter)
 
-
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-find_package(Curl)
 
+
+
+find_package(Curl)
 if (CURL_FOUND)
     message("Found curl")
-    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
     find_package(Threads REQUIRED)
     include_directories(${CURL_INCLUDE_DIRS})
     set(ARBITER_CURL TRUE)
@@ -17,6 +17,18 @@ if (CURL_FOUND)
 else()
     message("Curl NOT found")
 endif()
+
+find_package(OpenSSL)
+if (OPENSSL_FOUND)
+    message("Found OpenSSL ${OPENSSL_VERSION}")
+    include_directories(${OPENSSL_INCLUDE_DIR})
+    set(ARBITER_OPENSSL TRUE)
+    add_definitions("-DARBITER_OPENSSL")
+else()
+    message("OpenSSL NOT found")
+endif()
+
+
 
 MESSAGE(${CMAKE_CXX_COMPILER_ID})
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
@@ -46,14 +58,16 @@ set(OBJS
     $<TARGET_OBJECTS:third>
     $<TARGET_OBJECTS:util>)
 
-add_library(arbiter SHARED  ${OBJS})
+add_library(arbiter SHARED ${OBJS})
 
 if (${ARBITER_CURL})
 	target_link_libraries(arbiter PUBLIC ${CURL_LIBRARIES})
+    target_include_directories(arbiter PRIVATE "${CURL_INCLUDE_DIR}")
 endif()
 
-if (${ARBITER_CURL})
-    target_include_directories(arbiter PRIVATE "${CURL_INCLUDE_DIR}")
+if (${ARBITER_OPENSSL})
+    target_link_libraries(arbiter PUBLIC ${OPENSSL_LIBRARIES})
+    target_include_directories(arbiter PRIVATE "${OPENSSL_INCLUDE_DIR}")
 endif()
 
 add_subdirectory(third/gtest-1.7.0)
@@ -61,3 +75,4 @@ include_directories(src third/gtest-1.7.0/include third/gtest-1.7.0)
 add_subdirectory(test)
 
 install(TARGETS arbiter DESTINATION lib)
+

@@ -26,7 +26,7 @@ namespace drivers
  *
  * Internal methods for derivers are provided as protected methods.
  */
-class Http : public Driver
+class ARBITER_DLL Http : public Driver
 {
 public:
     Http(http::Pool& pool);
@@ -100,13 +100,14 @@ public:
             http::Headers headers,
             http::Query query) const;
 
-protected:
-    /** HTTP-derived Drivers should override this version of GET to allow for
-     * custom headers and query parameters.
-     */
-    virtual bool get(
+    void post(
             std::string path,
-            std::vector<char>& data,
+            const std::string& data,
+            http::Headers headers,
+            http::Query query) const;
+    void post(
+            std::string path,
+            const std::vector<char>& data,
             http::Headers headers,
             http::Query query) const;
 
@@ -136,6 +137,18 @@ protected:
             http::Headers headers = http::Headers(),
             http::Query query = http::Query()) const;
 
+protected:
+    /** HTTP-derived Drivers should override this version of GET to allow for
+     * custom headers and query parameters.
+     */
+    virtual bool get(
+            std::string path,
+            std::vector<char>& data,
+            http::Headers headers,
+            http::Query query) const;
+
+    http::Pool& m_pool;
+
 private:
     virtual bool get(
             std::string path,
@@ -144,12 +157,7 @@ private:
         return get(path, data, http::Headers(), http::Query());
     }
 
-    std::string typedPath(const std::string& p) const
-    {
-        return type() + "://" + p;
-    }
-
-    http::Pool& m_pool;
+    std::string typedPath(const std::string& p) const;
 };
 
 /** @brief HTTPS driver.  Identical to the HTTP driver except for its type

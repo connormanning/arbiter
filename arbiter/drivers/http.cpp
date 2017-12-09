@@ -139,13 +139,38 @@ void Http::put(
     }
 }
 
+void Http::post(
+        const std::string path,
+        const std::string& data,
+        const Headers h,
+        const Query q) const
+{
+    return post(path, std::vector<char>(data.begin(), data.end()), h, q);
+}
+
+void Http::post(
+        const std::string path,
+        const std::vector<char>& data,
+        const Headers headers,
+        const Query query) const
+{
+    auto http(m_pool.acquire());
+    auto res(http.post(typedPath(path), data, headers, query));
+
+    if (!res.ok())
+    {
+        std::cout << res.str() << std::endl;
+        throw ArbiterError("Couldn't HTTP POST to " + path);
+    }
+}
+
 Response Http::internalGet(
         const std::string path,
         const Headers headers,
         const Query query,
         const std::size_t reserve) const
 {
-    return m_pool.acquire().get(path, headers, query, reserve);
+    return m_pool.acquire().get(typedPath(path), headers, query, reserve);
 }
 
 Response Http::internalPut(
@@ -154,7 +179,7 @@ Response Http::internalPut(
         const Headers headers,
         const Query query) const
 {
-    return m_pool.acquire().put(path, data, headers, query);
+    return m_pool.acquire().put(typedPath(path), data, headers, query);
 }
 
 Response Http::internalHead(
@@ -162,16 +187,26 @@ Response Http::internalHead(
         const Headers headers,
         const Query query) const
 {
-    return m_pool.acquire().head(path, headers, query);
+    return m_pool.acquire().head(typedPath(path), headers, query);
 }
 
 Response Http::internalPost(
         const std::string path,
         const std::vector<char>& data,
-        const Headers headers,
+        Headers headers,
         const Query query) const
 {
-    return m_pool.acquire().post(path, data, headers, query);
+    if (!headers.count("Content-Length"))
+    {
+        headers["Content-Length"] = std::to_string(data.size());
+    }
+    return m_pool.acquire().post(typedPath(path), data, headers, query);
+}
+
+std::string Http::typedPath(const std::string& p) const
+{
+    if (Arbiter::getType(p) != "file") return p;
+    else return type() + "://" + p;
 }
 
 } // namespace drivers
