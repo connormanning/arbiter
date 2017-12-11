@@ -259,7 +259,7 @@ void Arbiter::copy(
             {
                 std::cout <<
                     ++i << " / " << paths.size() << ": " <<
-                    path << " -> " << dstEndpoint.fullPath(subpath) <<
+                    path << " -> " << dstEndpoint.prefixedFullPath(subpath) <<
                     std::endl;
             }
 

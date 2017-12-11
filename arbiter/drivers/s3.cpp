@@ -171,25 +171,28 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
                 json["access"].asString(),
                 json.isMember("secret") ?
                     json["secret"].asString() :
-                    json["hidden"].asString());
+                    json["hidden"].asString(),
+                json["token"].asString());
     }
 
     // Try environment settings next.
     {
         auto access(util::env("AWS_ACCESS_KEY_ID"));
         auto hidden(util::env("AWS_SECRET_ACCESS_KEY"));
+        auto token(util::env("AWS_SESSION_TOKEN"));
 
         if (access && hidden)
         {
-            return makeUnique<Auth>(*access, *hidden);
+            return makeUnique<Auth>(*access, *hidden, token ? *token : "");
         }
 
         access = util::env("AMAZON_ACCESS_KEY_ID");
         hidden = util::env("AMAZON_SECRET_ACCESS_KEY");
+        token = util::env("AMAZON_SESSION_TOKEN");
 
         if (access && hidden)
         {
-            return makeUnique<Auth>(*access, *hidden);
+            return makeUnique<Auth>(*access, *hidden, token ? *token : "");
         }
     }
 

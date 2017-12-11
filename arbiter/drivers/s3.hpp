@@ -113,9 +113,10 @@ private:
 class S3::Auth
 {
 public:
-    Auth(std::string access, std::string hidden)
+    Auth(std::string access, std::string hidden, std::string token = "")
         : m_access(access)
         , m_hidden(hidden)
+        , m_token(token)
     { }
 
     Auth(std::string iamRole)
