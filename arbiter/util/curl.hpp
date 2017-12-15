@@ -25,6 +25,8 @@
 
 #ifdef ARBITER_CURL
 #include <curl/curl.h>
+#else
+typedef void CURL;
 #endif
 
 struct curl_slist;
@@ -83,7 +85,7 @@ private:
     Curl(const Curl&);
     Curl& operator=(const Curl&);
 
-    void* m_curl = nullptr;
+    CURL* m_curl = nullptr;
     curl_slist* m_headers = nullptr;
 
     bool m_verbose = false;
