@@ -12,6 +12,7 @@
 #include <locale>
 #include <codecvt>
 #include <windows.h>
+#include <direct.h>
 #endif
 
 #include <algorithm>
@@ -157,7 +158,6 @@ namespace fs
 
 bool mkdirp(std::string raw)
 {
-#ifndef ARBITER_WINDOWS
     const std::string dir(([&raw]()
     {
         std::string s(expandTilde(raw));
@@ -182,27 +182,24 @@ bool mkdirp(std::string raw)
         it = std::find_if(++it, end, util::isSlash);
 
         const std::string cur(dir.begin(), it);
+#ifndef ARBITER_WINDOWS
         const bool err(::mkdir(cur.c_str(), S_IRWXU | S_IRGRP | S_IROTH));
+#else
+        const bool err(::_mkdir(cur.c_str()));
+#endif
         if (err && errno != EEXIST) return false;
     }
     while (it != end);
 
     return true;
 
-#else
-    throw ArbiterError("Windows mkdirp not done yet.");
-#endif
 }
 
 bool remove(std::string filename)
 {
     filename = expandTilde(filename);
 
-#ifndef ARBITER_WINDOWS
     return ::remove(filename.c_str()) == 0;
-#else
-    throw ArbiterError("Windows remove not done yet.");
-#endif
 }
 
 namespace
