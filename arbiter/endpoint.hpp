@@ -6,6 +6,7 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 
+#include <arbiter/util/exports.hpp>
 #include <arbiter/util/types.hpp>
 
 #endif
@@ -32,7 +33,7 @@ class Driver;
  *
  * An Endpoint may be created using Arbiter::getEndpoint.
  */
-class Endpoint
+class ARBITER_DLL Endpoint
 {
     // Only Arbiter may construct.
     friend class Arbiter;
