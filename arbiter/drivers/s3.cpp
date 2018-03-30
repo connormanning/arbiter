@@ -435,6 +435,7 @@ bool S3::get(
         const Query query) const
 {
     Headers headers(m_config->baseHeaders());
+    headers.erase("x-amz-server-side-encryption");
     headers.insert(userHeaders.begin(), userHeaders.end());
 
     std::unique_ptr<std::size_t> size(

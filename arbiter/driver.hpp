@@ -6,6 +6,12 @@
 #include <string>
 #include <vector>
 
+#ifndef ARBITER_IS_AMALGAMATION
+
+#include <arbiter/util/exports.hpp>
+
+#endif
+
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
 {
@@ -31,7 +37,7 @@ class HttpPool;
  * HTTP-derived classes should override the PUT and GET versions that accept
  * http::Headers and http::Query parameters instead.
  */
-class Driver
+class ARBITER_DLL Driver
 {
 public:
     virtual ~Driver() { }
