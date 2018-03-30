@@ -30,22 +30,7 @@ namespace
         std::time_t now(std::time(nullptr));
         std::tm utc(*std::gmtime(&now));
         std::tm loc(*std::localtime(&now));
-        return std::difftime(std::mktime(&utc), std::mktime(&loc));
-    }
-
-    std::tm getTm()
-    {
-        std::tm tm;
-        tm.tm_sec = 0;
-        tm.tm_min = 0;
-        tm.tm_hour = 0;
-        tm.tm_mday = 0;
-        tm.tm_mon = 0;
-        tm.tm_year = 0;
-        tm.tm_wday = 0;
-        tm.tm_yday = 0;
-        tm.tm_isdst = 0;
-        return tm;
+        return (int64_t)std::difftime(std::mktime(&utc), std::mktime(&loc));
     }
 }
 
@@ -62,7 +47,8 @@ Time::Time(const std::string& s, const std::string& format)
 {
     static const int64_t utcOffset(utcOffsetSeconds());
 
-    auto tm(getTm());
+    std::tm tm{};
+
 #ifndef ARBITER_WINDOWS
     // We'd prefer to use get_time, but it has poor compiler support.
     if (!strptime(s.c_str(), format.c_str(), &tm))
@@ -77,7 +63,9 @@ Time::Time(const std::string& s, const std::string& format)
         throw ArbiterError("Failed to parse " + s + " as time: " + format);
     }
 #endif
-    tm.tm_sec -= utcOffset;
+    if (utcOffset > std::numeric_limits<int>::max())
+        throw ArbiterError("Can't convert offset time in seconds to tm type.");
+    tm.tm_sec -= (int)utcOffset;
     m_time = std::mktime(&tm);
 }
 
@@ -102,7 +90,7 @@ std::string Time::str(const std::string& format) const
 
 int64_t Time::operator-(const Time& other) const
 {
-    return std::difftime(m_time, other.m_time);
+    return (int64_t)std::difftime(m_time, other.m_time);
 }
 
 int64_t Time::asUnix() const
