@@ -40,13 +40,13 @@ namespace http
 /** Perform URI percent-encoding, without encoding characters included in
  * @p exclusions.
  */
-std::string sanitize(std::string path, std::string exclusions = "/");
+ARBITER_DLL std::string sanitize(std::string path, std::string exclusions = "/");
 
 /** Build a query string from key-value pairs.  If @p query is empty, the
  * result is an empty string.  Otherwise, the result will start with the
  * '?' character.
  */
-std::string buildQueryString(const http::Query& query);
+ARBITER_DLL std::string buildQueryString(const http::Query& query);
 
 /** @cond arbiter_internal */
 

@@ -6,6 +6,7 @@ set(
     "${BASE}/http.cpp"
     "${BASE}/dropbox.cpp"
     "${BASE}/fs.cpp"
+    "${BASE}/google.cpp"
     "${BASE}/s3.cpp"
 )
 
@@ -14,6 +15,7 @@ set(
     "${BASE}/http.hpp"
     "${BASE}/dropbox.hpp"
     "${BASE}/fs.hpp"
+    "${BASE}/google.hpp"
     "${BASE}/s3.hpp"
     "${BASE}/test.hpp"
 )

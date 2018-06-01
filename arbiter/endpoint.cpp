@@ -153,6 +153,41 @@ void Endpoint::put(
     getHttpDriver().put(path, data, headers, query);
 }
 
+http::Response Endpoint::httpGet(
+        std::string path,
+        http::Headers headers,
+        http::Query query,
+        const std::size_t reserve) const
+{
+    return getHttpDriver().internalGet(fullPath(path), headers, query, reserve);
+}
+
+http::Response Endpoint::httpPut(
+        std::string path,
+        const std::vector<char>& data,
+        http::Headers headers,
+        http::Query query) const
+{
+    return getHttpDriver().internalPut(fullPath(path), data, headers, query);
+}
+
+http::Response Endpoint::httpHead(
+        std::string path,
+        http::Headers headers,
+        http::Query query) const
+{
+    return getHttpDriver().internalHead(fullPath(path), headers, query);
+}
+
+http::Response Endpoint::httpPost(
+        std::string path,
+        const std::vector<char>& data,
+        http::Headers headers,
+        http::Query query) const
+{
+    return getHttpDriver().internalPost(fullPath(path), data, headers, query);
+}
+
 std::string Endpoint::fullPath(const std::string& subpath) const
 {
     return m_root + subpath;

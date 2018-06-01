@@ -62,6 +62,10 @@ public:
 
     std::vector<char> data() const { return m_data; }
     const Headers& headers() const { return m_headers; }
+    std::string str() const
+    {
+        return std::string(data().data(), data().size());
+    }
 
 private:
     int m_code;

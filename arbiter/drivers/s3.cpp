@@ -1,5 +1,4 @@
 #ifndef ARBITER_IS_AMALGAMATION
-#include <arbiter/arbiter.hpp>
 #include <arbiter/drivers/s3.hpp>
 #endif
 
@@ -43,7 +42,7 @@ namespace
 
     // See:
     // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
-    const std::string credIp("http://169.254.169.254/");
+    const std::string credIp("169.254.169.254/");
     const std::string credBase(
             credIp + "latest/meta-data/iam/security-credentials/");
 
@@ -110,30 +109,51 @@ S3::S3(
     , m_config(std::move(config))
 { }
 
-std::unique_ptr<S3> S3::create(Pool& pool, const Json::Value& json)
+std::vector<std::unique_ptr<S3>> S3::create(Pool& pool, const Json::Value& json)
+{
+    std::vector<std::unique_ptr<S3>> result;
+
+    if (json.isArray())
+    {
+        for (const auto& curr : json)
+        {
+            if (auto s = createOne(pool, curr))
+            {
+                result.push_back(std::move(s));
+            }
+        }
+    }
+    else if (auto s = createOne(pool, json))
+    {
+        result.push_back(std::move(s));
+    }
+
+    return result;
+}
+
+std::unique_ptr<S3> S3::createOne(Pool& pool, const Json::Value& json)
 {
     const std::string profile(extractProfile(json));
 
     auto auth(Auth::create(json, profile));
     if (!auth) return std::unique_ptr<S3>();
 
-    auto config(Config::create(json, profile));
-    if (!config) return std::unique_ptr<S3>();
-
+    std::unique_ptr<Config> config(new Config(json, profile));
     return makeUnique<S3>(pool, profile, std::move(auth), std::move(config));
 }
 
 std::string S3::extractProfile(const Json::Value& json)
 {
-    if (auto p = util::env("AWS_PROFILE")) return *p;
-    else if (auto p = util::env("AWS_DEFAULT_PROFILE")) return *p;
-    else if (
+    if (
             !json.isNull() &&
             json.isMember("profile") &&
             json["profile"].asString().size())
     {
         return json["profile"].asString();
     }
+
+    if (auto p = util::env("AWS_PROFILE")) return *p;
+    if (auto p = util::env("AWS_DEFAULT_PROFILE")) return *p;
     else return "default";
 }
 
@@ -141,26 +161,7 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
         const Json::Value& json,
         const std::string profile)
 {
-    // Try environment settings first.
-    {
-        auto access(util::env("AWS_ACCESS_KEY_ID"));
-        auto hidden(util::env("AWS_SECRET_ACCESS_KEY"));
-
-        if (access && hidden)
-        {
-            return makeUnique<Auth>(*access, *hidden);
-        }
-
-        access = util::env("AMAZON_ACCESS_KEY_ID");
-        hidden = util::env("AMAZON_SECRET_ACCESS_KEY");
-
-        if (access && hidden)
-        {
-            return makeUnique<Auth>(*access, *hidden);
-        }
-    }
-
-    // Try explicit JSON configuration next.
+    // Try explicit JSON configuration first.
     if (
             !json.isNull() &&
             json.isMember("access") &&
@@ -170,7 +171,29 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
                 json["access"].asString(),
                 json.isMember("secret") ?
                     json["secret"].asString() :
-                    json["hidden"].asString());
+                    json["hidden"].asString(),
+                json["token"].asString());
+    }
+
+    // Try environment settings next.
+    {
+        auto access(util::env("AWS_ACCESS_KEY_ID"));
+        auto hidden(util::env("AWS_SECRET_ACCESS_KEY"));
+        auto token(util::env("AWS_SESSION_TOKEN"));
+
+        if (access && hidden)
+        {
+            return makeUnique<Auth>(*access, *hidden, token ? *token : "");
+        }
+
+        access = util::env("AMAZON_ACCESS_KEY_ID");
+        hidden = util::env("AMAZON_SECRET_ACCESS_KEY");
+        token = util::env("AMAZON_SESSION_TOKEN");
+
+        if (access && hidden)
+        {
+            return makeUnique<Auth>(*access, *hidden, token ? *token : "");
+        }
     }
 
     const std::string credPath(
@@ -221,31 +244,21 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
 }
 
 S3::Config::Config(
-        const std::string region,
-        const std::string baseUrl,
-        const bool sse,
-        const bool precheck)
-    : m_region(region)
-    , m_baseUrl(baseUrl)
-    , m_precheck(precheck)
-{
-    if (sse)
-    {
-        // This could grow to support other SSE schemes, like KMS and customer-
-        // supplied keys.
-        m_baseHeaders["x-amz-server-side-encryption"] = "AES256";
-    }
-}
-
-std::unique_ptr<S3::Config> S3::Config::create(
         const Json::Value& json,
         const std::string profile)
+    : m_region(extractRegion(json, profile))
+    , m_baseUrl(extractBaseUrl(json, m_region))
+    , m_precheck(json["precheck"].asBool())
 {
-    const auto region(extractRegion(json, profile));
-    const auto baseUrl(extractBaseUrl(json, region));
-    const bool sse(json["sse"].asBool());
-    const bool precheck(json["precheck"].asBool());
-    return makeUnique<Config>(region, baseUrl, sse, precheck);
+    if (json["sse"].asBool())
+    {
+        m_baseHeaders["x-amz-server-side-encryption"] = "AES256";
+    }
+
+    if (json["requesterPays"].asBool())
+    {
+        m_baseHeaders["x-amz-request-payer"] = "requester";
+    }
 }
 
 std::string S3::Config::extractRegion(
@@ -363,7 +376,10 @@ S3::AuthFields S3::Auth::fields() const
             m_access = creds["AccessKeyId"].asString();
             m_hidden = creds["SecretAccessKey"].asString();
             m_token = creds["Token"].asString();
-            m_expiration.reset(new Time(creds["Expiration"].asString(), arbiter::Time::iso8601));
+            m_expiration.reset(
+                    new Time(
+                        creds["Expiration"].asString(),
+                        arbiter::Time::iso8601));
 
             if (*m_expiration - now < reauthSeconds)
             {
@@ -400,7 +416,8 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
             Headers(),
             empty);
 
-    Response res(Http::internalHead(resource.url(), apiV4.headers()));
+    drivers::Http http(m_pool);
+    Response res(http.internalHead(resource.url(), apiV4.headers()));
 
     if (res.ok() && res.headers().count("Content-Length"))
     {
@@ -414,9 +431,13 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
 bool S3::get(
         const std::string rawPath,
         std::vector<char>& data,
-        const Headers headers,
+        const Headers userHeaders,
         const Query query) const
 {
+    Headers headers(m_config->baseHeaders());
+    headers.erase("x-amz-server-side-encryption");
+    headers.insert(userHeaders.begin(), userHeaders.end());
+
     std::unique_ptr<std::size_t> size(
             m_config->precheck() && !headers.count("Range") ?
                 tryGetSize(rawPath) : nullptr);
@@ -431,8 +452,9 @@ bool S3::get(
             headers,
             empty);
 
+    drivers::Http http(m_pool);
     Response res(
-            Http::internalGet(
+            http.internalGet(
                 resource.url(),
                 apiV4.headers(),
                 apiV4.query(),
@@ -445,8 +467,7 @@ bool S3::get(
     }
     else
     {
-        std::cout << std::string(res.data().data(), res.data().size()) <<
-            std::endl;
+        std::cout << res.code() << ": " << res.str() << std::endl;
         return false;
     }
 }
@@ -462,6 +483,11 @@ void S3::put(
     Headers headers(m_config->baseHeaders());
     headers.insert(userHeaders.begin(), userHeaders.end());
 
+    if (Arbiter::getExtension(rawPath) == "json")
+    {
+        headers["Content-Type"] = "application/json";
+    }
+
     const ApiV4 apiV4(
             "PUT",
             m_config->region(),
@@ -471,8 +497,9 @@ void S3::put(
             headers,
             data);
 
+    drivers::Http http(m_pool);
     Response res(
-            Http::internalPut(
+            http.internalPut(
                 resource.url(),
                 data,
                 apiV4.headers(),
@@ -562,7 +589,8 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
                         // beyond the prefix if recursive is true.
                         if (recursive || !isSubdir)
                         {
-                            results.push_back("s3://" + bucket + "/" + key);
+                            results.push_back(
+                                    type() + "://" + bucket + "/" + key);
                         }
 
                         if (more)
@@ -620,7 +648,10 @@ S3::ApiV4::ApiV4(
 
     if (verb == "PUT" || verb == "POST")
     {
-        m_headers["Content-Type"] = "application/octet-stream";
+        if (!m_headers.count("Content-Type"))
+        {
+            m_headers["Content-Type"] = "application/octet-stream";
+        }
         m_headers["Transfer-Encoding"] = "";
         m_headers["Expect"] = "";
     }
@@ -741,8 +772,8 @@ std::string S3::ApiV4::getAuthHeader(
         "Signature=" + signature;
 }
 
-S3::Resource::Resource(std::string baseUrl, std::string fullPath)
-    : m_baseUrl(baseUrl)
+S3::Resource::Resource(std::string base, std::string fullPath)
+    : m_baseUrl(base)
     , m_bucket()
     , m_object()
     , m_virtualHosted(true)
@@ -753,15 +784,29 @@ S3::Resource::Resource(std::string baseUrl, std::string fullPath)
     m_bucket = fullPath.substr(0, split);
     if (split != std::string::npos) m_object = fullPath.substr(split + 1);
 
-    m_virtualHosted = m_bucket.find_first_of('.') == std::string::npos;
+    // Always use virtual-host style paths.  We'll use HTTP for our back-end
+    // calls to allow this.  If we were to use HTTPS on the back-end, then we
+    // would have to use non-virtual-hosted paths if the bucket name contained
+    // '.' characters.
+    //
+    // m_virtualHosted = m_bucket.find_first_of('.') == std::string::npos;
+}
+
+std::string S3::Resource::baseUrl() const
+{
+    return m_baseUrl;
+}
+
+std::string S3::Resource::bucket() const
+{
+    return m_virtualHosted ? m_bucket : "";
 }
 
 std::string S3::Resource::url() const
 {
-    // We can't use virtual-host style paths if the bucket contains dots.
     if (m_virtualHosted)
     {
-        return "https://" + m_bucket + "." + m_baseUrl + m_object;
+        return "http://" + m_bucket + "." + m_baseUrl + m_object;
     }
     else
     {

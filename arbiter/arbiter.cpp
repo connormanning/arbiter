@@ -33,13 +33,22 @@ namespace
 
         if (!b.isNull())
         {
-            for (const auto& key : b.getMemberNames())
+            if (b.isObject())
             {
-                // If A doesn't have this key, then set it to B's value.
-                // If A has the key but it's an object, then recursively merge.
-                // Otherwise A already has a value here that we won't overwrite.
-                if (!out.isMember(key)) out[key] = b[key];
-                else if (out[key].isObject()) merge(out[key], b[key]);
+                for (const auto& key : b.getMemberNames())
+                {
+                    // If A doesn't have this key, then set it to B's value.
+                    // If A has the key but it's an object, then recursively
+                    // merge.
+                    // Otherwise A already has a value here that we won't
+                    // overwrite.
+                    if (!out.isMember(key)) out[key] = b[key];
+                    else if (out[key].isObject()) merge(out[key], b[key]);
+                }
+            }
+            else
+            {
+                out = b;
             }
         }
 
@@ -89,24 +98,19 @@ Arbiter::Arbiter(const Json::Value& in)
     auto https(Https::create(*m_pool, json["http"]));
     if (https) m_drivers[https->type()] = std::move(https);
 
-    if (json["s3"].isArray())
-    {
-        for (const auto& sub : json["s3"])
-        {
-            auto s3(S3::create(*m_pool, sub));
-            m_drivers[s3->type()] = std::move(s3);
-        }
-    }
-    else
-    {
-        auto s3(S3::create(*m_pool, json["s3"]));
-        if (s3) m_drivers[s3->type()] = std::move(s3);
-    }
+    auto s3(S3::create(*m_pool, json["s3"]));
+    for (auto& s : s3) m_drivers[s->type()] = std::move(s);
 
     // Credential-based drivers should probably all do something similar to the
     // S3 driver to support multiple profiles.
     auto dropbox(Dropbox::create(*m_pool, json["dropbox"]));
     if (dropbox) m_drivers[dropbox->type()] = std::move(dropbox);
+
+#ifdef ARBITER_OPENSSL
+    auto google(Google::create(*m_pool, json["gs"]));
+    if (google) m_drivers[google->type()] = std::move(google);
+#endif
+
 #endif
 }
 
@@ -255,7 +259,7 @@ void Arbiter::copy(
             {
                 std::cout <<
                     ++i << " / " << paths.size() << ": " <<
-                    path << " -> " << dstEndpoint.fullPath(subpath) <<
+                    path << " -> " << dstEndpoint.prefixedFullPath(subpath) <<
                     std::endl;
             }
 

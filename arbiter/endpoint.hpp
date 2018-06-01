@@ -6,6 +6,7 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 
+#include <arbiter/util/exports.hpp>
 #include <arbiter/util/types.hpp>
 
 #endif
@@ -32,7 +33,7 @@ class Driver;
  *
  * An Endpoint may be created using Arbiter::getEndpoint.
  */
-class Endpoint
+class ARBITER_DLL Endpoint
 {
     // Only Arbiter may construct.
     friend class Arbiter;
@@ -154,6 +155,29 @@ public:
 
     /** Get a further nested subpath relative to this Endpoint's root. */
     Endpoint getSubEndpoint(std::string subpath) const;
+
+    http::Response httpGet(
+            std::string path,
+            http::Headers headers = http::Headers(),
+            http::Query query = http::Query(),
+            std::size_t reserve = 0) const;
+
+    http::Response httpPut(
+            std::string path,
+            const std::vector<char>& data,
+            http::Headers headers = http::Headers(),
+            http::Query query = http::Query()) const;
+
+    http::Response httpHead(
+            std::string path,
+            http::Headers headers = http::Headers(),
+            http::Query query = http::Query()) const;
+
+    http::Response httpPost(
+            std::string path,
+            const std::vector<char>& data,
+            http::Headers headers = http::Headers(),
+            http::Query query = http::Query()) const;
 
 private:
     Endpoint(const Driver& driver, std::string root);

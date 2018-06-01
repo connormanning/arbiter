@@ -138,7 +138,7 @@ Curl::Curl(const Json::Value& json)
         {
             if (h.isMember("timeout"))
             {
-                m_timeout = h["timeout"].asUInt64();
+                m_timeout = long(h["timeout"].asUInt64());
             }
 
             if (h.isMember("followRedirect"))
