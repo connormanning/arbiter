@@ -1,6 +1,6 @@
 #include <arbiter/arbiter.hpp>
 
-class Config
+class ARBITER_DLL Config
 {
 public:
     static const Json::Value& get()

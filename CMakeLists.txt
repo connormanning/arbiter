@@ -5,8 +5,6 @@ project(arbiter)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 
-
-
 find_package(Curl)
 if (CURL_FOUND)
     message("Found curl")
@@ -44,6 +42,9 @@ if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     add_definitions("-DWINDOWS")
     add_definitions("-D_CRT_SECURE_NO_WARNINGS")
+    
+    add_definitions("-DJSON_DLL_BUILD")
+    
 endif()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
