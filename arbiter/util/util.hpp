@@ -108,7 +108,11 @@ namespace util
         {
             // We are going to join current with a populated subpath, so make
             // sure they are separated by a slash.
-            sep = "/";
+#ifdef ARBITER_WINDOWS
+            sep = "\\";
+#else
+            sep = "/";   
+#endif
         }
         else if (next.empty() && currentIsDir)
         {
@@ -116,7 +120,12 @@ namespace util
             // directory.  Retain its trailing slash.
             if (current.size() && !isSlash(current.back()))
             {
-                sep = "/";
+#ifdef ARBITER_WINDOWS
+                sep = "\\";
+#else
+                sep = "/";   
+#endif
+
             }
         }
 
@@ -156,13 +165,13 @@ namespace util
     /** @brief Extract an environment variable, if it exists, independent of
      * platform.
      */
-    std::unique_ptr<std::string> env(const std::string& var);
+    ARBITER_DLL std::unique_ptr<std::string> env(const std::string& var);
 
     /** @brief Split a string on a token. */
-    std::vector<std::string> split(const std::string& s, char delimiter = '\n');
+    ARBITER_DLL std::vector<std::string> split(const std::string& s, char delimiter = '\n');
 
     /** @brief Remove whitespace. */
-    std::string stripWhitespace(const std::string& s);
+    ARBITER_DLL std::string stripWhitespace(const std::string& s);
 
     template<typename T, typename... Args>
     std::unique_ptr<T> makeUnique(Args&&... args)

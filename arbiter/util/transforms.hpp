@@ -3,6 +3,16 @@
 #include <string>
 #include <vector>
 
+#ifndef ARBITER_IS_AMALGAMATION
+#include <arbiter/util/exports.hpp>
+
+#ifndef ARBITER_EXTERNAL_JSON
+#include <arbiter/third/json/json.hpp>
+#endif
+
+#endif
+
+
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
 {
@@ -13,11 +23,11 @@ namespace arbiter
 namespace crypto
 {
 
-std::string encodeBase64(const std::vector<char>& data, bool pad = true);
-std::string encodeBase64(const std::string& data, bool pad = true);
+ARBITER_DLL std::string encodeBase64(const std::vector<char>& data, bool pad = true);
+ARBITER_DLL std::string encodeBase64(const std::string& data, bool pad = true);
 
-std::string encodeAsHex(const std::vector<char>& data);
-std::string encodeAsHex(const std::string& data);
+ARBITER_DLL std::string encodeAsHex(const std::vector<char>& data);
+ARBITER_DLL std::string encodeAsHex(const std::string& data);
 
 } // namespace crypto
 } // namespace arbiter

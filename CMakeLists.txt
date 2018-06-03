@@ -5,8 +5,6 @@ project(arbiter)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 
-
-
 find_package(Curl)
 if (CURL_FOUND)
     message("Found curl")
@@ -44,6 +42,10 @@ if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     add_definitions("-DWINDOWS")
     add_definitions("-D_CRT_SECURE_NO_WARNINGS")
+    
+    add_definitions("-DJSON_DLL_BUILD")
+    find_library(SHLWAPI Shlwapi.lib) 
+    
 endif()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
@@ -69,6 +71,8 @@ if (${ARBITER_OPENSSL})
     target_link_libraries(arbiter PUBLIC ${OPENSSL_LIBRARIES})
     target_include_directories(arbiter PRIVATE "${OPENSSL_INCLUDE_DIR}")
 endif()
+
+target_link_libraries(arbiter PUBLIC ${SHLWAPI})
 
 add_subdirectory(third/gtest-1.7.0)
 include_directories(src third/gtest-1.7.0/include third/gtest-1.7.0)

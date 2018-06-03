@@ -41,8 +41,12 @@ std::string getBasename(const std::string fullPath)
     const std::string stripped(stripPostfixing(Arbiter::stripType(fullPath)));
 
     // Now do the real slash searching.
-    const std::size_t pos(stripped.rfind('/'));
-
+    std::size_t pos(stripped.rfind('/'));
+    
+    // Maybe windows
+    if (pos == std::string::npos) 
+        pos = stripped.rfind('\\');
+    
     if (pos != std::string::npos)
     {
         const std::string sub(stripped.substr(pos + 1));
