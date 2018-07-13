@@ -652,8 +652,8 @@ S3::ApiV4::ApiV4(
         {
             m_headers["Content-Type"] = "application/octet-stream";
         }
-        m_headers["Transfer-Encoding"] = "";
-        m_headers["Expect"] = "";
+        m_headers.erase("Transfer-Encoding");
+        m_headers.erase("Expect");
     }
 
     const Headers normalizedHeaders(
@@ -840,4 +840,3 @@ std::string S3::Resource::host() const
 #ifdef ARBITER_CUSTOM_NAMESPACE
 }
 #endif
-
