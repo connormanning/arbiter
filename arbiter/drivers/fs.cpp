@@ -228,7 +228,8 @@ template<typename C>
 		}
 		return s;
 	}
-    
+
+#ifdef ARBITER_WINDOWS
 	bool icase_wchar_cmp(wchar_t a, wchar_t b)
 	{
 		return std::toupper(a, std::locale()) == std::toupper(b, std::locale());
@@ -241,7 +242,8 @@ template<typename C>
 			std::equal(s1.begin(), s1.end(), s2.begin(),
 				icase_wchar_cmp);
 	}
-    
+#endif
+
     Globs globOne(std::string path)
     {
         Globs results;
@@ -286,17 +288,17 @@ template<typename C>
 				if (icase_cmp(std::wstring(data.cFileName), L".") ||
 					icase_cmp(std::wstring(data.cFileName), L".."))
 					continue;
-   
+
 				std::vector<wchar_t> buf(MAX_PATH);
 				wide.erase(std::remove(wide.begin(), wide.end(), '*'), wide.end());
 
 				std::replace(wide.begin(), wide.end(), '\\', '/');
 
-				std::copy(wide.begin(), wide.end(), buf.begin()	);	
+				std::copy(wide.begin(), wide.end(), buf.begin()	);
                 BOOL appended = PathAppendW(buf.data(), data.cFileName);
 
 				std::wstring output(buf.data(), wcslen( buf.data()));
-                
+
                 // Erase any \'s
                 output.erase(std::remove(output.begin(), output.end(), '\\'), output.end());
 
