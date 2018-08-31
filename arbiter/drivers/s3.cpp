@@ -250,12 +250,12 @@ S3::Config::Config(
     , m_baseUrl(extractBaseUrl(json, m_region))
     , m_precheck(json["precheck"].asBool())
 {
-    if (json["sse"].asBool())
+    if (json["sse"].asBool() || env("AWS_SSE"))
     {
         m_baseHeaders["x-amz-server-side-encryption"] = "AES256";
     }
 
-    if (json["requesterPays"].asBool())
+    if (json["requesterPays"].asBool() || env("AWS_REQUESTER_PAYS"))
     {
         m_baseHeaders["x-amz-request-payer"] = "requester";
     }
