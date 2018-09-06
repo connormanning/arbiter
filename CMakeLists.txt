@@ -26,6 +26,15 @@ else()
     message("OpenSSL NOT found")
 endif()
 
+find_package(Zlib)
+if (ZLIB_FOUND)
+    message("Found Zlib ${ZLIB_INCLUDE_DIR} ${ZLIB_LIBRARY}")
+    include_directories(${ZLIB_INCLUDE_DIR})
+    set(ARBITER_ZLIB TRUE)
+    add_definitions("-DARBITER_ZLIB")
+else()
+    message("Zlib NOT found - gzipped data not supported")
+endif()
 
 
 MESSAGE(${CMAKE_CXX_COMPILER_ID})
@@ -42,10 +51,10 @@ if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     add_definitions("-DWINDOWS")
     add_definitions("-D_CRT_SECURE_NO_WARNINGS")
-    
+
     add_definitions("-DJSON_DLL_BUILD")
-    find_library(SHLWAPI Shlwapi.lib) 
-    
+    find_library(SHLWAPI Shlwapi.lib)
+
 endif()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
@@ -61,6 +70,11 @@ set(OBJS
     $<TARGET_OBJECTS:util>)
 
 add_library(arbiter SHARED ${OBJS})
+
+if (${ARBITER_ZLIB})
+    target_link_libraries(arbiter PUBLIC ${ZLIB_LIBRARY})
+    target_include_directories(arbiter PRIVATE "${ZLIB_INCLUDE_DIR}")
+endif()
 
 if (${ARBITER_CURL})
 	target_link_libraries(arbiter PUBLIC ${CURL_LIBRARIES})
