@@ -26,9 +26,9 @@ else()
     message("OpenSSL NOT found")
 endif()
 
-find_package(Zlib)
+find_package(ZLIB)
 if (ZLIB_FOUND)
-    message("Found Zlib ${ZLIB_INCLUDE_DIR} ${ZLIB_LIBRARY}")
+    message("Found Zlib ${ZLIB_INCLUDE_DIR} ${ZLIB_LIBRARIES}")
     include_directories(${ZLIB_INCLUDE_DIR})
     set(ARBITER_ZLIB TRUE)
     add_definitions("-DARBITER_ZLIB")
@@ -72,7 +72,7 @@ set(OBJS
 add_library(arbiter SHARED ${OBJS})
 
 if (${ARBITER_ZLIB})
-    target_link_libraries(arbiter PUBLIC ${ZLIB_LIBRARY})
+    target_link_libraries(arbiter PUBLIC ${ZLIB_LIBRARIES})
     target_include_directories(arbiter PRIVATE "${ZLIB_INCLUDE_DIR}")
 endif()
 

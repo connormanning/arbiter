@@ -1,3 +1,7 @@
+#pragma once
+
+#ifdef ARBITER_ZLIB
+
 #ifndef ARBITER_IS_AMALGAMATION
 #include "config.hpp"
 #endif
@@ -106,3 +110,6 @@ inline std::string decompress(const char* data, std::size_t size)
 }
 
 } // namespace gzip
+
+#endif // ARBITER_ZLIB
+

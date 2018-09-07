@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef ARBITER_ZLIB
+
 /// The major version number
 #define GZIP_VERSION_MAJOR 1
 
@@ -14,3 +16,6 @@
 
 /// Version number as string
 #define GZIP_VERSION_STRING "1.0.0"
+
+#endif
+

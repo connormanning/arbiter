@@ -335,24 +335,24 @@ std::string Google::Auth::sign(
 
     EVP_PKEY* key(loadKey(pkey, false));
 
-    EVP_MD_CTX ctx;
-    EVP_MD_CTX_init(&ctx);
-    EVP_DigestSignInit(&ctx, nullptr, EVP_sha256(), nullptr, key);
+    EVP_MD_CTX* ctx(EVP_MD_CTX_new());
+    EVP_MD_CTX_init(ctx);
+    EVP_DigestSignInit(ctx, nullptr, EVP_sha256(), nullptr, key);
 
-    if (EVP_DigestSignUpdate(&ctx, data.data(), data.size()) == 1)
+    if (EVP_DigestSignUpdate(ctx, data.data(), data.size()) == 1)
     {
         std::size_t size(0);
-        if (EVP_DigestSignFinal(&ctx, nullptr, &size) == 1)
+        if (EVP_DigestSignFinal(ctx, nullptr, &size) == 1)
         {
             std::vector<unsigned char> v(size, 0);
-            if (EVP_DigestSignFinal(&ctx, v.data(), &size) == 1)
+            if (EVP_DigestSignFinal(ctx, v.data(), &size) == 1)
             {
                 signature.assign(reinterpret_cast<const char*>(v.data()), size);
             }
         }
     }
 
-    EVP_MD_CTX_cleanup(&ctx);
+    EVP_MD_CTX_free(ctx);
     if (signature.empty()) throw ArbiterError("Could not sign JWT");
     return signature;
 #else

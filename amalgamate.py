@@ -109,6 +109,10 @@ def amalgamate_source(source_top_dir=None,
     if include_json:
         header.add_file("arbiter/third/json/json.hpp")
 
+    if include_xml:
+        header.add_file("arbiter/third/xml/rapidxml.hpp")
+        header.add_file("arbiter/third/xml/xml.hpp")
+
     header.add_file("arbiter/third/gzip/config.hpp");
     header.add_file("arbiter/third/gzip/utils.hpp");
     header.add_file("arbiter/third/gzip/version.hpp");
@@ -131,10 +135,6 @@ def amalgamate_source(source_top_dir=None,
     header.add_file("arbiter/driver.hpp")
     header.add_file("arbiter/drivers/fs.hpp")
     header.add_file("arbiter/drivers/http.hpp")
-
-    if include_xml:
-        header.add_file("arbiter/third/xml/rapidxml.hpp")
-        header.add_file("arbiter/third/xml/xml.hpp")
 
     header.add_file("arbiter/util/macros.hpp")
     header.add_file("arbiter/util/md5.hpp")
