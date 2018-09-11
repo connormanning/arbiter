@@ -289,6 +289,10 @@ public:
      * string if there are no '.' characters. */
     static std::string getExtension(std::string path);
 
+    /** Strip the characters following (and including) the final instance of
+     * '.' if one exists, otherwise return the full path. */
+    static std::string stripExtension(std::string path);
+
     /** Fetch the common HTTP pool, which may be useful when dynamically
      * constructing adding a Driver via Arbiter::addDriver.
      */

@@ -2,7 +2,9 @@
 #include <arbiter/arbiter.hpp>
 
 #include <arbiter/driver.hpp>
+#include <arbiter/util/sha256.hpp>
 #include <arbiter/util/util.hpp>
+#include <arbiter/util/transforms.hpp>
 #endif
 
 #include <algorithm>
@@ -374,15 +376,13 @@ std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
             throw ArbiterError("Temporary endpoint must be local.");
         }
 
-        std::string name(path);
-        std::replace(name.begin(), name.end(), '/', '-');
-        std::replace(name.begin(), name.end(), '\\', '-');
-        std::replace(name.begin(), name.end(), ':', '_');
-
-        tempEndpoint.put(name, getBinary(path));
-
+        const auto ext(getExtension(path));
+        const std::string basename(
+                crypto::encodeAsHex(crypto::sha256(stripExtension(path))) +
+                (ext.size() ? "." + ext : ""));
+        tempEndpoint.put(basename, getBinary(path));
         localHandle.reset(
-                new fs::LocalHandle(tempEndpoint.root() + name, true));
+                new fs::LocalHandle(tempEndpoint.root() + basename, true));
     }
     else
     {
@@ -433,6 +433,12 @@ std::string Arbiter::getExtension(const std::string path)
 
     if (pos != std::string::npos) return path.substr(pos + 1);
     else return std::string();
+}
+
+std::string Arbiter::stripExtension(const std::string path)
+{
+    const std::size_t pos(path.find_last_of('.'));
+    return path.substr(0, pos);
 }
 
 } // namespace arbiter

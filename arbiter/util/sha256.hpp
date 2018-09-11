@@ -32,7 +32,9 @@ namespace crypto
 ARBITER_DLL std::vector<char> sha256(const std::vector<char>& data);
 ARBITER_DLL std::string sha256(const std::string& data);
 
-ARBITER_DLL std::string hmacSha256(const std::string& key, const std::string& data);
+ARBITER_DLL std::string hmacSha256(
+        const std::string& key,
+        const std::string& data);
 
 } // namespace crypto
 } // namespace arbiter

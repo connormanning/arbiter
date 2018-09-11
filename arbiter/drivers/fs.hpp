@@ -27,6 +27,7 @@ namespace arbiter
 {
 
 class Arbiter;
+class Endpoint;
 
 /**
  * \addtogroup fs
@@ -63,6 +64,7 @@ namespace fs
     class ARBITER_DLL LocalHandle
     {
         friend class arbiter::Arbiter;
+        friend class arbiter::Endpoint;
 
     public:
         /** @brief Deletes the local path if the data was copied from a remote

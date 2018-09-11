@@ -391,17 +391,21 @@ std::string expandTilde(std::string in)
 
 std::string getTempPath()
 {
+    std::string tmp;
 #ifndef ARBITER_WINDOWS
-    if (const auto t = util::env("TMPDIR"))     return *t;
-    if (const auto t = util::env("TMP"))        return *t;
-    if (const auto t = util::env("TEMP"))       return *t;
-    if (const auto t = util::env("TEMPDIR"))    return *t;
-    return "/tmp";
+    if (const auto t = util::env("TMPDIR"))         tmp = *t;
+    else if (const auto t = util::env("TMP"))       tmp = *t;
+    else if (const auto t = util::env("TEMP"))      tmp = *t;
+    else if (const auto t = util::env("TEMPDIR"))   tmp = *t;
+    else tmp = "/tmp";
 #else
     std::vector<char> path(MAX_PATH, '\0');
-    if (GetTempPath(MAX_PATH, path.data())) return path.data();
-    else throw ArbiterError("Could not find a temp path.");
+    if (GetTempPath(MAX_PATH, path.data())) tmp.assign(path.data());
 #endif
+
+    if (tmp.empty()) throw ArbiterError("Could not find a temp path.");
+    if (tmp.back() != '/') tmp += '/';
+    return tmp;
 }
 
 LocalHandle::LocalHandle(const std::string localPath, const bool isRemote)

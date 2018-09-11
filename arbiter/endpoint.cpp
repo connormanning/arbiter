@@ -3,6 +3,9 @@
 
 #include <arbiter/arbiter.hpp>
 #include <arbiter/driver.hpp>
+#include <arbiter/drivers/fs.hpp>
+#include <arbiter/util/sha256.hpp>
+#include <arbiter/util/transforms.hpp>
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
@@ -56,6 +59,36 @@ bool Endpoint::isLocal() const
 bool Endpoint::isHttpDerived() const
 {
     return tryGetHttpDriver() != nullptr;
+}
+
+std::unique_ptr<fs::LocalHandle> Endpoint::getLocalHandle(
+        const std::string subpath) const
+{
+    std::unique_ptr<fs::LocalHandle> handle;
+
+    if (isRemote())
+    {
+        const std::string tmp(fs::getTempPath());
+        const auto ext(Arbiter::getExtension(subpath));
+        const std::string basename(
+                crypto::encodeAsHex(crypto::sha256(Arbiter::stripExtension(
+                            prefixedRoot() + subpath))) +
+                    (ext.size() ? "." + ext : ""));
+
+        const std::string local(tmp + basename);
+
+        drivers::Fs fs;
+        fs.put(local, getBinary(subpath));
+
+        handle.reset(new fs::LocalHandle(local, true));
+    }
+    else
+    {
+        handle.reset(
+                new fs::LocalHandle(fs::expandTilde(fullPath(subpath)), false));
+    }
+
+    return handle;
 }
 
 std::string Endpoint::get(const std::string subpath) const

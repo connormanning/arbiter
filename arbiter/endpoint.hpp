@@ -6,6 +6,7 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 
+#include <arbiter/drivers/fs.hpp>
 #include <arbiter/util/exports.hpp>
 #include <arbiter/util/types.hpp>
 
@@ -64,6 +65,9 @@ public:
 
     /** See Arbiter::isHttpDerived. */
     bool isHttpDerived() const;
+
+    /** See Arbiter::getLocalHandle. */
+    std::unique_ptr<fs::LocalHandle> getLocalHandle(std::string subpath) const;
 
     /** Passthrough to Driver::get. */
     std::string get(std::string subpath) const;
