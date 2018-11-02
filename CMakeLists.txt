@@ -16,7 +16,7 @@ else()
     message("Curl NOT found")
 endif()
 
-find_package(OpenSSL 1.1)
+find_package(OpenSSL 1.0)
 if (OPENSSL_FOUND)
     message("Found OpenSSL ${OPENSSL_VERSION}")
     include_directories(${OPENSSL_INCLUDE_DIR})

@@ -10,6 +10,12 @@
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
 #include <openssl/sha.h>
+
+// See: https://www.openssl.org/docs/manmaster/man3/OPENSSL_VERSION_NUMBER.html
+#   if OPENSSL_VERSION_NUMBER >= 0x010100000
+#   define ARBITER_OPENSSL_ATLEAST_1_1
+#   endif
+
 #endif
 
 #ifndef ARBITER_IS_AMALGAMATION
@@ -335,7 +341,12 @@ std::string Google::Auth::sign(
 
     EVP_PKEY* key(loadKey(pkey, false));
 
+#   ifdef ARBITER_OPENSSL_ATLEAST_1_1
     EVP_MD_CTX* ctx(EVP_MD_CTX_new());
+#   else
+    EVP_MD_CTX ctxAlloc;
+    EVP_MD_CTX* ctx(&ctxAlloc);
+#   endif
     EVP_MD_CTX_init(ctx);
     EVP_DigestSignInit(ctx, nullptr, EVP_sha256(), nullptr, key);
 
@@ -352,7 +363,12 @@ std::string Google::Auth::sign(
         }
     }
 
+#   ifdef ARBITER_OPENSSL_ATLEAST_1_1
     EVP_MD_CTX_free(ctx);
+#   else
+    EVP_MD_CTX_cleanup(ctx);
+#   endif
+
     if (signature.empty()) throw ArbiterError("Could not sign JWT");
     return signature;
 #else
