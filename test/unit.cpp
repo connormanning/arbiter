@@ -45,6 +45,12 @@ TEST(Arbiter, Time)
 
     Time epoch("1970-01-01T00:00:00Z");
     EXPECT_EQ(epoch.asUnix(), 0);
+
+    // Issue 23.
+    {
+        Time t("2019-01-03T17:39:11Z");
+        EXPECT_EQ(t.asUnix() - 1546537151, 0);
+    }
 }
 
 TEST(Arbiter, Base64)
