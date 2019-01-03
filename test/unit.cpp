@@ -42,6 +42,9 @@ TEST(Arbiter, Time)
 
     EXPECT_EQ(y - x, delta);
     EXPECT_EQ(x - y, -delta);
+
+    Time epoch("1970-01-01T00:00:00Z");
+    EXPECT_EQ(epoch.asUnix(), 0);
 }
 
 TEST(Arbiter, Base64)
