@@ -96,13 +96,13 @@ class ARBITER_DLL Pool
     friend class Resource;
 
 public:
-    Pool(
+    ARBITER_DLL Pool(
             std::size_t concurrent = 4,
             std::size_t retry = 4,
             Json::Value json = Json::Value());
-    ~Pool();
+    ARBITER_DLL ~Pool();
 
-    Resource acquire();
+    ARBITER_DLL Resource acquire();
 
 private:
     void release(std::size_t id);
