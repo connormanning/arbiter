@@ -21,3 +21,8 @@
 #  endif
 #endif
 #endif
+
+#ifdef _WIN32
+#pragma warning(disable:4251)// [templated class] needs to have dll-interface...
+#endif
+
