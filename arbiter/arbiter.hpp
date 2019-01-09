@@ -79,9 +79,7 @@ public:
      *
      * @note This operation is not thread-safe.
      */
-    void addDriver(
-            std::string type,
-            std::unique_ptr<Driver> driver);
+    void addDriver(std::string type, std::unique_ptr<Driver> driver);
 
     /** Get data or throw if inaccessible. */
     std::string get(std::string path) const;
@@ -93,8 +91,7 @@ public:
     std::vector<char> getBinary(std::string path) const;
 
     /** Get data in binary form if accessible. */
-    std::unique_ptr<std::vector<char>> tryGetBinary(
-            std::string path) const;
+    std::unique_ptr<std::vector<char>> tryGetBinary(std::string path) const;
 
     /** Get file size in bytes or throw if inaccessible. */
     std::size_t getSize(std::string path) const;
@@ -162,10 +159,7 @@ public:
      * be repeatedly called during copying to ensure that any nested directories
      * are reproduced.
      */
-    void copy(
-            std::string src,
-            std::string dst,
-            bool verbose = false) const;
+    void copy(std::string src, std::string dst, bool verbose = false) const;
 
     /** Copy the single file @p file to the destination @p to.  If @p to ends
      * with a `/` or '\' character, then @p file will be copied into the
@@ -175,10 +169,7 @@ public:
      * If @p to is a local filesystem path, then `fs::mkdirp` will be called
      * prior to copying.
      */
-    void copyFile(
-            std::string file,
-            std::string to,
-            bool verbose = false) const;
+    void copyFile(std::string file, std::string to, bool verbose = false) const;
 
     /** Returns true if this path is a remote path, or false if it is on the
      * local filesystem.
