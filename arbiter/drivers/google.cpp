@@ -224,9 +224,9 @@ std::unique_ptr<Google::Auth> Google::Auth::create(const Json::Value& json)
             {
                 return util::makeUnique<Auth>(util::parse(*file));
             }
-            catch (const ArbiterError &e)
+            catch (const ArbiterError& e)
             {
-                std::cout<< e.what() << std::endl;
+                std::cout << e.what() << std::endl;
                 return std::unique_ptr<Auth>();
             }
         }
@@ -299,8 +299,12 @@ void Google::Auth::maybeRefresh() const
     drivers::Https https(pool);
     const auto res(https.internalPost(tokenRequestUrl, body, headers));
 
-    if (!res.ok()) throw ArbiterError("Failed to get token for Google authentication"
-                                      ", request came back with response: " + res.str());
+    if (!res.ok())
+    {
+        throw ArbiterError(
+                "Failed to get token for Google authentication, "
+                "request came back with response: " + res.str());
+    }
 
     const Json::Value token(util::parse(res.str()));
     m_headers["Authorization"] = "Bearer " + token["access_token"].asString();
