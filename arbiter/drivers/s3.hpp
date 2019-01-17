@@ -46,11 +46,9 @@ public:
      */
     static std::vector<std::unique_ptr<S3>> create(
             http::Pool& pool,
-            const Json::Value& json);
+            std::string j);
 
-    static std::unique_ptr<S3> createOne(
-            http::Pool& pool,
-            const Json::Value& json);
+    static std::unique_ptr<S3> createOne(http::Pool& pool, std::string j);
 
     // Overrides.
     virtual std::string type() const override;
@@ -68,12 +66,14 @@ public:
     virtual void copy(std::string src, std::string dst) const override;
 
 private:
-    static std::string extractProfile(const Json::Value& json);
+    static std::string extractProfile(std::string j);
 
+    /*
     static std::unique_ptr<Config> extractConfig(
-            const Json::Value& json,
+            std::string j,
             std::string profile);
 
+            */
     /** Inherited from Drivers::Http. */
     virtual bool get(
             std::string path,
@@ -123,9 +123,7 @@ public:
         : m_role(util::makeUnique<std::string>(iamRole))
     { }
 
-    static std::unique_ptr<Auth> create(
-            const Json::Value& json,
-            std::string profile);
+    static std::unique_ptr<Auth> create(std::string j, std::string profile);
 
     AuthFields fields() const;
 
@@ -142,7 +140,7 @@ private:
 class S3::Config
 {
 public:
-    Config(const Json::Value& json, std::string profile);
+    Config(std::string j, std::string profile);
 
     const std::string& region() const { return m_region; }
     const std::string& baseUrl() const { return m_baseUrl; }
@@ -150,18 +148,13 @@ public:
     bool precheck() const { return m_precheck; }
 
 private:
-    static std::string extractRegion(
-            const Json::Value& json,
-            std::string profile);
-
-    static std::string extractBaseUrl(
-            const Json::Value& json,
-            std::string region);
+    static std::string extractRegion(std::string j, std::string profile);
+    static std::string extractBaseUrl(std::string j, std::string region);
 
     const std::string m_region;
     const std::string m_baseUrl;
     http::Headers m_baseHeaders;
-    const bool m_precheck;
+    bool m_precheck;
 };
 
 

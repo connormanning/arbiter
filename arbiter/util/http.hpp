@@ -12,19 +12,11 @@
 #ifndef ARBITER_IS_AMALGAMATION
 
 #include <arbiter/util/curl.hpp>
-#include <arbiter/util/types.hpp>
 #include <arbiter/util/exports.hpp>
+#include <arbiter/util/types.hpp>
 
-#ifndef ARBITER_EXTERNAL_JSON
-#include <arbiter/third/json/json.hpp>
-#endif
-
-#endif
-
-
-
-#ifdef ARBITER_EXTERNAL_JSON
 #include <json/json.h>
+
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
@@ -96,10 +88,8 @@ class ARBITER_DLL Pool
     friend class Resource;
 
 public:
-    Pool(
-            std::size_t concurrent = 4,
-            std::size_t retry = 4,
-            Json::Value json = Json::Value());
+    Pool() : Pool(4, 4, "") { }
+    Pool(std::size_t concurrent, std::size_t retry, std::string j);
     ~Pool();
 
     Resource acquire();

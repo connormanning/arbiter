@@ -23,9 +23,7 @@ class Google : public Https
 public:
     Google(http::Pool& pool, std::unique_ptr<Auth> auth);
 
-    static std::unique_ptr<Google> create(
-            http::Pool& pool,
-            const Json::Value& json);
+    static std::unique_ptr<Google> create(http::Pool& pool, std::string j);
 
     // Overrides.
     virtual std::string type() const override { return "gs"; }  // Match gsutil.

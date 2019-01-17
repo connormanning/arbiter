@@ -1,5 +1,6 @@
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/util/http.hpp>
+#include <arbiter/util/json.hpp>
 #endif
 
 #ifdef ARBITER_CURL
@@ -144,7 +145,7 @@ Response Resource::exec(std::function<Response()> f)
 Pool::Pool(
         const std::size_t concurrent,
         const std::size_t retry,
-        const Json::Value json)
+        const std::string s)
     : m_curls(concurrent)
     , m_available(concurrent)
     , m_retry(retry)
@@ -154,10 +155,12 @@ Pool::Pool(
 #ifdef ARBITER_CURL
     curl_global_init(CURL_GLOBAL_ALL);
 
+    const json config(s.size() ? json::parse(s) : json::object());
+
     for (std::size_t i(0); i < concurrent; ++i)
     {
         m_available[i] = i;
-        m_curls[i].reset(new Curl(json));
+        m_curls[i].reset(new Curl(config.dump()));
     }
 #endif
 }

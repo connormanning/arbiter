@@ -28,7 +28,7 @@ namespace
 
 Endpoint::Endpoint(const Driver& driver, const std::string root)
     : m_driver(driver)
-    , m_root(fs::expandTilde(postfixSlash(root)))
+    , m_root(expandTilde(postfixSlash(root)))
 { }
 
 std::string Endpoint::root() const
@@ -61,14 +61,14 @@ bool Endpoint::isHttpDerived() const
     return tryGetHttpDriver() != nullptr;
 }
 
-std::unique_ptr<fs::LocalHandle> Endpoint::getLocalHandle(
+std::unique_ptr<LocalHandle> Endpoint::getLocalHandle(
         const std::string subpath) const
 {
-    std::unique_ptr<fs::LocalHandle> handle;
+    std::unique_ptr<LocalHandle> handle;
 
     if (isRemote())
     {
-        const std::string tmp(fs::getTempPath());
+        const std::string tmp(getTempPath());
         const auto ext(Arbiter::getExtension(subpath));
         const std::string basename(
                 crypto::encodeAsHex(crypto::sha256(Arbiter::stripExtension(
@@ -80,12 +80,11 @@ std::unique_ptr<fs::LocalHandle> Endpoint::getLocalHandle(
         drivers::Fs fs;
         fs.put(local, getBinary(subpath));
 
-        handle.reset(new fs::LocalHandle(local, true));
+        handle.reset(new LocalHandle(local, true));
     }
     else
     {
-        handle.reset(
-                new fs::LocalHandle(fs::expandTilde(fullPath(subpath)), false));
+        handle.reset(new LocalHandle(expandTilde(fullPath(subpath)), false));
     }
 
     return handle;

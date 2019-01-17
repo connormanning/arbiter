@@ -81,7 +81,7 @@ std::vector<std::string> Driver::resolve(
     else
     {
         if (isRemote()) path = type() + "://" + path;
-        else path = fs::expandTilde(path);
+        else path = expandTilde(path);
 
         results.push_back(path);
     }

@@ -3,8 +3,9 @@
 
 #include <arbiter/driver.hpp>
 #include <arbiter/util/sha256.hpp>
-#include <arbiter/util/util.hpp>
+#include <arbiter/util/json.hpp>
 #include <arbiter/util/transforms.hpp>
+#include <arbiter/util/util.hpp>
 #endif
 
 #include <algorithm>
@@ -29,23 +30,27 @@ namespace
 #endif
 
     // Merge B into A, without overwriting any keys from A.
-    Json::Value merge(const Json::Value& a, const Json::Value& b)
+    json merge(const json& a, const json& b)
     {
-        Json::Value out(a);
+        json out(a);
+        if (out.is_null()) out = json::object();
 
-        if (!b.isNull())
+        if (!b.is_null())
         {
-            if (b.isObject())
+            if (b.is_object())
             {
-                for (const auto& key : b.getMemberNames())
+                for (const auto& p : b.items())
                 {
                     // If A doesn't have this key, then set it to B's value.
                     // If A has the key but it's an object, then recursively
                     // merge.
                     // Otherwise A already has a value here that we won't
                     // overwrite.
-                    if (!out.isMember(key)) out[key] = b[key];
-                    else if (out[key].isObject()) merge(out[key], b[key]);
+                    const std::string& key(p.key());
+                    const json& val(p.value());
+
+                    if (!out.count(key)) out[key] = val;
+                    else if (out[key].is_object()) merge(out[key], val);
                 }
             }
             else
@@ -57,60 +62,78 @@ namespace
         return out;
     }
 
-    Json::Value getConfig(const Json::Value& in)
+    json getConfig(const std::string& s)
     {
-        Json::Value config;
+        const json in(json::parse(s));
+
+        json config;
         std::string path("~/.arbiter/config.json");
 
         if      (auto p = util::env("ARBITER_CONFIG_FILE")) path = *p;
         else if (auto p = util::env("ARBITER_CONFIG_PATH")) path = *p;
 
-        if (auto data = drivers::Fs().tryGet(path))
-        {
-            std::istringstream ss(*data);
-            ss >> config;
-        }
+        if (auto data = drivers::Fs().tryGet(path)) config = json::parse(*data);
 
         return merge(in, config);
     }
 }
 
-Arbiter::Arbiter() : Arbiter(Json::nullValue) { }
+Arbiter::Arbiter() : Arbiter(json().dump()) { }
 
-Arbiter::Arbiter(const Json::Value& in)
+Arbiter::Arbiter(const std::string s)
     : m_drivers()
 #ifdef ARBITER_CURL
-    , m_pool(new http::Pool(concurrentHttpReqs, httpRetryCount, getConfig(in)))
+    , m_pool(
+            new http::Pool(
+                concurrentHttpReqs,
+                httpRetryCount,
+                getConfig(s).dump()))
 #endif
 {
     using namespace drivers;
 
-    const Json::Value json(getConfig(in));
+    const json c(getConfig(s));
 
-    auto fs(Fs::create(json["file"]));
-    if (fs) m_drivers[fs->type()] = std::move(fs);
+    if (auto d = Fs::create())
+    {
+        m_drivers[d->type()] = std::move(d);
+    }
 
-    auto test(Test::create(json["test"]));
-    if (test) m_drivers[test->type()] = std::move(test);
+    if (auto d = Test::create())
+    {
+        m_drivers[d->type()] = std::move(d);
+    }
 
 #ifdef ARBITER_CURL
-    auto http(Http::create(*m_pool, json["http"]));
-    if (http) m_drivers[http->type()] = std::move(http);
+    if (auto d = Http::create(*m_pool))
+    {
+        m_drivers[d->type()] = std::move(d);
+    }
 
-    auto https(Https::create(*m_pool, json["http"]));
-    if (https) m_drivers[https->type()] = std::move(https);
+    if (auto d = Https::create(*m_pool))
+    {
+        m_drivers[d->type()] = std::move(d);
+    }
 
-    auto s3(S3::create(*m_pool, json["s3"]));
-    for (auto& s : s3) m_drivers[s->type()] = std::move(s);
+    {
+        auto dlist(S3::create(*m_pool, c.value("s3", json::object()).dump()));
+        for (auto& d : dlist) m_drivers[d->type()] = std::move(d);
+    }
 
     // Credential-based drivers should probably all do something similar to the
     // S3 driver to support multiple profiles.
-    auto dropbox(Dropbox::create(*m_pool, json["dropbox"]));
-    if (dropbox) m_drivers[dropbox->type()] = std::move(dropbox);
+    if (auto d = Dropbox::create(
+                *m_pool,
+                c.value("dropbox", json::object()).dump()))
+    {
+        m_drivers[d->type()] = std::move(d);
+    }
 
 #ifdef ARBITER_OPENSSL
-    auto google(Google::create(*m_pool, json["gs"]));
-    if (google) m_drivers[google->type()] = std::move(google);
+    if (auto d = Google::create(*m_pool, c.value("gs", json::object())))
+    {
+        m_drivers[d->type()] = std::move(d);
+    }
 #endif
 
 #endif
@@ -267,7 +290,7 @@ void Arbiter::copy(
 
             if (dstEndpoint.isLocal())
             {
-                fs::mkdirp(util::getNonBasename(dstEndpoint.fullPath(subpath)));
+                mkdirp(util::getNonBasename(dstEndpoint.fullPath(subpath)));
             }
 
             dstEndpoint.put(subpath, getBinary(path));
@@ -293,7 +316,7 @@ void Arbiter::copyFile(
 
     if (verbose) std::cout << file << " -> " << dst << std::endl;
 
-    if (dstEndpoint.isLocal()) fs::mkdirp(util::getNonBasename(dst));
+    if (dstEndpoint.isLocal()) mkdirp(util::getNonBasename(dst));
 
     if (getEndpoint(file).type() == dstEndpoint.type())
     {
@@ -363,11 +386,11 @@ const drivers::Http& Arbiter::getHttpDriver(const std::string path) const
     else throw ArbiterError("Cannot get driver for " + path + " as HTTP");
 }
 
-std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
+std::unique_ptr<LocalHandle> Arbiter::getLocalHandle(
         const std::string path,
         const Endpoint& tempEndpoint) const
 {
-    std::unique_ptr<fs::LocalHandle> localHandle;
+    std::unique_ptr<LocalHandle> localHandle;
 
     if (isRemote(path))
     {
@@ -382,22 +405,22 @@ std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
                 (ext.size() ? "." + ext : ""));
         tempEndpoint.put(basename, getBinary(path));
         localHandle.reset(
-                new fs::LocalHandle(tempEndpoint.root() + basename, true));
+                new LocalHandle(tempEndpoint.root() + basename, true));
     }
     else
     {
         localHandle.reset(
-                new fs::LocalHandle(fs::expandTilde(stripType(path)), false));
+                new LocalHandle(expandTilde(stripType(path)), false));
     }
 
     return localHandle;
 }
 
-std::unique_ptr<fs::LocalHandle> Arbiter::getLocalHandle(
+std::unique_ptr<LocalHandle> Arbiter::getLocalHandle(
         const std::string path,
         std::string tempPath) const
 {
-    if (tempPath.empty()) tempPath = fs::getTempPath();
+    if (tempPath.empty()) tempPath = getTempPath();
     return getLocalHandle(path, getEndpoint(tempPath));
 }
 

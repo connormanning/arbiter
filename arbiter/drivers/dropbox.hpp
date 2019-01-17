@@ -29,9 +29,7 @@ public:
     /** Try to construct a %Dropbox Driver.  Searches @p json for the key
      * `token` to construct a DropboxAuth.
      */
-    static std::unique_ptr<Dropbox> create(
-            http::Pool& pool,
-            const Json::Value& json);
+    static std::unique_ptr<Dropbox> create(http::Pool& pool, std::string j);
 
     virtual std::string type() const override { return "dropbox"; }
     virtual void put(

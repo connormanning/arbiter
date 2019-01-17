@@ -25,7 +25,7 @@ namespace drivers
 class Test : public Fs
 {
 public:
-    static std::unique_ptr<Test> create(const Json::Value& json)
+    static std::unique_ptr<Test> create()
     {
         return std::unique_ptr<Test>(new Test());
     }

@@ -4,8 +4,8 @@
 #include <memory>
 
 #ifndef ARBITER_IS_AMALGAMATION
-#include <arbiter/util/http.hpp>
 #include <arbiter/driver.hpp>
+#include <arbiter/util/http.hpp>
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
@@ -30,9 +30,7 @@ class ARBITER_DLL Http : public Driver
 {
 public:
     Http(http::Pool& pool);
-    static std::unique_ptr<Http> create(
-            http::Pool& pool,
-            const Json::Value& json);
+    static std::unique_ptr<Http> create(http::Pool& pool);
 
     // Inherited from Driver.
     virtual std::string type() const override { return "http"; }
@@ -168,9 +166,7 @@ class Https : public Http
 public:
     Https(http::Pool& pool) : Http(pool) { }
 
-    static std::unique_ptr<Https> create(
-            http::Pool& pool,
-            const Json::Value& json)
+    static std::unique_ptr<Https> create(http::Pool& pool)
     {
         return std::unique_ptr<Https>(new Https(pool));
     }

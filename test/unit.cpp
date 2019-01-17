@@ -15,7 +15,7 @@ TEST(Env, HomeDir)
 {
     std::string home;
 
-    ASSERT_NO_THROW(home = arbiter::fs::expandTilde("~"));
+    ASSERT_NO_THROW(home = arbiter::expandTilde("~"));
     EXPECT_NE(home, "~");
     EXPECT_FALSE(home.empty());
 }
@@ -74,7 +74,7 @@ TEST_P(DriverTest, PutGet)
     const std::string path(root + "test.txt");
     const std::string data("Testing path " + path);
 
-    if (a.isLocal(root)) fs::mkdirp(root);
+    if (a.isLocal(root)) mkdirp(root);
 
     EXPECT_NO_THROW(a.put(path, data));
     EXPECT_EQ(a.get(path), data);
@@ -124,8 +124,8 @@ TEST_P(DriverTest, Glob)
 
     if (a.isLocal(root))
     {
-        fs::mkdirp(root + "a");
-        fs::mkdirp(root + "a/b");
+        mkdirp(root + "a");
+        mkdirp(root + "a/b");
     }
 
     put("one.txt");

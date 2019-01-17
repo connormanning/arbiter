@@ -71,8 +71,12 @@ Dropbox::Dropbox(Pool& pool, const Dropbox::Auth& auth)
     , m_auth(auth)
 { }
 
-std::unique_ptr<Dropbox> Dropbox::create(Pool& pool, const Json::Value& json)
+std::unique_ptr<Dropbox> Dropbox::create(Pool& pool, const std::string s)
 {
+    Json::Value json;
+    Json::Reader reader;
+    reader.parse(s, json, false);
+
     if (!json.isNull())
     {
         if (json.isObject() && json.isMember("token"))

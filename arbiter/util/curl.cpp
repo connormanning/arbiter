@@ -7,6 +7,7 @@
 #include <arbiter/util/curl.hpp>
 #include <arbiter/util/http.hpp>
 #include <arbiter/util/util.hpp>
+#include <arbiter/util/json.hpp>
 
 
 #ifdef ARBITER_ZLIB
@@ -109,9 +110,11 @@ namespace
 #endif // ARBITER_CURL
 } // unnamed namespace
 
-Curl::Curl(const Json::Value& json)
+Curl::Curl(const std::string s)
 {
 #ifdef ARBITER_CURL
+    const json c(s.size() ? json::parse(s) : json::object());
+
     using namespace util;
 
     m_curl = curl_easy_init();
@@ -135,40 +138,40 @@ Curl::Curl(const Json::Value& json)
 
     auto mk([](std::string s) { return makeUnique<std::string>(s); });
 
-    if (!json.isNull())
+    if (!c.is_null())
     {
-        m_verbose = json["verbose"].asBool();
-        const auto& h(json["http"]);
+        m_verbose = c.value("verbose", false);
+        const auto& h(c.value("http", json::object()));
 
-        if (!h.isNull())
+        if (!h.is_null())
         {
-            if (h.isMember("timeout"))
+            if (h.count("timeout"))
             {
-                m_timeout = long(h["timeout"].asUInt64());
+                m_timeout = h["timeout"].get<long>();
             }
 
-            if (h.isMember("followRedirect"))
+            if (h.count("followRedirect"))
             {
-                m_followRedirect = h["followRedirect"].asBool();
+                m_followRedirect = h["followRedirect"].get<bool>();
             }
 
-            if (h.isMember("caBundle"))
+            if (h.count("caBundle"))
             {
-                m_caPath = mk(h["caBundle"].asString());
+                m_caPath = mk(h["caBundle"].get<std::string>());
             }
-            else if (h.isMember("caPath"))
+            else if (h.count("caPath"))
             {
-                m_caPath = mk(h["caPath"].asString());
-            }
-
-            if (h.isMember("caInfo"))
-            {
-                m_caInfo = mk(h["caInfo"].asString());
+                m_caPath = mk(h["caPath"].get<std::string>());
             }
 
-            if (h.isMember("verifyPeer"))
+            if (h.count("caInfo"))
             {
-                m_verifyPeer = h["verifyPeer"].asBool();
+                m_caInfo = mk(h["caInfo"].get<std::string>());
+            }
+
+            if (h.count("verifyPeer"))
+            {
+                m_verifyPeer = h["verifyPeer"].get<bool>();
             }
         }
     }

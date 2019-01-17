@@ -19,6 +19,7 @@
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/third/xml/xml.hpp>
 #include <arbiter/util/ini.hpp>
+#include <arbiter/util/json.hpp>
 #include <arbiter/util/md5.hpp>
 #include <arbiter/util/sha256.hpp>
 #include <arbiter/util/transforms.hpp>
@@ -109,21 +110,23 @@ S3::S3(
     , m_config(std::move(config))
 { }
 
-std::vector<std::unique_ptr<S3>> S3::create(Pool& pool, const Json::Value& json)
+std::vector<std::unique_ptr<S3>> S3::create(Pool& pool, const std::string s)
 {
     std::vector<std::unique_ptr<S3>> result;
 
-    if (json.isArray())
+    const json config(s.size() ? json::parse(s) : json::object());
+
+    if (config.is_array())
     {
-        for (const auto& curr : json)
+        for (const json& curr : config)
         {
-            if (auto s = createOne(pool, curr))
+            if (auto s = createOne(pool, curr.dump()))
             {
                 result.push_back(std::move(s));
             }
         }
     }
-    else if (auto s = createOne(pool, json))
+    else if (auto s = createOne(pool, config.dump()))
     {
         result.push_back(std::move(s));
     }
@@ -131,25 +134,28 @@ std::vector<std::unique_ptr<S3>> S3::create(Pool& pool, const Json::Value& json)
     return result;
 }
 
-std::unique_ptr<S3> S3::createOne(Pool& pool, const Json::Value& json)
+std::unique_ptr<S3> S3::createOne(Pool& pool, const std::string s)
 {
-    const std::string profile(extractProfile(json));
+    const json j(s.size() ? json::parse(s) : json::object());
+    const std::string profile(extractProfile(j.dump()));
 
-    auto auth(Auth::create(json, profile));
+    auto auth(Auth::create(j.dump(), profile));
     if (!auth) return std::unique_ptr<S3>();
 
-    std::unique_ptr<Config> config(new Config(json, profile));
+    std::unique_ptr<Config> config(new Config(j.dump(), profile));
     return makeUnique<S3>(pool, profile, std::move(auth), std::move(config));
 }
 
-std::string S3::extractProfile(const Json::Value& json)
+std::string S3::extractProfile(const std::string s)
 {
+    const json config(s.size() ? json::parse(s) : json::object());
+
     if (
-            !json.isNull() &&
-            json.isMember("profile") &&
-            json["profile"].asString().size())
+            !config.is_null() &&
+            config.count("profile") &&
+            config["profile"].get<std::string>().size())
     {
-        return json["profile"].asString();
+        return config["profile"].get<std::string>();
     }
 
     if (auto p = util::env("AWS_PROFILE")) return *p;
@@ -158,21 +164,23 @@ std::string S3::extractProfile(const Json::Value& json)
 }
 
 std::unique_ptr<S3::Auth> S3::Auth::create(
-        const Json::Value& json,
+        const std::string s,
         const std::string profile)
 {
+    const json config(s.size() ? json::parse(s) : json::object());
+
     // Try explicit JSON configuration first.
     if (
-            !json.isNull() &&
-            json.isMember("access") &&
-            (json.isMember("secret") || json.isMember("hidden")))
+            !config.is_null() &&
+            config.count("access") &&
+            (config.count("secret") || config.count("hidden")))
     {
         return makeUnique<Auth>(
-                json["access"].asString(),
-                json.isMember("secret") ?
-                    json["secret"].asString() :
-                    json["hidden"].asString(),
-                json["token"].asString());
+                config["access"].get<std::string>(),
+                config.count("secret") ?
+                    config["secret"].get<std::string>() :
+                    config["hidden"].get<std::string>(),
+                config.value("token", ""));
     }
 
     // Try environment settings next.
@@ -227,7 +235,7 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
     // an HTTP request on every Arbiter construction - but if we're allowed,
     // see if we can request an instance profile configuration.
     if (
-            json["allowInstanceProfile"].asBool() ||
+            config.value("allowInstanceProfile", false) ||
             env("AWS_ALLOW_INSTANCE_PROFILE"))
     {
         http::Pool pool;
@@ -243,32 +251,33 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
     return std::unique_ptr<Auth>();
 }
 
-S3::Config::Config(
-        const Json::Value& json,
-        const std::string profile)
-    : m_region(extractRegion(json, profile))
-    , m_baseUrl(extractBaseUrl(json, m_region))
-    , m_precheck(json["precheck"].asBool())
+S3::Config::Config(const std::string s, const std::string profile)
+    : m_region(extractRegion(s, profile))
+    , m_baseUrl(extractBaseUrl(s, m_region))
 {
-    if (json["sse"].asBool() || env("AWS_SSE"))
+    const json c(s.size() ? json::parse(s) : json::object());
+
+    m_precheck = c.value("precheck", false);
+
+    if (c.value("sse", false)|| env("AWS_SSE"))
     {
         m_baseHeaders["x-amz-server-side-encryption"] = "AES256";
     }
 
-    if (json["requesterPays"].asBool() || env("AWS_REQUESTER_PAYS"))
+    if (c.value("requesterPays", false) || env("AWS_REQUESTER_PAYS"))
     {
         m_baseHeaders["x-amz-request-payer"] = "requester";
     }
 
-    if (json.isMember("headers"))
+    if (c.count("headers"))
     {
-        const auto& headers(json["headers"]);
+        const json& headers(c["headers"]);
 
-        if (headers.isObject())
+        if (headers.is_object())
         {
-            for (const std::string key : headers.getMemberNames())
+            for (const auto& p : headers.items())
             {
-                m_baseHeaders[key] = headers[key].asString();
+                m_baseHeaders[p.key()] = p.value().get<std::string>();
             }
         }
         else
@@ -280,7 +289,7 @@ S3::Config::Config(
 }
 
 std::string S3::Config::extractRegion(
-        const Json::Value& json,
+        const std::string s,
         const std::string profile)
 {
     const std::string configPath(
@@ -289,9 +298,11 @@ std::string S3::Config::extractRegion(
 
     drivers::Fs fsDriver;
 
-    if (!json.isNull() && json.isMember("region"))
+    const json c(s.size() ? json::parse(s) : json::object());
+
+    if (c.count("region"))
     {
-        return json["region"].asString();
+        return c["region"].get<std::string>();
     }
     else if (auto p = util::env("AWS_REGION"))
     {
@@ -311,7 +322,7 @@ std::string S3::Config::extractRegion(
         }
     }
 
-    if (json["verbose"].asBool())
+    if (c.value("verbose", false))
     {
         std::cout << "Region not found - defaulting to us-east-1" << std::endl;
     }
@@ -320,12 +331,14 @@ std::string S3::Config::extractRegion(
 }
 
 std::string S3::Config::extractBaseUrl(
-        const Json::Value& json,
-        std::string region)
+        const std::string s,
+        const std::string region)
 {
-    if (json.isMember("endpoint") && json["endpoint"].asString().size())
+    const json c(s.size() ? json::parse(s) : json::object());
+
+    if (c.count("endpoint") && c["endpoint"].get<std::string>().size())
     {
-        const std::string path(json["endpoint"].asString());
+        const std::string path(c["endpoint"].get<std::string>());
         return path.back() == '/' ? path : path + '/';
     }
 
@@ -335,9 +348,9 @@ std::string S3::Config::extractBaseUrl(
     {
         endpointsPath = *e;
     }
-    else if (json.isMember("endpointsFile"))
+    else if (c.count("endpointsFile"))
     {
-        endpointsPath = json["endpointsFile"].asString();
+        endpointsPath = c["endpointsFile"].get<std::string>();
     }
 
     std::string dnsSuffix("amazonaws.com");
@@ -345,24 +358,26 @@ std::string S3::Config::extractBaseUrl(
     drivers::Fs fsDriver;
     if (std::unique_ptr<std::string> e = fsDriver.tryGet(endpointsPath))
     {
-        Json::Value ep;
-        std::istringstream ss(*e);
-        ss >> ep;
+        const json ep(json::parse(*e));
 
         for (const auto& partition : ep["partitions"])
         {
-            if (partition.isMember("dnsSuffix"))
+            if (partition.count("dnsSuffix"))
             {
-                dnsSuffix = partition["dnsSuffix"].asString();
+                dnsSuffix = partition["dnsSuffix"].get<std::string>();
             }
 
-            const auto& endpoints(partition["services"]["s3"]["endpoints"]);
-            const auto regions(endpoints.getMemberNames());
-            for (const auto& r : regions)
+            const auto& endpoints(
+                    partition.at("services").at("s3").at("endpoints"));
+
+            for (const auto& r : endpoints.items())
             {
-                if (r == region && endpoints[region].isMember("hostname"))
+                if (r.key() == region &&
+                        endpoints.value("region", json::object())
+                            .count("hostname"))
                 {
-                    return endpoints[region]["hostname"].asString() + '/';
+                    return endpoints["region"]["hostname"].get<std::string>() +
+                        '/';
                 }
             }
         }
@@ -388,15 +403,13 @@ S3::AuthFields S3::Auth::fields() const
             http::Pool pool;
             drivers::Http httpDriver(pool);
 
-            std::istringstream ss(httpDriver.get(credBase + *m_role));
-            Json::Value creds;
-            ss >> creds;
-            m_access = creds["AccessKeyId"].asString();
-            m_hidden = creds["SecretAccessKey"].asString();
-            m_token = creds["Token"].asString();
+            const json creds(json::parse(httpDriver.get(credBase + *m_role)));
+            m_access = creds.at("AccessKeyId").get<std::string>();
+            m_hidden = creds.at("SecretAccessKey").get<std::string>();
+            m_token = creds.at("Token").get<std::string>();
             m_expiration.reset(
                     new Time(
-                        creds["Expiration"].asString(),
+                        creds.at("Expiration").get<std::string>(),
                         arbiter::Time::iso8601));
 
             if (*m_expiration - now < reauthSeconds)

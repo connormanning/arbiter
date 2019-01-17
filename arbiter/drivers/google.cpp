@@ -88,10 +88,12 @@ Google::Google(http::Pool& pool, std::unique_ptr<Auth> auth)
     , m_auth(std::move(auth))
 { }
 
-std::unique_ptr<Google> Google::create(
-        http::Pool& pool,
-        const Json::Value& json)
+std::unique_ptr<Google> Google::create(http::Pool& pool, const std::string s)
 {
+    Json::Value json;
+    Json::Reader reader;
+    reader.parse(s, json, false);
+
     if (auto auth = Auth::create(json))
     {
         return util::makeUnique<Google>(pool, std::move(auth));
