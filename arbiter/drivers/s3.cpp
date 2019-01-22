@@ -114,7 +114,7 @@ std::vector<std::unique_ptr<S3>> S3::create(Pool& pool, const std::string s)
 {
     std::vector<std::unique_ptr<S3>> result;
 
-    const json config(s.size() ? json::parse(s) : json::object());
+    const json config(s.size() ? json::parse(s) : json());
 
     if (config.is_array())
     {
@@ -136,19 +136,20 @@ std::vector<std::unique_ptr<S3>> S3::create(Pool& pool, const std::string s)
 
 std::unique_ptr<S3> S3::createOne(Pool& pool, const std::string s)
 {
-    const json j(s.size() ? json::parse(s) : json::object());
+    const json j(s.size() ? json::parse(s) : json());
     const std::string profile(extractProfile(j.dump()));
 
     auto auth(Auth::create(j.dump(), profile));
     if (!auth) return std::unique_ptr<S3>();
 
     std::unique_ptr<Config> config(new Config(j.dump(), profile));
-    return makeUnique<S3>(pool, profile, std::move(auth), std::move(config));
+    auto s3 = makeUnique<S3>(pool, profile, std::move(auth), std::move(config));
+    return s3;
 }
 
 std::string S3::extractProfile(const std::string s)
 {
-    const json config(s.size() ? json::parse(s) : json::object());
+    const json config(s.size() ? json::parse(s) : json());
 
     if (
             !config.is_null() &&
@@ -167,7 +168,7 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
         const std::string s,
         const std::string profile)
 {
-    const json config(s.size() ? json::parse(s) : json::object());
+    const json config(s.size() ? json::parse(s) : json());
 
     // Try explicit JSON configuration first.
     if (
@@ -235,7 +236,8 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
     // an HTTP request on every Arbiter construction - but if we're allowed,
     // see if we can request an instance profile configuration.
     if (
-            config.value("allowInstanceProfile", false) ||
+            (!config.is_null() &&
+                config.value("allowInstanceProfile", false)) ||
             env("AWS_ALLOW_INSTANCE_PROFILE"))
     {
         http::Pool pool;
@@ -255,7 +257,8 @@ S3::Config::Config(const std::string s, const std::string profile)
     : m_region(extractRegion(s, profile))
     , m_baseUrl(extractBaseUrl(s, m_region))
 {
-    const json c(s.size() ? json::parse(s) : json::object());
+    const json c(s.size() ? json::parse(s) : json());
+    if (c.is_null()) return;
 
     m_precheck = c.value("precheck", false);
 
@@ -298,7 +301,9 @@ std::string S3::Config::extractRegion(
 
     drivers::Fs fsDriver;
 
-    const json c(s.size() ? json::parse(s) : json::object());
+    const json c(s.size() ? json::parse(s) : json());
+
+    if (c.is_null()) return "us-east-1";
 
     if (c.count("region"))
     {
@@ -334,9 +339,11 @@ std::string S3::Config::extractBaseUrl(
         const std::string s,
         const std::string region)
 {
-    const json c(s.size() ? json::parse(s) : json::object());
+    const json c(s.size() ? json::parse(s) : json());
 
-    if (c.count("endpoint") && c["endpoint"].get<std::string>().size())
+    if (!c.is_null() &&
+            c.count("endpoint") &&
+            c["endpoint"].get<std::string>().size())
     {
         const std::string path(c["endpoint"].get<std::string>());
         return path.back() == '/' ? path : path + '/';

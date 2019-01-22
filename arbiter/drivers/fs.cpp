@@ -150,7 +150,7 @@ void Fs::copy(std::string src, std::string dst) const
 
 std::vector<std::string> Fs::glob(std::string path, bool verbose) const
 {
-    return ::arbiter::glob(path);
+    return arbiter::glob(path);
 }
 
 } // namespace drivers

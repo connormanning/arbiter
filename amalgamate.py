@@ -127,6 +127,8 @@ def amalgamate_source(source_top_dir=None,
 
     header.add_file("arbiter/util/exports.hpp")
     header.add_file("arbiter/util/types.hpp")
+    header.add_file("arbiter/util/mjson.hpp")
+    header.add_file("arbiter/util/json.hpp")
     header.add_file("arbiter/util/curl.hpp")
     header.add_file("arbiter/util/http.hpp")
     header.add_file("arbiter/util/ini.hpp")

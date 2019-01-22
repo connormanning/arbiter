@@ -29,42 +29,9 @@ namespace
     const std::size_t httpRetryCount(8);
 #endif
 
-    // Merge B into A, without overwriting any keys from A.
-    json merge(const json& a, const json& b)
-    {
-        json out(a);
-        if (out.is_null()) out = json::object();
-
-        if (!b.is_null())
-        {
-            if (b.is_object())
-            {
-                for (const auto& p : b.items())
-                {
-                    // If A doesn't have this key, then set it to B's value.
-                    // If A has the key but it's an object, then recursively
-                    // merge.
-                    // Otherwise A already has a value here that we won't
-                    // overwrite.
-                    const std::string& key(p.key());
-                    const json& val(p.value());
-
-                    if (!out.count(key)) out[key] = val;
-                    else if (out[key].is_object()) merge(out[key], val);
-                }
-            }
-            else
-            {
-                out = b;
-            }
-        }
-
-        return out;
-    }
-
     json getConfig(const std::string& s)
     {
-        const json in(json::parse(s));
+        json in(json::parse(s));
 
         json config;
         std::string path("~/.arbiter/config.json");
@@ -73,6 +40,9 @@ namespace
         else if (auto p = util::env("ARBITER_CONFIG_PATH")) path = *p;
 
         if (auto data = drivers::Fs().tryGet(path)) config = json::parse(*data);
+
+        if (in.is_null()) in = json::object();
+        if (config.is_null()) config = json::object();
 
         return merge(in, config);
     }
@@ -116,21 +86,19 @@ Arbiter::Arbiter(const std::string s)
     }
 
     {
-        auto dlist(S3::create(*m_pool, c.value("s3", json::object()).dump()));
+        auto dlist(S3::create(*m_pool, c.value("s3", json()).dump()));
         for (auto& d : dlist) m_drivers[d->type()] = std::move(d);
     }
 
     // Credential-based drivers should probably all do something similar to the
     // S3 driver to support multiple profiles.
-    if (auto d = Dropbox::create(
-                *m_pool,
-                c.value("dropbox", json::object()).dump()))
+    if (auto d = Dropbox::create(*m_pool, c.value("dropbox", json()).dump()))
     {
         m_drivers[d->type()] = std::move(d);
     }
 
 #ifdef ARBITER_OPENSSL
-    if (auto d = Google::create(*m_pool, c.value("gs", json::object())))
+    if (auto d = Google::create(*m_pool, c.value("gs", json()).dump()))
     {
         m_drivers[d->type()] = std::move(d);
     }

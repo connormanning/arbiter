@@ -8,13 +8,8 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/util/exports.hpp>
-
-#ifndef ARBITER_EXTERNAL_JSON
-#include <arbiter/third/json/json.hpp>
+#include <arbiter/util/json.hpp>
 #endif
-
-#endif
-
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -111,7 +106,7 @@ namespace util
 #ifdef ARBITER_WINDOWS
             sep = "\\";
 #else
-            sep = "/";   
+            sep = "/";
 #endif
         }
         else if (next.empty() && currentIsDir)
@@ -123,7 +118,7 @@ namespace util
 #ifdef ARBITER_WINDOWS
                 sep = "\\";
 #else
-                sep = "/";   
+                sep = "/";
 #endif
 
             }
