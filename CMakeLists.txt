@@ -51,10 +51,7 @@ if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     add_definitions("-DWINDOWS")
     add_definitions("-D_CRT_SECURE_NO_WARNINGS")
-
-    add_definitions("-DJSON_DLL_BUILD")
     find_library(SHLWAPI Shlwapi.lib)
-
 endif()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
