@@ -6,10 +6,8 @@
 #include <vector>
 
 #ifndef ARBITER_IS_AMALGAMATION
-
 #include <arbiter/util/exports.hpp>
 #include <arbiter/util/types.hpp>
-
 #endif
 
 #ifdef ARBITER_CURL

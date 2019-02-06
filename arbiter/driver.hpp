@@ -7,9 +7,7 @@
 #include <vector>
 
 #ifndef ARBITER_IS_AMALGAMATION
-
 #include <arbiter/util/exports.hpp>
-
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE

@@ -26,8 +26,9 @@ public:
     class Auth;
     Dropbox(http::Pool& pool, const Auth& auth);
 
-    /** Try to construct a %Dropbox Driver.  Searches @p json for the key
-     * `token` to construct a DropboxAuth.
+    /** Try to construct a %Dropbox Driver.  @p j may be stringified JSON, in
+     * which the key `token` will be used to construct the Dropbox auth, or
+     * may simply be the token string itself.
      */
     static std::unique_ptr<Dropbox> create(http::Pool& pool, std::string j);
 

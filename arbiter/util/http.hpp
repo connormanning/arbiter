@@ -10,13 +10,9 @@
 #include <vector>
 
 #ifndef ARBITER_IS_AMALGAMATION
-
 #include <arbiter/util/curl.hpp>
 #include <arbiter/util/exports.hpp>
 #include <arbiter/util/types.hpp>
-
-#include <json/json.h>
-
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE

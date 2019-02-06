@@ -8,7 +8,6 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/util/exports.hpp>
-#include <arbiter/util/json.hpp>
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE

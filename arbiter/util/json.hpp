@@ -1,10 +1,8 @@
 #pragma once
 
 #ifndef ARBITER_IS_AMALGAMATION
-#include "mjson.hpp"
+#include <arbiter/third/json/json.hpp>
 #endif
-
-#include <json/json.h> // TODO Remove.
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE

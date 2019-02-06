@@ -21,6 +21,7 @@
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/arbiter.hpp>
 #include <arbiter/drivers/fs.hpp>
+#include <arbiter/util/json.hpp>
 #include <arbiter/util/transforms.hpp>
 #endif
 
@@ -90,7 +91,7 @@ Google::Google(http::Pool& pool, std::unique_ptr<Auth> auth)
 
 std::unique_ptr<Google> Google::create(http::Pool& pool, const std::string s)
 {
-    if (auto auth = Auth::create(json::parse(s)))
+    if (auto auth = Auth::create(s))
     {
         return util::makeUnique<Google>(pool, std::move(auth));
     }
@@ -212,15 +213,16 @@ std::vector<std::string> Google::glob(std::string path, bool verbose) const
 
 ///////////////////////////////////////////////////////////////////////////////
 
-std::unique_ptr<Google::Auth> Google::Auth::create(const json& j)
+std::unique_ptr<Google::Auth> Google::Auth::create(const std::string s)
 {
+    const json j(json::parse(s));
     if (auto path = util::env("GOOGLE_APPLICATION_CREDENTIALS"))
     {
         if (const auto file = drivers::Fs().tryGet(*path))
         {
             try
             {
-                return util::makeUnique<Auth>(json::parse(*file));
+                return util::makeUnique<Auth>(*file);
             }
             catch (const ArbiterError& e)
             {
@@ -234,19 +236,20 @@ std::unique_ptr<Google::Auth> Google::Auth::create(const json& j)
         const auto path(j.get<std::string>());
         if (const auto file = drivers::Fs().tryGet(path))
         {
-            return util::makeUnique<Auth>(json::parse(*file));
+            return util::makeUnique<Auth>(*file);
         }
     }
     else if (j.is_object())
     {
-        return util::makeUnique<Auth>(j);
+        return util::makeUnique<Auth>(s);
     }
 
     return std::unique_ptr<Auth>();
 }
 
-Google::Auth::Auth(const json& creds)
-    : m_creds(creds)
+Google::Auth::Auth(const std::string s)
+    : m_clientEmail(json::parse(s).at("client_email").get<std::string>())
+    , m_privateKey(json::parse(s).at("private_key").get<std::string>())
 {
     maybeRefresh();
 }
@@ -268,7 +271,7 @@ void Google::Auth::maybeRefresh() const
     // https://developers.google.com/identity/protocols/OAuth2ServiceAccount
     const json h { { "alg", "RS256" }, { "typ", "JWT" } };
     const json c {
-        { "iss", m_creds.at("client_email").get<std::string>() },
+        { "iss", m_clientEmail },
         { "scope", "https://www.googleapis.com/auth/devstorage.read_write" },
         { "aud", "https://www.googleapis.com/oauth2/v4/token" },
         { "iat", now },
@@ -278,7 +281,7 @@ void Google::Auth::maybeRefresh() const
     const std::string header(encodeBase64(h.dump()));
     const std::string claims(encodeBase64(c.dump()));
 
-    const std::string key(m_creds.at("private_key").get<std::string>());
+    const std::string key(m_privateKey);
     const std::string signature(
             http::sanitize(encodeBase64(sign(header + '.' + claims, key))));
 

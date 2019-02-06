@@ -66,7 +66,6 @@ add_subdirectory(arbiter)
 set(OBJS
     $<TARGET_OBJECTS:src>
     $<TARGET_OBJECTS:drivers>
-    $<TARGET_OBJECTS:third>
     $<TARGET_OBJECTS:util>)
 
 add_library(arbiter SHARED ${OBJS})
