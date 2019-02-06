@@ -183,7 +183,7 @@ const auto tests = std::accumulate(
         Config::get().begin(),
         Config::get().end(),
         std::vector<std::string>(),
-        [](const std::vector<std::string>& in, const Json::Value& entry)
+        [](const std::vector<std::string>& in, const json& entry)
         {
             if (in.empty())
             {
@@ -191,7 +191,7 @@ const auto tests = std::accumulate(
             }
 
             auto out(in);
-            const std::string path(entry.asString());
+            const std::string path(entry.get<std::string>());
             out.push_back(path + (path.back() != '/' ? "/" : ""));
             std::cout << "\t" << out.back() << std::endl;
             return out;

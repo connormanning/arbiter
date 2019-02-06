@@ -90,11 +90,7 @@ Google::Google(http::Pool& pool, std::unique_ptr<Auth> auth)
 
 std::unique_ptr<Google> Google::create(http::Pool& pool, const std::string s)
 {
-    Json::Value json;
-    Json::Reader reader;
-    reader.parse(s, json, false);
-
-    if (auto auth = Auth::create(json))
+    if (auto auth = Auth::create(json::parse(s)))
     {
         return util::makeUnique<Google>(pool, std::move(auth));
     }
@@ -200,15 +196,15 @@ std::vector<std::string> Google::glob(std::string path, bool verbose) const
             throw ArbiterError(std::to_string(res.code()) + ": " + res.str());
         }
 
-        const Json::Value json(util::parse(res.str()));
-        for (const auto& item : json["items"])
+        const json j(json::parse(res.str()));
+        for (const json& item : j.at("items"))
         {
             results.push_back(
                     type() + "://" +
-                    resource.bucket() + item["name"].asString());
+                    resource.bucket() + item.at("name").get<std::string>());
         }
 
-        pageToken = json["nextPageToken"].asString();
+        pageToken = j.value("nextPageToken", "");
     } while (pageToken.size());
 
     return results;
@@ -216,7 +212,7 @@ std::vector<std::string> Google::glob(std::string path, bool verbose) const
 
 ///////////////////////////////////////////////////////////////////////////////
 
-std::unique_ptr<Google::Auth> Google::Auth::create(const Json::Value& json)
+std::unique_ptr<Google::Auth> Google::Auth::create(const json& j)
 {
     if (auto path = util::env("GOOGLE_APPLICATION_CREDENTIALS"))
     {
@@ -224,7 +220,7 @@ std::unique_ptr<Google::Auth> Google::Auth::create(const Json::Value& json)
         {
             try
             {
-                return util::makeUnique<Auth>(util::parse(*file));
+                return util::makeUnique<Auth>(json::parse(*file));
             }
             catch (const ArbiterError& e)
             {
@@ -233,23 +229,23 @@ std::unique_ptr<Google::Auth> Google::Auth::create(const Json::Value& json)
             }
         }
     }
-    else if (json.isString())
+    else if (j.is_string())
     {
-        const auto path = json.asString();
+        const auto path(j.get<std::string>());
         if (const auto file = drivers::Fs().tryGet(path))
         {
-            return util::makeUnique<Auth>(util::parse(*file));
+            return util::makeUnique<Auth>(json::parse(*file));
         }
     }
-    else if (json.isObject())
+    else if (j.is_object())
     {
-        return util::makeUnique<Auth>(json);
+        return util::makeUnique<Auth>(j);
     }
 
     return std::unique_ptr<Auth>();
 }
 
-Google::Auth::Auth(const Json::Value& creds)
+Google::Auth::Auth(const json& creds)
     : m_creds(creds)
 {
     maybeRefresh();
@@ -270,21 +266,19 @@ void Google::Auth::maybeRefresh() const
     if (m_expiration - now > 120) return;   // Refresh when under 2 mins left.
 
     // https://developers.google.com/identity/protocols/OAuth2ServiceAccount
-    Json::Value h;
-    h["alg"] = "RS256";
-    h["typ"] = "JWT";
+    const json h { { "alg", "RS256" }, { "typ", "JWT" } };
+    const json c {
+        { "iss", m_creds.at("client_email").get<std::string>() },
+        { "scope", "https://www.googleapis.com/auth/devstorage.read_write" },
+        { "aud", "https://www.googleapis.com/oauth2/v4/token" },
+        { "iat", now },
+        { "exp", now + 3600 }
+    };
 
-    Json::Value c;
-    c["iss"] = m_creds["client_email"].asString();
-    c["scope"] = "https://www.googleapis.com/auth/devstorage.read_write";
-    c["aud"] = "https://www.googleapis.com/oauth2/v4/token";
-    c["iat"] = Json::Int64(now);
-    c["exp"] = Json::Int64(now + 3600);
+    const std::string header(encodeBase64(h.dump()));
+    const std::string claims(encodeBase64(c.dump()));
 
-    const std::string header(encodeBase64(util::toFastString(h)));
-    const std::string claims(encodeBase64(util::toFastString(c)));
-
-    const std::string key(m_creds["private_key"].asString());
+    const std::string key(m_creds.at("private_key").get<std::string>());
     const std::string signature(
             http::sanitize(encodeBase64(sign(header + '.' + claims, key))));
 
@@ -308,9 +302,10 @@ void Google::Auth::maybeRefresh() const
                 "request came back with response: " + res.str());
     }
 
-    const Json::Value token(util::parse(res.str()));
-    m_headers["Authorization"] = "Bearer " + token["access_token"].asString();
-    m_expiration = now + token["expires_in"].asInt64();
+    const json token(json::parse(res.str()));
+    m_headers["Authorization"] =
+        "Bearer " + token.at("access_token").get<std::string>();
+    m_expiration = now + token.at("expires_in").get<int64_t>();
 }
 
 std::string Google::Auth::sign(

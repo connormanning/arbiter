@@ -187,25 +187,6 @@ namespace util
         else return std::unique_ptr<T>();
     }
 
-    inline Json::Value parse(const std::string& s)
-    {
-        Json::Reader reader;
-        Json::Value json;
-        if (!reader.parse(s, json))
-        {
-            throw std::runtime_error(
-                    "Parse failure: " + reader.getFormattedErrorMessages());
-        }
-        return json;
-    }
-
-    inline std::string toFastString(const Json::Value& json)
-    {
-        std::string s = Json::FastWriter().write(json);
-        s.pop_back();   // Strip trailing newline.
-        return s;
-    }
-
 } // namespace util
 
 } // namespace arbiter

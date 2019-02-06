@@ -2,6 +2,7 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/drivers/http.hpp>
+#include <arbiter/util/json.hpp>
 #endif
 
 #include <mutex>
@@ -56,8 +57,8 @@ private:
 class Google::Auth
 {
 public:
-    Auth(const Json::Value& creds);
-    static std::unique_ptr<Auth> create(const Json::Value& json);
+    Auth(const json& creds);
+    static std::unique_ptr<Auth> create(const json& j);
 
     http::Headers headers() const;
 
@@ -65,7 +66,7 @@ private:
     void maybeRefresh() const;
     std::string sign(std::string data, std::string privateKey) const;
 
-    const Json::Value m_creds;
+    const json m_creds;
     mutable int64_t m_expiration = 0;   // Unix time.
     mutable http::Headers m_headers;
 

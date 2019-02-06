@@ -1,9 +1,10 @@
 #include <arbiter/arbiter.hpp>
+#include <arbiter/util/json.hpp>
 
 class ARBITER_DLL Config
 {
 public:
-    static const Json::Value& get()
+    static const arbiter::json& get()
     {
         static Config config;
         return config.m_json;
@@ -12,20 +13,22 @@ public:
 private:
     Config()
     {
+        using namespace arbiter;
+
         std::string file("~/.arbiter/.test.json");
 
-        if (const auto p = arbiter::util::env("TEST_CONFIG_FILE"))
+        if (const auto p = util::env("TEST_CONFIG_FILE"))
         {
             file = *p;
         }
-        else if (const auto p = arbiter::util::env("TEST_CONFIG_PATH"))
+        else if (const auto p = util::env("TEST_CONFIG_PATH"))
         {
             file = *p;
         }
 
         try
         {
-            m_json = arbiter::util::parse(arbiter::drivers::Fs().get(file));
+            m_json = json::parse(drivers::Fs().get(file));
         }
         catch (...)
         {
@@ -36,6 +39,6 @@ private:
         }
     }
 
-    Json::Value m_json;
+    arbiter::json m_json;
 };
 
