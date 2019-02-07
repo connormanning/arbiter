@@ -8,13 +8,7 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/util/exports.hpp>
-
-#ifndef ARBITER_EXTERNAL_JSON
-#include <arbiter/third/json/json.hpp>
 #endif
-
-#endif
-
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -111,7 +105,7 @@ namespace util
 #ifdef ARBITER_WINDOWS
             sep = "\\";
 #else
-            sep = "/";   
+            sep = "/";
 #endif
         }
         else if (next.empty() && currentIsDir)
@@ -123,7 +117,7 @@ namespace util
 #ifdef ARBITER_WINDOWS
                 sep = "\\";
 #else
-                sep = "/";   
+                sep = "/";
 #endif
 
             }
@@ -190,25 +184,6 @@ namespace util
     {
         if (t) return makeUnique<T>(*t);
         else return std::unique_ptr<T>();
-    }
-
-    inline Json::Value parse(const std::string& s)
-    {
-        Json::Reader reader;
-        Json::Value json;
-        if (!reader.parse(s, json))
-        {
-            throw std::runtime_error(
-                    "Parse failure: " + reader.getFormattedErrorMessages());
-        }
-        return json;
-    }
-
-    inline std::string toFastString(const Json::Value& json)
-    {
-        std::string s = Json::FastWriter().write(json);
-        s.pop_back();   // Strip trailing newline.
-        return s;
     }
 
 } // namespace util

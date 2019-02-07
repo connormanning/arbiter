@@ -12,18 +12,10 @@
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/drivers/dropbox.hpp>
 #include <arbiter/third/xml/xml.hpp>
-
-#ifndef ARBITER_EXTERNAL_JSON
-#include <arbiter/third/json/json.hpp>
-#endif
-
+#include <arbiter/util/json.hpp>
 #endif
 
 
-
-#ifdef ARBITER_EXTERNAL_JSON
-#include <json/json.h>
-#endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -48,14 +40,6 @@ namespace
         return std::tolower(lhs) == std::tolower(rhs);
     });
 
-    std::string toSanitizedString(const Json::Value& v)
-    {
-        Json::FastWriter writer;
-        std::string f(writer.write(v));
-        f.erase(std::remove(f.begin(), f.end(), '\n'), f.end());
-        return f;
-    }
-
     const std::string dirTag("folder");
     const std::string fileTag("file");
 }
@@ -71,17 +55,20 @@ Dropbox::Dropbox(Pool& pool, const Dropbox::Auth& auth)
     , m_auth(auth)
 { }
 
-std::unique_ptr<Dropbox> Dropbox::create(Pool& pool, const Json::Value& json)
+std::unique_ptr<Dropbox> Dropbox::create(Pool& pool, const std::string s)
 {
-    if (!json.isNull())
+    const json j(json::parse(s));
+    if (!j.is_null())
     {
-        if (json.isObject() && json.isMember("token"))
+        if (j.is_object() && j.count("token"))
         {
-            return makeUnique<Dropbox>(pool, Auth(json["token"].asString()));
+            return makeUnique<Dropbox>(
+                    pool,
+                    Auth(j.at("token").get<std::string>()));
         }
-        else if (json.isString())
+        else if (j.is_string())
         {
-            return makeUnique<Dropbox>(pool, Auth(json.asString()));
+            return makeUnique<Dropbox>(pool, Auth(j.get<std::string>()));
         }
     }
 
@@ -119,9 +106,8 @@ std::unique_ptr<std::size_t> Dropbox::tryGetSize(
 
     Headers headers(httpPostHeaders());
 
-    Json::Value json;
-    json["path"] = std::string("/" + sanitize(rawPath));
-    const auto f(toSanitizedString(json));
+    json tx { { "path", "/" + sanitize(rawPath) } };
+    const std::string f(tx.dump());
     const std::vector<char> postData(f.begin(), f.end());
 
     Response res(Http::internalPost(metaUrl, postData, headers));
@@ -130,13 +116,10 @@ std::unique_ptr<std::size_t> Dropbox::tryGetSize(
     {
         const auto data(res.data());
 
-        Json::Value json;
-        Json::Reader reader;
-        reader.parse(std::string(data.data(), data.size()), json, false);
-
-        if (json.isMember("size"))
+        json rx(json::parse(std::string(data.data(), data.size())));
+        if (rx.count("size"))
         {
-            result.reset(new std::size_t(json["size"].asUInt64()));
+            result = makeUnique<std::size_t>(rx.at("size").get<uint64_t>());
         }
     }
 
@@ -153,10 +136,7 @@ bool Dropbox::get(
 
     Headers headers(httpGetHeaders());
 
-    Json::Value json;
-    json["path"] = std::string("/" + path);
-    headers["Dropbox-API-Arg"] = toSanitizedString(json);
-
+    headers["Dropbox-API-Arg"] = json{{ "path", "/" + path }}.dump();
     headers.insert(userHeaders.begin(), userHeaders.end());
 
     const Response res(Http::internalGet(getUrl, headers, query));
@@ -171,32 +151,29 @@ bool Dropbox::get(
                 return false;
             }
 
-            Json::Value apiJson;
-            Json::Reader reader;
-            if (reader.parse(res.headers().at("dropbox-api-result"), apiJson))
+            json rx;
+            try { rx = json::parse(res.headers().at("dropbox-api-result")); }
+            catch (...) { std::cout << "Failed to parse result" << std::endl; }
+
+            if (!rx.is_null())
             {
-                if (!apiJson.isMember("size"))
+                if (!rx.count("size"))
                 {
                     std::cout << "No size found in API result" << std::endl;
                     return false;
                 }
 
-                const std::size_t size(apiJson["size"].asUInt64());
+                const std::size_t size(rx.at("size").get<std::size_t>());
                 data = res.data();
 
                 if (size == data.size()) return true;
                 else
                 {
                     std::cout <<
-                        "Data size check failed - got " <<
-                        size << " of " << res.data().size() << " bytes." <<
-                        std::endl;
+                            "Data size check failed - got " <<
+                            size << " of " << data.size() << " bytes." <<
+                            std::endl;
                 }
-            }
-            else
-            {
-                std::cout << "Could not parse API result: " <<
-                    reader.getFormattedErrorMessages() << std::endl;
             }
         }
         else
@@ -227,10 +204,7 @@ void Dropbox::put(
     const std::string path(sanitize(rawPath));
 
     Headers headers(httpGetHeaders());
-
-    Json::Value json;
-    json["path"] = std::string("/" + path);
-    headers["Dropbox-API-Arg"] = toSanitizedString(json);
+    headers["Dropbox-API-Arg"] = json{{ "path", "/" + path }}.dump();
     headers["Content-Type"] = "application/octet-stream";
 
     headers.insert(userHeaders.begin(), userHeaders.end());
@@ -244,10 +218,7 @@ std::string Dropbox::continueFileInfo(std::string cursor) const
 {
     Headers headers(httpPostHeaders());
 
-    Json::Value json;
-    json["cursor"] = cursor;
-    const std::string f(toSanitizedString(json));
-
+    const std::string f(json{{ "cursor", cursor }}.dump());
     std::vector<char> postData(f.begin(), f.end());
     Response res(Http::internalPost(continueListUrl, postData, headers));
 
@@ -279,13 +250,13 @@ std::vector<std::string> Dropbox::glob(std::string path, bool verbose) const
     {
         Headers headers(httpPostHeaders());
 
-        Json::Value request;
-        request["path"] = std::string("/" + path);
-        request["recursive"] = recursive;
-        request["include_media_info"] = false;
-        request["include_deleted"] = false;
-
-        const std::string f(toSanitizedString(request));
+        const json request {
+            { "path", "/" + path },
+            { "recursive", recursive },
+            { "include_media_info", false },
+            { "include_deleted", false }
+        };
+        const std::string f(request.dump());
         std::vector<char> postData(f.begin(), f.end());
 
         // Can't fully qualify this protected method within the lambda due to a
@@ -312,41 +283,36 @@ std::vector<std::string> Dropbox::glob(std::string path, bool verbose) const
     bool more(false);
     std::string cursor("");
 
-    auto processPath =
-        [this, verbose, &results, &more, &cursor](std::string data)
+    auto processPath = [this, verbose, &results, &more, &cursor](std::string d)
     {
-        if (data.empty()) return;
-
+        if (d.empty()) return;
         if (verbose) std::cout << '.';
 
-        Json::Value json;
-        Json::Reader reader;
-        reader.parse(data, json, false);
-
-        const Json::Value& entries(json["entries"]);
-
-        if (entries.isNull())
+        const json j(json::parse(d));
+        if (!j.count("entries"))
         {
-            throw ArbiterError("Returned JSON from Dropbox was NULL");
+            throw ArbiterError("Returned JSON from Dropbox was null");
         }
-        if (!entries.isArray())
+        const json& entries(j.at("entries"));
+        if (!entries.is_array())
         {
             throw ArbiterError("Returned JSON from Dropbox was not an array");
         }
 
-        more = json["has_more"].asBool();
-        cursor = json["cursor"].asString();
+        more = j.value("has_more", false);
+        cursor = j.value("cursor", "");
 
         for (std::size_t i(0); i < entries.size(); ++i)
         {
-            const Json::Value& v(entries[static_cast<Json::ArrayIndex>(i)]);
-            const std::string tag(v[".tag"].asString());
+            const json& v(entries[i]);
+            const std::string tag(v.value(".tag", ""));
 
             // Only insert files.
             if (std::equal(tag.begin(), tag.end(), fileTag.begin(), ins))
             {
                 // Results already begin with a slash.
-                results.push_back(type() + ":/" + v["path_lower"].asString());
+                results.push_back(
+                        type() + ":/" + v.at("path_lower").get<std::string>());
             }
         }
     };

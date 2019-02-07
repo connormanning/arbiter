@@ -19,17 +19,6 @@
 #include <arbiter/util/exports.hpp>
 #include <arbiter/util/types.hpp>
 #include <arbiter/util/util.hpp>
-
-#ifndef ARBITER_EXTERNAL_JSON
-#include <arbiter/third/json/json.hpp>
-#endif
-
-#endif
-
-
-
-#ifdef ARBITER_EXTERNAL_JSON
-#include <json/json.h>
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
@@ -63,7 +52,7 @@ public:
     Arbiter();
 
     /** @brief Construct an Arbiter with driver configurations. */
-    Arbiter(const Json::Value& json);
+    Arbiter(std::string stringifiedJson);
 
     /** True if a Driver has been registered for this file type. */
     bool hasDriver(std::string path) const;
@@ -154,8 +143,8 @@ public:
      * If @p src ends with a slash, it will be resolved with a recursive glob,
      * in which case any nested directory structure will be recreated in @p dst.
      *
-     * If @p dst is a filesystem path, fs::mkdirp will be called prior to the
-     * start of copying.  If @p src is a recursive glob, `fs::mkdirp` will
+     * If @p dst is a filesystem path, mkdirp will be called prior to the
+     * start of copying.  If @p src is a recursive glob, `mkdirp` will
      * be repeatedly called during copying to ensure that any nested directories
      * are reproduced.
      */
@@ -166,7 +155,7 @@ public:
      * directory @p to with the basename of @p file.  If @p to does not end
      * with a slash character, then @p to will be interpreted as a file path.
      *
-     * If @p to is a local filesystem path, then `fs::mkdirp` will be called
+     * If @p to is a local filesystem path, then `mkdirp` will be called
      * prior to copying.
      */
     void copyFile(std::string file, std::string to, bool verbose = false) const;
@@ -244,7 +233,7 @@ public:
      */
     const Driver& getDriver(std::string path) const;
 
-    /** @brief Get a fs::LocalHandle to a possibly remote file.
+    /** @brief Get a LocalHandle to a possibly remote file.
      *
      * If @p path is remote (see Arbiter::isRemote), this operation will fetch
      * the file contents and write them to the local filesystem in the
@@ -262,18 +251,18 @@ public:
      * @param tempEndpoint If @path is remote, the local copy will be created
      * at this Endpoint.
      *
-     * @return A fs::LocalHandle for local access to the resulting file.
+     * @return A LocalHandle for local access to the resulting file.
      */
-    std::unique_ptr<fs::LocalHandle> getLocalHandle(
+    std::unique_ptr<LocalHandle> getLocalHandle(
             std::string path,
             const Endpoint& tempEndpoint) const;
 
-    /** @brief Get a fs::LocalHandle to a possibly remote file.
+    /** @brief Get a LocalHandle to a possibly remote file.
      *
      * If @p tempPath is not specified, the environment will be searched for a
      * temporary location.
      */
-    std::unique_ptr<fs::LocalHandle> getLocalHandle(
+    std::unique_ptr<LocalHandle> getLocalHandle(
             std::string path,
             std::string tempPath = "") const;
 

@@ -23,9 +23,7 @@ class Google : public Https
 public:
     Google(http::Pool& pool, std::unique_ptr<Auth> auth);
 
-    static std::unique_ptr<Google> create(
-            http::Pool& pool,
-            const Json::Value& json);
+    static std::unique_ptr<Google> create(http::Pool& pool, std::string j);
 
     // Overrides.
     virtual std::string type() const override { return "gs"; }  // Match gsutil.
@@ -58,8 +56,8 @@ private:
 class Google::Auth
 {
 public:
-    Auth(const Json::Value& creds);
-    static std::unique_ptr<Auth> create(const Json::Value& json);
+    Auth(std::string s);
+    static std::unique_ptr<Auth> create(std::string s);
 
     http::Headers headers() const;
 
@@ -67,7 +65,8 @@ private:
     void maybeRefresh() const;
     std::string sign(std::string data, std::string privateKey) const;
 
-    const Json::Value m_creds;
+    const std::string m_clientEmail;
+    const std::string m_privateKey;
     mutable int64_t m_expiration = 0;   // Unix time.
     mutable http::Headers m_headers;
 

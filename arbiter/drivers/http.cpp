@@ -32,7 +32,7 @@ Http::Http(Pool& pool)
 #endif
 }
 
-std::unique_ptr<Http> Http::create(Pool& pool, const Json::Value&)
+std::unique_ptr<Http> Http::create(Pool& pool)
 {
     return std::unique_ptr<Http>(new Http(pool));
 }

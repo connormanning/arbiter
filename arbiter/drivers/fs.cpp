@@ -67,7 +67,7 @@ namespace
 namespace drivers
 {
 
-std::unique_ptr<Fs> Fs::create(const Json::Value&)
+std::unique_ptr<Fs> Fs::create()
 {
     return std::unique_ptr<Fs>(new Fs());
 }
@@ -76,7 +76,7 @@ std::unique_ptr<std::size_t> Fs::tryGetSize(std::string path) const
 {
     std::unique_ptr<std::size_t> size;
 
-    path = fs::expandTilde(path);
+    path = expandTilde(path);
 
     std::ifstream stream(path, std::ios::in | std::ios::binary);
 
@@ -93,7 +93,7 @@ bool Fs::get(std::string path, std::vector<char>& data) const
 {
     bool good(false);
 
-    path = fs::expandTilde(path);
+    path = expandTilde(path);
     std::ifstream stream(path, std::ios::in | std::ios::binary);
 
     if (stream.good())
@@ -111,7 +111,7 @@ bool Fs::get(std::string path, std::vector<char>& data) const
 
 void Fs::put(std::string path, const std::vector<char>& data) const
 {
-    path = fs::expandTilde(path);
+    path = expandTilde(path);
     std::ofstream stream(path, binaryTruncMode);
 
     if (!stream.good())
@@ -129,8 +129,8 @@ void Fs::put(std::string path, const std::vector<char>& data) const
 
 void Fs::copy(std::string src, std::string dst) const
 {
-    src = fs::expandTilde(src);
-    dst = fs::expandTilde(dst);
+    src = expandTilde(src);
+    dst = expandTilde(dst);
 
     std::ifstream instream(src, std::ifstream::in | std::ifstream::binary);
     if (!instream.good())
@@ -150,13 +150,11 @@ void Fs::copy(std::string src, std::string dst) const
 
 std::vector<std::string> Fs::glob(std::string path, bool verbose) const
 {
-    return fs::glob(path);
+    return arbiter::glob(path);
 }
 
 } // namespace drivers
 
-namespace fs
-{
 
 bool mkdirp(std::string raw)
 {
@@ -343,7 +341,7 @@ std::vector<std::string> glob(std::string path)
 {
     std::vector<std::string> results;
 
-    path = fs::expandTilde(path);
+    path = expandTilde(path);
 
     if (path.find('*') == std::string::npos)
     {
@@ -415,10 +413,9 @@ LocalHandle::LocalHandle(const std::string localPath, const bool isRemote)
 
 LocalHandle::~LocalHandle()
 {
-    if (m_erase) fs::remove(fs::expandTilde(m_localPath));
+    if (m_erase) remove(expandTilde(m_localPath));
 }
 
-} // namespace fs
 } // namespace arbiter
 
 #ifdef ARBITER_CUSTOM_NAMESPACE

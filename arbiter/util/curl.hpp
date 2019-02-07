@@ -6,21 +6,8 @@
 #include <vector>
 
 #ifndef ARBITER_IS_AMALGAMATION
-
-#include <arbiter/util/types.hpp>
 #include <arbiter/util/exports.hpp>
-
-
-#ifndef ARBITER_EXTERNAL_JSON
-#include <arbiter/third/json/json.hpp>
-#endif
-
-#endif
-
-
-
-#ifdef ARBITER_EXTERNAL_JSON
-#include <json/json.h>
+#include <arbiter/util/types.hpp>
 #endif
 
 #ifdef ARBITER_CURL
@@ -75,7 +62,7 @@ public:
             Query query);
 
 private:
-    Curl(const Json::Value& json = Json::Value());
+    Curl(std::string j);
 
     void init(std::string path, const Headers& headers, const Query& query);
 
