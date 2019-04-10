@@ -6,6 +6,7 @@
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/util/sha256.hpp>
 #include <arbiter/util/transforms.hpp>
+#include <arbiter/util/util.hpp>
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
@@ -71,9 +72,8 @@ std::unique_ptr<LocalHandle> Endpoint::getLocalHandle(
         const std::string tmp(getTempPath());
         const auto ext(Arbiter::getExtension(subpath));
         const std::string basename(
-                crypto::encodeAsHex(crypto::sha256(Arbiter::stripExtension(
-                            prefixedRoot() + subpath))) +
-                    (ext.size() ? "." + ext : ""));
+                std::to_string(randomNumber()) +
+                (ext.size() ? "." + ext : ""));
 
         const std::string local(tmp + basename);
 

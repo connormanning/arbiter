@@ -161,7 +161,9 @@ inline std::string join(std::string path, Paths&&... paths)
 ARBITER_DLL std::unique_ptr<std::string> env(const std::string& var);
 
 /** @brief Split a string on a token. */
-ARBITER_DLL std::vector<std::string> split(const std::string& s, char delimiter = '\n');
+ARBITER_DLL std::vector<std::string> split(
+        const std::string& s,
+        char delimiter = '\n');
 
 /** @brief Remove whitespace. */
 ARBITER_DLL std::string stripWhitespace(const std::string& s);
@@ -184,6 +186,8 @@ std::unique_ptr<T> maybeClone(const T* t)
     if (t) return makeUnique<T>(*t);
     else return std::unique_ptr<T>();
 }
+
+ARBITER_DLL uint64_t randomNumber();
 
 } // namespace arbiter
 

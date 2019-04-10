@@ -6,6 +6,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <mutex>
+#include <random>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -14,6 +16,20 @@ namespace ARBITER_CUSTOM_NAMESPACE
 
 namespace arbiter
 {
+
+namespace
+{
+    std::mutex randomMutex;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<unsigned long long> distribution;
+}
+
+uint64_t randomNumber()
+{
+    std::lock_guard<std::mutex> lock(randomMutex);
+    return distribution(gen);
+}
 
 std::string stripPostfixing(const std::string path)
 {

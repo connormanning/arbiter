@@ -369,7 +369,7 @@ std::unique_ptr<LocalHandle> Arbiter::getLocalHandle(
 
         const auto ext(getExtension(path));
         const std::string basename(
-                crypto::encodeAsHex(crypto::sha256(stripExtension(path))) +
+                std::to_string(randomNumber()) +
                 (ext.size() ? "." + ext : ""));
         tempEndpoint.put(basename, getBinary(path));
         localHandle.reset(
