@@ -23,9 +23,9 @@ Contents parse(const std::string& s)
     Section section;
 
     const std::vector<std::string> lines;
-    for (std::string line : util::split(s))
+    for (std::string line : split(s))
     {
-        line = util::stripWhitespace(line);
+        line = stripWhitespace(line);
         const std::size_t semiPos(line.find_first_of(';'));
         const std::size_t hashPos(line.find_first_of('#'));
         line = line.substr(0, std::min(semiPos, hashPos));

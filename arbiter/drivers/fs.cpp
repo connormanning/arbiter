@@ -44,16 +44,16 @@ namespace
         std::string s;
 
 #ifndef ARBITER_WINDOWS
-        if (auto home = util::env("HOME")) s = *home;
+        if (auto home = env("HOME")) s = *home;
 #else
-        if (auto userProfile = util::env("USERPROFILE"))
+        if (auto userProfile = env("USERPROFILE"))
         {
             s = *userProfile;
         }
         else
         {
-            auto homeDrive(util::env("HOMEDRIVE"));
-            auto homePath(util::env("HOMEPATH"));
+            auto homeDrive(env("HOMEDRIVE"));
+            auto homePath(env("HOMEPATH"));
 
             if (homeDrive && homePath) s = *homeDrive + *homePath;
         }
@@ -166,11 +166,11 @@ bool mkdirp(std::string raw)
         // not to remove drive letters like C:\\.
         const auto end = std::unique(s.begin(), s.end(), [](char l, char r)
         {
-            return util::isSlash(l) && util::isSlash(r);
+            return isSlash(l) && isSlash(r);
         });
 
         s = std::string(s.begin(), end);
-        if (s.size() && util::isSlash(s.back())) s.pop_back();
+        if (s.size() && isSlash(s.back())) s.pop_back();
         return s;
     })());
 
@@ -179,7 +179,7 @@ bool mkdirp(std::string raw)
 
     do
     {
-        it = std::find_if(++it, end, util::isSlash);
+        it = std::find_if(++it, end, isSlash);
 
         const std::string cur(dir.begin(), it);
 #ifndef ARBITER_WINDOWS
@@ -391,10 +391,10 @@ std::string getTempPath()
 {
     std::string tmp;
 #ifndef ARBITER_WINDOWS
-    if (const auto t = util::env("TMPDIR"))         tmp = *t;
-    else if (const auto t = util::env("TMP"))       tmp = *t;
-    else if (const auto t = util::env("TEMP"))      tmp = *t;
-    else if (const auto t = util::env("TEMPDIR"))   tmp = *t;
+    if (const auto t = env("TMPDIR"))         tmp = *t;
+    else if (const auto t = env("TMP"))       tmp = *t;
+    else if (const auto t = env("TEMP"))      tmp = *t;
+    else if (const auto t = env("TEMPDIR"))   tmp = *t;
     else tmp = "/tmp";
 #else
     std::vector<char> path(MAX_PATH, '\0');

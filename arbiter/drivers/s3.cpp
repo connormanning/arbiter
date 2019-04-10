@@ -97,7 +97,6 @@ namespace drivers
 {
 
 using namespace http;
-using namespace util;
 
 S3::S3(
         Pool& pool,
@@ -159,8 +158,8 @@ std::string S3::extractProfile(const std::string s)
         return config["profile"].get<std::string>();
     }
 
-    if (auto p = util::env("AWS_PROFILE")) return *p;
-    if (auto p = util::env("AWS_DEFAULT_PROFILE")) return *p;
+    if (auto p = env("AWS_PROFILE")) return *p;
+    if (auto p = env("AWS_DEFAULT_PROFILE")) return *p;
     else return "default";
 }
 
@@ -186,18 +185,18 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
 
     // Try environment settings next.
     {
-        auto access(util::env("AWS_ACCESS_KEY_ID"));
-        auto hidden(util::env("AWS_SECRET_ACCESS_KEY"));
-        auto token(util::env("AWS_SESSION_TOKEN"));
+        auto access(env("AWS_ACCESS_KEY_ID"));
+        auto hidden(env("AWS_SECRET_ACCESS_KEY"));
+        auto token(env("AWS_SESSION_TOKEN"));
 
         if (access && hidden)
         {
             return makeUnique<Auth>(*access, *hidden, token ? *token : "");
         }
 
-        access = util::env("AMAZON_ACCESS_KEY_ID");
-        hidden = util::env("AMAZON_SECRET_ACCESS_KEY");
-        token = util::env("AMAZON_SESSION_TOKEN");
+        access = env("AMAZON_ACCESS_KEY_ID");
+        hidden = env("AMAZON_SECRET_ACCESS_KEY");
+        token = env("AMAZON_SESSION_TOKEN");
 
         if (access && hidden)
         {
@@ -206,8 +205,8 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
     }
 
     const std::string credPath(
-            util::env("AWS_CREDENTIAL_FILE") ?
-                *util::env("AWS_CREDENTIAL_FILE") : "~/.aws/credentials");
+            env("AWS_CREDENTIAL_FILE") ?
+                *env("AWS_CREDENTIAL_FILE") : "~/.aws/credentials");
 
     // Finally, try reading credentials file.
     drivers::Fs fsDriver;
@@ -296,8 +295,8 @@ std::string S3::Config::extractRegion(
         const std::string profile)
 {
     const std::string configPath(
-            util::env("AWS_CONFIG_FILE") ?
-                *util::env("AWS_CONFIG_FILE") : "~/.aws/config");
+            env("AWS_CONFIG_FILE") ?
+                *env("AWS_CONFIG_FILE") : "~/.aws/config");
 
     drivers::Fs fsDriver;
 
@@ -309,11 +308,11 @@ std::string S3::Config::extractRegion(
     {
         return c["region"].get<std::string>();
     }
-    else if (auto p = util::env("AWS_REGION"))
+    else if (auto p = env("AWS_REGION"))
     {
         return *p;
     }
-    else if (auto p = util::env("AWS_DEFAULT_REGION"))
+    else if (auto p = env("AWS_DEFAULT_REGION"))
     {
         return *p;
     }
@@ -351,7 +350,7 @@ std::string S3::Config::extractBaseUrl(
 
     std::string endpointsPath("~/.aws/endpoints.json");
 
-    if (const auto e = util::env("AWS_ENDPOINTS_FILE"))
+    if (const auto e = env("AWS_ENDPOINTS_FILE"))
     {
         endpointsPath = *e;
     }

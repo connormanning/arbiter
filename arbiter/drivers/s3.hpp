@@ -120,7 +120,7 @@ public:
     { }
 
     Auth(std::string iamRole)
-        : m_role(util::makeUnique<std::string>(iamRole))
+        : m_role(makeUnique<std::string>(iamRole))
     { }
 
     static std::unique_ptr<Auth> create(std::string j, std::string profile);

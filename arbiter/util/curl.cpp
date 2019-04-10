@@ -115,8 +115,6 @@ Curl::Curl(const std::string s)
 #ifdef ARBITER_CURL
     const json c(s.size() ? json::parse(s) : json::object());
 
-    using namespace util;
-
     m_curl = curl_easy_init();
 
     // Configurable entries are:
@@ -131,7 +129,7 @@ Curl::Curl(const std::string s)
     {
         for (const auto& key : keys)
         {
-            if (auto e = util::env(key)) return makeUnique<std::string>(*e);
+            if (auto e = env(key)) return makeUnique<std::string>(*e);
         }
         return std::unique_ptr<std::string>();
     });

@@ -93,7 +93,7 @@ std::unique_ptr<Google> Google::create(http::Pool& pool, const std::string s)
 {
     if (auto auth = Auth::create(s))
     {
-        return util::makeUnique<Google>(pool, std::move(auth));
+        return makeUnique<Google>(pool, std::move(auth));
     }
 
     return std::unique_ptr<Google>();
@@ -111,7 +111,7 @@ std::unique_ptr<std::size_t> Google::tryGetSize(const std::string path) const
     if (res.ok() && res.headers().count("Content-Length"))
     {
         const auto& s(res.headers().at("Content-Length"));
-        return util::makeUnique<std::size_t>(std::stoul(s));
+        return makeUnique<std::size_t>(std::stoul(s));
     }
 
     return std::unique_ptr<std::size_t>();
@@ -216,13 +216,13 @@ std::vector<std::string> Google::glob(std::string path, bool verbose) const
 std::unique_ptr<Google::Auth> Google::Auth::create(const std::string s)
 {
     const json j(json::parse(s));
-    if (auto path = util::env("GOOGLE_APPLICATION_CREDENTIALS"))
+    if (auto path = env("GOOGLE_APPLICATION_CREDENTIALS"))
     {
         if (const auto file = drivers::Fs().tryGet(*path))
         {
             try
             {
-                return util::makeUnique<Auth>(*file);
+                return makeUnique<Auth>(*file);
             }
             catch (const ArbiterError& e)
             {
@@ -236,12 +236,12 @@ std::unique_ptr<Google::Auth> Google::Auth::create(const std::string s)
         const auto path(j.get<std::string>());
         if (const auto file = drivers::Fs().tryGet(path))
         {
-            return util::makeUnique<Auth>(*file);
+            return makeUnique<Auth>(*file);
         }
     }
     else if (j.is_object())
     {
-        return util::makeUnique<Auth>(s);
+        return makeUnique<Auth>(s);
     }
 
     return std::unique_ptr<Auth>();

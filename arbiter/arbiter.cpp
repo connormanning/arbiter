@@ -36,8 +36,8 @@ namespace
         json config;
         std::string path("~/.arbiter/config.json");
 
-        if      (auto p = util::env("ARBITER_CONFIG_FILE")) path = *p;
-        else if (auto p = util::env("ARBITER_CONFIG_PATH")) path = *p;
+        if      (auto p = env("ARBITER_CONFIG_FILE")) path = *p;
+        else if (auto p = env("ARBITER_CONFIG_PATH")) path = *p;
 
         if (auto data = drivers::Fs().tryGet(path)) config = json::parse(*data);
 
@@ -218,7 +218,7 @@ void Arbiter::copy(
 
     // Globify the source path if it's a directory.  In this case, the source
     // already ends with a slash.
-    const std::string srcToResolve(src + (util::isDirectory(src) ? "**" : ""));
+    const std::string srcToResolve(src + (isDirectory(src) ? "**" : ""));
 
     if (srcToResolve.back() != '*')
     {
@@ -231,7 +231,7 @@ void Arbiter::copy(
         // All resolved paths will contain this common prefix, so we can
         // determine any nested paths from recursive resolutions by stripping
         // that common portion.
-        const Endpoint& srcEndpoint(getEndpoint(util::stripPostfixing(src)));
+        const Endpoint& srcEndpoint(getEndpoint(stripPostfixing(src)));
         const std::string commonPrefix(srcEndpoint.prefixedRoot());
 
         const Endpoint dstEndpoint(getEndpoint(dst));
@@ -258,7 +258,7 @@ void Arbiter::copy(
 
             if (dstEndpoint.isLocal())
             {
-                mkdirp(util::getNonBasename(dstEndpoint.fullPath(subpath)));
+                mkdirp(getNonBasename(dstEndpoint.fullPath(subpath)));
             }
 
             dstEndpoint.put(subpath, getBinary(path));
@@ -275,16 +275,16 @@ void Arbiter::copyFile(
 
     const Endpoint dstEndpoint(getEndpoint(dst));
 
-    if (util::isDirectory(dst))
+    if (isDirectory(dst))
     {
         // If the destination is a directory, maintain the basename of the
         // source file.
-        dst += util::getBasename(file);
+        dst += getBasename(file);
     }
 
     if (verbose) std::cout << file << " -> " << dst << std::endl;
 
-    if (dstEndpoint.isLocal()) mkdirp(util::getNonBasename(dst));
+    if (dstEndpoint.isLocal()) mkdirp(getNonBasename(dst));
 
     if (getEndpoint(file).type() == dstEndpoint.type())
     {

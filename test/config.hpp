@@ -17,11 +17,11 @@ private:
 
         std::string file("~/.arbiter/.test.json");
 
-        if (const auto p = util::env("TEST_CONFIG_FILE"))
+        if (const auto p = env("TEST_CONFIG_FILE"))
         {
             file = *p;
         }
-        else if (const auto p = util::env("TEST_CONFIG_PATH"))
+        else if (const auto p = env("TEST_CONFIG_PATH"))
         {
             file = *p;
         }

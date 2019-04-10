@@ -14,8 +14,6 @@ namespace ARBITER_CUSTOM_NAMESPACE
 
 namespace arbiter
 {
-namespace util
-{
 
 std::string stripPostfixing(const std::string path)
 {
@@ -42,11 +40,11 @@ std::string getBasename(const std::string fullPath)
 
     // Now do the real slash searching.
     std::size_t pos(stripped.rfind('/'));
-    
+
     // Maybe windows
-    if (pos == std::string::npos) 
+    if (pos == std::string::npos)
         pos = stripped.rfind('\\');
-    
+
     if (pos != std::string::npos)
     {
         const std::string sub(stripped.substr(pos + 1));
@@ -136,7 +134,6 @@ std::string stripWhitespace(const std::string& in)
     return out;
 }
 
-} // namespace util
 } // namespace arbiter
 
 #ifdef ARBITER_CUSTOM_NAMESPACE

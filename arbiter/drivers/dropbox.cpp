@@ -48,7 +48,6 @@ namespace drivers
 {
 
 using namespace http;
-using namespace util;
 
 Dropbox::Dropbox(Pool& pool, const Dropbox::Auth& auth)
     : Http(pool)
