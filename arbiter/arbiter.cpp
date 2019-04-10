@@ -31,7 +31,7 @@ namespace
 
     json getConfig(const std::string& s)
     {
-        json in(json::parse(s));
+        json in(s.size() ? json::parse(s) : json::object());
 
         json config;
         std::string path("~/.arbiter/config.json");
