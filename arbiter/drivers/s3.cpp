@@ -33,6 +33,8 @@ namespace ARBITER_CUSTOM_NAMESPACE
 namespace arbiter
 {
 
+using namespace internal;
+
 namespace
 {
 #ifdef ARBITER_CURL
