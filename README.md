@@ -36,15 +36,25 @@ s3Glob = a.resolve("s3://some-bucket/some-dir/*");
 
 Some drivers accept (or might require) explicit values for configuration.
 
+Arbiter takes a `std::string` json argument.  Here is an example using `nlohmann::json` that is also used internally in Arbiter.
+
 ```cpp
+#include <arbiter/util/json.hpp>
 using namespace arbiter;
 
-Json::Value config;
-config["dropbox"]["token"] = "My dropbox token";
-config["s3"]["access"] = "My access key";
-config["s3"]["hidden"] = "My secret key";
+json config = {
+    { "dropbox", {
+        {"token", "My dropbox token"}
+    }},
+    {"s3", {
+        {"region", "ap-southeast-2"},
+        {"access", "My access key"},
+        {"secret", "My secret key"}
+    }}
+};
 
-Arbiter a(config);
+std::string configStr = config.dump();
+Arbiter a(configStr);
 
 // Now dropbox and S3 paths are accessible.
 auto data = a.get("dropbox://my-file.txt");
