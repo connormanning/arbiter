@@ -79,7 +79,7 @@ namespace
     };
     
     // https://cloud.google.com/storage/docs/json_api/#encoding
-    const std::string GResource::exclusion("!$&'()*+,;=:@");
+    const std::string GResource::exclusions("!$&'()*+,;=:@");
     
 } // unnamed namespace
 
