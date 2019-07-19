@@ -113,7 +113,7 @@ std::unique_ptr<std::size_t> Google::tryGetSize(const std::string path) const
     if (res.ok() && res.headers().count("Content-Length"))
     {
         const auto& s(res.headers().at("Content-Length"));
-        return makeUnique<std::size_t>(std::stoul(s));
+        return makeUnique<std::size_t>(std::stoull(s));
     }
 
     return std::unique_ptr<std::size_t>();

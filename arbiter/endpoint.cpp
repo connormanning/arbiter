@@ -8,6 +8,7 @@
 #include <arbiter/util/transforms.hpp>
 #include <arbiter/util/util.hpp>
 #endif
+#include<fstream>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -72,14 +73,44 @@ std::unique_ptr<LocalHandle> Endpoint::getLocalHandle(
         const std::string tmp(getTempPath());
         const auto ext(Arbiter::getExtension(subpath));
         const std::string basename(
-                std::to_string(randomNumber()) +
-                (ext.size() ? "." + ext : ""));
+                                std::to_string(randomNumber()) +
+                                (ext.size() ? "." + ext : ""));
 
         const std::string local(tmp + basename);
-
-        drivers::Fs fs;
-        fs.put(local, getBinary(subpath));
-
+        if (isHttpDerived())
+        {
+            std::size_t fileSize = getSize(subpath);
+            uint32_t chunkSize = 100 * 1000 * 1000; // 100mb
+            uint32_t numChunks = ((fileSize % chunkSize) == 0)
+                                     ? (fileSize / chunkSize)
+                                     : (fileSize / chunkSize) + 1;
+            int32_t start;
+            std::ofstream stream(local, std::ofstream::binary |
+                                        std::ofstream::out |
+                                        std::ofstream::app);
+            stream.good()
+                ? start = -1
+                : throw ArbiterError("Unable to create local handle.");
+            while (numChunks > 0)
+            {
+                http::Headers headers;
+                std::string range("bytes=" + std::to_string(start + 1) + "-" +
+                                  std::to_string((start + chunkSize)>fileSize?fileSize:(start + chunkSize)));
+                headers.insert(std::pair<std::string, std::string>("Range", range));
+                std::vector<char> data =getBinary(subpath, headers, http::Query());
+                stream.write(data.data(), data.size());
+                stream.good()
+                    ? start += chunkSize
+                    : throw ArbiterError("Unable to write to local handle.");
+                --numChunks;
+            }
+            stream.close();
+        }
+        else
+        {
+            drivers::Fs fs;
+            fs.put(local, getBinary(subpath));
+        }
         handle.reset(new LocalHandle(local, true));
     }
     else
