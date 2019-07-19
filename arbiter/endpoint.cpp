@@ -73,8 +73,8 @@ std::unique_ptr<LocalHandle> Endpoint::getLocalHandle(
         const std::string tmp(getTempPath());
         const auto ext(Arbiter::getExtension(subpath));
         const std::string basename(
-                                std::to_string(randomNumber()) +
-                                (ext.size() ? "." + ext : ""));
+                std::to_string(randomNumber()) +
+                (ext.size() ? "." + ext : ""));
 
         const std::string local(tmp + basename);
         if (isHttpDerived())
