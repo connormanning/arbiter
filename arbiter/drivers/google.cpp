@@ -37,8 +37,8 @@ namespace
 {
     std::mutex sslMutex;
 
-    const std::string baseGoogleUrl("www.googleapis.com/storage/v1/");
-    const std::string uploadUrl("www.googleapis.com/upload/storage/v1/");
+    const char baseGoogleUrl[] = "www.googleapis.com/storage/v1/";
+    const char uploadUrl[] = "www.googleapis.com/upload/storage/v1/";
     const http::Query altMediaQuery{ { "alt", "media" } };
 
     class GResource
@@ -53,23 +53,23 @@ namespace
 
         const std::string& bucket() const { return m_bucket; }
         const std::string& object() const { return m_object; }
-        static const std::string exclusions;
+        static const char exclusions[];
         std::string endpoint() const
         {
             // https://cloud.google.com/storage/docs/json_api/v1/
             return
-                baseGoogleUrl + "b/" + bucket() +
+                std::string(baseGoogleUrl) + "b/" + bucket() +
                 "o/" + http::sanitize(object(), exclusions);
         }
 
         std::string uploadEndpoint() const
         {
-            return uploadUrl + "b/" + bucket() + "o";
+            return std::string(uploadUrl) + "b/" + bucket() + "o";
         }
 
         std::string listEndpoint() const
         {
-            return baseGoogleUrl + "b/" + bucket() + "o";
+            return std::string(baseGoogleUrl) + "b/" + bucket() + "o";
         }
 
     private:
@@ -79,7 +79,7 @@ namespace
     };
     
     // https://cloud.google.com/storage/docs/json_api/#encoding
-    const std::string GResource::exclusions("!$&'()*+,;=:@");
+    const char GResource::exclusions[] = "!$&'()*+,;=:@";
     
 } // unnamed namespace
 
