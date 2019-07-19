@@ -84,7 +84,7 @@ std::unique_ptr<LocalHandle> Endpoint::getLocalHandle(
             uint32_t numChunks = ((fileSize % chunkSize) == 0)
                                      ? (fileSize / chunkSize)
                                      : (fileSize / chunkSize) + 1;
-            int32_t start;
+            std::size_t start;
             std::ofstream stream(local, std::ofstream::binary |
                                         std::ofstream::out |
                                         std::ofstream::app);
