@@ -70,7 +70,7 @@ std::string getBasename(const std::string fullPath)
     return result;
 }
 
-std::string getNonBasename(const std::string fullPath)
+std::string getDirname(const std::string fullPath)
 {
     std::string result("");
 

@@ -258,7 +258,7 @@ void Arbiter::copy(
 
             if (dstEndpoint.isLocal())
             {
-                mkdirp(getNonBasename(dstEndpoint.fullPath(subpath)));
+                mkdirp(getDirname(dstEndpoint.fullPath(subpath)));
             }
 
             dstEndpoint.put(subpath, getBinary(path));
@@ -284,7 +284,7 @@ void Arbiter::copyFile(
 
     if (verbose) std::cout << file << " -> " << dst << std::endl;
 
-    if (dstEndpoint.isLocal()) mkdirp(getNonBasename(dst));
+    if (dstEndpoint.isLocal()) mkdirp(getDirname(dst));
 
     if (getEndpoint(file).type() == dstEndpoint.type())
     {
@@ -358,30 +358,8 @@ std::unique_ptr<LocalHandle> Arbiter::getLocalHandle(
         const std::string path,
         const Endpoint& tempEndpoint) const
 {
-    std::unique_ptr<LocalHandle> localHandle;
-
-    if (isRemote(path))
-    {
-        if (tempEndpoint.isRemote())
-        {
-            throw ArbiterError("Temporary endpoint must be local.");
-        }
-
-        const auto ext(getExtension(path));
-        const std::string basename(
-                std::to_string(randomNumber()) +
-                (ext.size() ? "." + ext : ""));
-        tempEndpoint.put(basename, getBinary(path));
-        localHandle.reset(
-                new LocalHandle(tempEndpoint.root() + basename, true));
-    }
-    else
-    {
-        localHandle.reset(
-                new LocalHandle(expandTilde(stripType(path)), false));
-    }
-
-    return localHandle;
+    const Endpoint fromEndpoint(getEndpoint(getDirname(path)));
+    return fromEndpoint.getLocalHandle(getBasename(path));
 }
 
 std::unique_ptr<LocalHandle> Arbiter::getLocalHandle(

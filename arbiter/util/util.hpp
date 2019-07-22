@@ -42,7 +42,7 @@ ARBITER_DLL std::string getBasename(std::string fullPath);
  * For directory paths, this corresponds to all directories above the
  * innermost directory.
  */
-ARBITER_DLL std::string getNonBasename(std::string fullPath);
+ARBITER_DLL std::string getDirname(std::string fullPath);
 
 /** @cond arbiter_internal */
 ARBITER_DLL inline bool isSlash(char c) { return c == '/' || c == '\\'; }
