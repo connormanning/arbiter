@@ -25,6 +25,8 @@ namespace ARBITER_CUSTOM_NAMESPACE
 namespace arbiter
 {
 
+using namespace internal;
+
 namespace
 {
     const std::string baseDropboxUrl("https://content.dropboxapi.com/");

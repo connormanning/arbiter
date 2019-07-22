@@ -90,11 +90,11 @@ def amalgamate_source(source_top_dir=None,
     header.add_text("#define ARBITER_IS_AMALGAMATION")
 
     if custom_namespace:
-        print "Using custom namespace: " + custom_namespace
+        print("Using custom namespace: " + custom_namespace)
         header.add_text("#define ARBITER_CUSTOM_NAMESPACE " + custom_namespace)
 
     if not include_xml:
-        print "NOT bundling XML"
+        print("NOT bundling XML")
         header.add_text("#define ARBITER_EXTERNAL_XML")
 
     if include_xml:
@@ -111,7 +111,7 @@ def amalgamate_source(source_top_dir=None,
         header.add_text("\n#pragma once")
         header.add_text("#define ARBITER_CURL")
     else:
-        print "NOT #defining ARBITER_CURL"
+        print("NOT #defining ARBITER_CURL")
 
     header.add_file("arbiter/third/json/json.hpp")
     header.add_file("arbiter/util/exports.hpp")

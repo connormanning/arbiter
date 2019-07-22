@@ -168,6 +168,9 @@ ARBITER_DLL std::vector<std::string> split(
 /** @brief Remove whitespace. */
 ARBITER_DLL std::string stripWhitespace(const std::string& s);
 
+namespace internal
+{
+
 template<typename T, typename... Args>
 std::unique_ptr<T> makeUnique(Args&&... args)
 {
@@ -186,6 +189,8 @@ std::unique_ptr<T> maybeClone(const T* t)
     if (t) return makeUnique<T>(*t);
     else return std::unique_ptr<T>();
 }
+
+} // namespace internal
 
 ARBITER_DLL uint64_t randomNumber();
 
