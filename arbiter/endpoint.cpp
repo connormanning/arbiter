@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <fstream>
+
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/endpoint.hpp>
 
@@ -8,7 +11,6 @@
 #include <arbiter/util/transforms.hpp>
 #include <arbiter/util/util.hpp>
 #endif
-#include<fstream>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
