@@ -393,6 +393,56 @@ std::string Google::Auth::sign(
 #endif
 }
 
+void Google::upload(std::string path, const std::string resourcepath) const {
+    Fs fs;
+    size_t fileSize = fs.getSize(resourcepath);
+    const GResource resource(path);
+    std::string url(resource.uploadEndpoint());
+
+    drivers::Https https(m_pool);
+
+    http::Query query;
+    query["uploadType"] = "resumable";
+    query["name"] = http::sanitize(resource.object(), GResource::exclusions);
+
+    http::Headers headers(m_auth->headers());
+    headers["X-Upload-Content-Length"]=std::to_string(fileSize);
+    headers["X-Upload-Content-Type"] ="application/octet-stream";
+    std::vector<char> data;
+    headers["Content-Length"] = std::to_string(data.size());
+
+    // Initiate upload request. This will return an upload location, where we can perform chunked upload.
+    auto res(https.internalPost(url,data, headers, query));
+    if (!res.ok()){
+        throw ArbiterError("Failed to initialize upload session.");
+    }
+
+    headers.clear();
+    query.clear();
+    url = res.headers().at("Location");
+
+    // Trim Received url, It contains spaces at the start and may be at end.
+    url.erase(0, url.find_first_not_of(' '));
+    url.erase(url.find_last_not_of(' ') + 1);
+
+    // Perform chunked upload
+    for (size_t start(0); start < fileSize && (res.ok() || res.code() == 308); start += chunkSize) {
+        const std::size_t end((std::min)(start + chunkSize, fileSize));
+        const std::string range("bytes "+std::to_string(start)+"-"+std::to_string(end-1)+"/"+std::to_string(fileSize));
+          
+        const auto data(fs.getBinaryChunk(resourcepath, start, end));
+
+        headers["Content-Range"]=range;
+        headers["Content-Length"] = std::to_string(data.size());
+          
+        res = https.internalPut(url, data, headers, query);
+    }
+
+    if (!res.ok()) {
+        throw ArbiterError("Error while uploading "+path+", Error code : "+std::to_string(res.code()));
+    }
+}
+
 } // namespace drivers
 } // namespace arbiter
 

@@ -153,6 +153,35 @@ std::vector<std::string> Fs::glob(std::string path, bool verbose) const
     return arbiter::glob(path);
 }
 
+std::vector<char> Fs::getBinaryChunk(std::string path, size_t start,
+    size_t end) const {
+    std::vector<char> retBuffer;
+    std::ifstream iStream(path, std::ifstream::binary | std::ios::in);
+    if (!iStream.good()) {
+        throw ArbiterError("Unable to open "+ path);
+    }
+
+    iStream.seekg(0, std::ios::end);
+    if (end > iStream.tellg()) end = iStream.tellg();
+	
+    retBuffer.clear();
+    retBuffer.resize(end - start);
+	
+    iStream.seekg(start, std::ios::beg);
+    if (!iStream.good()) {
+        throw ArbiterError("Unable to Move to "+ std::to_string(start));
+    }
+
+    iStream.read(retBuffer.data(), end - start);
+    if (!iStream.good()) {
+        throw ArbiterError("Unable to read " + std::to_string(start) + " - " + std::to_string(end));
+    }
+	
+    iStream.close();
+
+    return retBuffer;
+}
+
 } // namespace drivers
 
 

@@ -38,6 +38,8 @@ public:
             http::Headers headers,
             http::Query query) const override;
 
+    void upload(std::string path, const std::string resourcepath) const;
+
 private:
     /** Inherited from Drivers::Http. */
     virtual bool get(

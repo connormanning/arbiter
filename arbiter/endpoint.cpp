@@ -22,8 +22,6 @@ namespace arbiter
 
 namespace
 {
-    constexpr std::size_t mb = 1024 * 1024;
-    const std::size_t chunkSize = 10 * mb;
     const auto streamFlags(
         std::ofstream::binary |
         std::ofstream::out |
@@ -284,6 +282,14 @@ const drivers::Http& Endpoint::getHttpDriver() const
 {
     if (auto d = tryGetHttpDriver()) return *d;
     else throw ArbiterError("Cannot get driver of type " + type() + " as HTTP");
+}
+
+void Endpoint::upload(const std::string subpath, const std::string resourcePath) const {
+    if (m_driver.type()=="gs"){
+        drivers::Google* gDriver = (drivers::Google*)&m_driver;
+        gDriver->upload(fullPath(subpath), resourcePath);
+    } else
+        throw ArbiterError("Chunked upload is only availabe for Google Driver.");    
 }
 
 } // namespace arbiter

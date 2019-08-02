@@ -18,6 +18,9 @@ namespace ARBITER_CUSTOM_NAMESPACE
 namespace arbiter
 {
 
+constexpr std::size_t mb = 1024 * 1024;
+const std::size_t chunkSize = 10 * mb;
+
 /** General utilities. */
 
 /** Returns @p path, less any trailing glob indicators (one or two

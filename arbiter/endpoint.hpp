@@ -183,6 +183,9 @@ public:
             http::Headers headers = http::Headers(),
             http::Query query = http::Query()) const;
 
+    void Endpoint::upload(
+	     const std::string subpath, const std::string resourcePath) const;
+
 private:
     Endpoint(const Driver& driver, std::string root);
 
