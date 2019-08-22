@@ -67,7 +67,10 @@ public:
     bool isHttpDerived() const;
 
     /** See Arbiter::getLocalHandle. */
-    std::unique_ptr<LocalHandle> getLocalHandle(std::string subpath) const;
+    std::unique_ptr<LocalHandle> getLocalHandle(
+            std::string subpath,
+            http::Headers headers = http::Headers(),
+            http::Query query = http::Query()) const;
 
     /** Passthrough to Driver::get. */
     std::string get(std::string subpath) const;

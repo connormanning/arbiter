@@ -55,7 +55,8 @@ def amalgamate_source(source_top_dir=None,
                        header_include_path=None,
                        include_xml=True,
                        custom_namespace=None,
-                       define_curl=True):
+                       define_curl=True,
+                       bundle_json=False):
     """Produces amalgamated source.
        Parameters:
            source_top_dir: top-directory
@@ -113,7 +114,11 @@ def amalgamate_source(source_top_dir=None,
     else:
         print("NOT #defining ARBITER_CURL")
 
-    header.add_file("arbiter/third/json/json.hpp")
+    if bundle_json:
+        header.add_file("arbiter/third/json/json.hpp")
+    else:
+        header.add_text("\n#include <nlohmann/json.hpp>\n\n")
+
     header.add_file("arbiter/util/exports.hpp")
     header.add_file("arbiter/util/types.hpp")
     header.add_file("arbiter/util/json.hpp")
@@ -217,6 +222,12 @@ Generate a single amalgamated source and header file from the sources.
             default=False)
 
     parser.add_option(
+            "-j", "--bundle-json",
+            dest="bundle_json",
+            action="store_true",
+            default=False)
+
+    parser.add_option(
             "-c", "--custom-namespace",
             dest="custom_namespace",
             action="store",
@@ -230,7 +241,8 @@ Generate a single amalgamated source and header file from the sources.
                              header_include_path=options.header_include_path,
                              include_xml=options.include_xml,
                              custom_namespace=options.custom_namespace,
-                             define_curl=options.define_curl)
+                             define_curl=options.define_curl,
+                             bundle_json=options.bundle_json)
     if msg:
         sys.stderr.write(msg + "\n")
         sys.exit(1)
