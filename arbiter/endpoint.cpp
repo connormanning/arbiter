@@ -30,8 +30,7 @@ namespace
         std::ofstream::app);
     std::string postfixSlash(std::string path)
     {
-        if (path.empty()) throw ArbiterError("Invalid root path");
-        if (path.back() != '/') path.push_back('/');
+        if (!path.empty() && path.back() != '/') path.push_back('/');
         return path;
     }
 }

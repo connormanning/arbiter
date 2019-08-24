@@ -50,7 +50,7 @@ std::string stripPostfixing(const std::string path)
 
 std::string getBasename(const std::string fullPath)
 {
-    std::string result(fullPath);
+    std::string result(Arbiter::stripType(fullPath));
 
     const std::string stripped(stripPostfixing(Arbiter::stripType(fullPath)));
 
