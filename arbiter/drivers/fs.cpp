@@ -154,7 +154,8 @@ std::vector<std::string> Fs::glob(std::string path, bool verbose) const
 }
 
 std::vector<char> Fs::getBinaryChunk(std::string path, size_t start,
-    size_t end) const {
+    size_t end) const 
+{
     std::vector<char> retBuffer;
     std::ifstream iStream(path, std::ifstream::binary | std::ios::in);
     if (!iStream.good()) {
@@ -164,7 +165,6 @@ std::vector<char> Fs::getBinaryChunk(std::string path, size_t start,
     iStream.seekg(0, std::ios::end);
     if (end > iStream.tellg()) end = iStream.tellg();
 	
-    retBuffer.clear();
     retBuffer.resize(end - start);
 	
     iStream.seekg(start, std::ios::beg);

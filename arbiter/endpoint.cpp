@@ -288,8 +288,12 @@ void Endpoint::upload(const std::string subpath, const std::string resourcePath)
     if (m_driver.type()=="gs"){
         drivers::Google* gDriver = (drivers::Google*)&m_driver;
         gDriver->upload(fullPath(subpath), resourcePath);
-    } else
-        throw ArbiterError("Chunked upload is only availabe for Google Driver.");    
+    } else {
+        drivers::Fs fs;
+        size_t fileSize = fs.getSize(resourcePath);
+        const auto data(fs.getBinaryChunk(resourcePath, 0, fileSize));
+        put(resourcePath, data);
+    }
 }
 
 } // namespace arbiter
