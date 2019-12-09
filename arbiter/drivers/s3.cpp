@@ -523,7 +523,7 @@ void S3::put(
     Headers headers(m_config->baseHeaders());
     headers.insert(userHeaders.begin(), userHeaders.end());
 
-    if (Arbiter::getExtension(rawPath) == "json")
+    if (getExtension(rawPath) == "json")
     {
         headers["Content-Type"] = "application/json";
     }

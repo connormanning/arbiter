@@ -19,6 +19,8 @@ namespace arbiter
 
 namespace
 {
+    const std::string protocolDelimiter("://");
+
     std::mutex randomMutex;
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -50,9 +52,9 @@ std::string stripPostfixing(const std::string path)
 
 std::string getBasename(const std::string fullPath)
 {
-    std::string result(Arbiter::stripType(fullPath));
+    std::string result(stripProtocol(fullPath));
 
-    const std::string stripped(stripPostfixing(Arbiter::stripType(fullPath)));
+    const std::string stripped(stripPostfixing(stripProtocol(fullPath)));
 
     // Now do the real slash searching.
     std::size_t pos(stripped.rfind('/'));
@@ -74,7 +76,7 @@ std::string getDirname(const std::string fullPath)
 {
     std::string result("");
 
-    const std::string stripped(stripPostfixing(Arbiter::stripType(fullPath)));
+    const std::string stripped(stripPostfixing(stripProtocol(fullPath)));
 
     // Now do the real slash searching.
     const std::size_t pos(stripped.rfind('/'));
@@ -85,8 +87,8 @@ std::string getDirname(const std::string fullPath)
         result = sub;
     }
 
-    const std::string type(Arbiter::getType(fullPath));
-    if (type != "file") result = type + "://" + result;
+    const std::string protocol(getProtocol(fullPath));
+    if (protocol != "file") result = protocol + "://" + result;
 
     return result;
 }
@@ -148,6 +150,46 @@ std::string stripWhitespace(const std::string& in)
                 [](char c) { return std::isspace(c); }),
             out.end());
     return out;
+}
+
+std::string getProtocol(const std::string path)
+{
+    std::string type("file");
+    const std::size_t pos(path.find(protocolDelimiter));
+
+    if (pos != std::string::npos)
+    {
+        type = path.substr(0, pos);
+    }
+
+    return type;
+}
+
+std::string stripProtocol(const std::string raw)
+{
+    std::string result(raw);
+    const std::size_t pos(raw.find(protocolDelimiter));
+
+    if (pos != std::string::npos)
+    {
+        result = raw.substr(pos + protocolDelimiter.size());
+    }
+
+    return result;
+}
+
+std::string getExtension(const std::string path)
+{
+    const std::size_t pos(path.find_last_of('.'));
+
+    if (pos != std::string::npos) return path.substr(pos + 1);
+    else return std::string();
+}
+
+std::string stripExtension(const std::string path)
+{
+    const std::size_t pos(path.find_last_of('.'));
+    return path.substr(0, pos);
 }
 
 } // namespace arbiter

@@ -205,7 +205,7 @@ Response Http::internalPost(
 
 std::string Http::typedPath(const std::string& p) const
 {
-    if (Arbiter::getType(p) != "file") return p;
+    if (getProtocol(p) != "file") return p;
     else return type() + "://" + p;
 }
 

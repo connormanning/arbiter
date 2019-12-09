@@ -111,8 +111,8 @@ TEST_P(DriverTest, Glob)
     // Local directories explicitly prefixed with file:// will be returned
     // without that prefix, so strip that off.
     const std::string root(
-            a.isLocal(rawRoot) ? Arbiter::stripType(rawRoot) : rawRoot);
-    const std::string type(Arbiter::getType(root));
+            a.isLocal(rawRoot) ? stripProtocol(rawRoot) : rawRoot);
+    const std::string type(getProtocol(root));
 
     // No `ls` for plain HTTP/s.
     if (type == "http" || type == "https") return;

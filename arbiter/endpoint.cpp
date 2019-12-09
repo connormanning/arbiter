@@ -80,7 +80,7 @@ std::unique_ptr<LocalHandle> Endpoint::getLocalHandle(
     if (isRemote())
     {
         const std::string tmp(getTempPath());
-        const auto ext(Arbiter::getExtension(subpath));
+        const auto ext(getExtension(subpath));
         const std::string basename(
                 std::to_string(randomNumber()) +
                 (ext.size() ? "." + ext : ""));

@@ -194,6 +194,22 @@ std::unique_ptr<T> maybeClone(const T* t)
 
 ARBITER_DLL uint64_t randomNumber();
 
+/** If no delimiter of "://" is found, returns "file".  Otherwise, returns
+ * the substring prior to but not including this delimiter.
+ */
+ARBITER_DLL std::string getProtocol(std::string path);
+
+/** Strip the type and delimiter `://`, if they exist. */
+ARBITER_DLL std::string stripProtocol(std::string path);
+
+/** Get the characters following the final instance of '.', or an empty
+ * string if there are no '.' characters. */
+ARBITER_DLL std::string getExtension(std::string path);
+
+/** Strip the characters following (and including) the final instance of
+ * '.' if one exists, otherwise return the full path. */
+ARBITER_DLL std::string stripExtension(std::string path);
+
 } // namespace arbiter
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
