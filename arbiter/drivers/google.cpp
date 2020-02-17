@@ -79,10 +79,10 @@ namespace
         std::string m_object;
 
     };
-    
+
     // https://cloud.google.com/storage/docs/json_api/#encoding
     const char GResource::exclusions[] = "!$&'()*+,;=:@";
-    
+
 } // unnamed namespace
 
 namespace drivers
@@ -112,10 +112,18 @@ std::unique_ptr<std::size_t> Google::tryGetSize(const std::string path) const
     const auto res(
             https.internalHead(resource.endpoint(), headers, altMediaQuery));
 
-    if (res.ok() && res.headers().count("Content-Length"))
+    if (res.ok())
     {
-        const auto& s(res.headers().at("Content-Length"));
-        return makeUnique<std::size_t>(std::stoull(s));
+        if (res.headers().count("Content-Length"))
+        {
+            const auto& s(res.headers().at("Content-Length"));
+            return makeUnique<std::size_t>(std::stoull(s));
+        }
+        else if (res.headers().count("content-length"))
+        {
+            const auto& s(res.headers().at("content-length"));
+            return makeUnique<std::size_t>(std::stoull(s));
+        }
     }
 
     return std::unique_ptr<std::size_t>();
