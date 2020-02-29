@@ -354,7 +354,7 @@ const drivers::Http& Arbiter::getHttpDriver(const std::string path) const
     else throw ArbiterError("Cannot get driver for " + path + " as HTTP");
 }
 
-std::unique_ptr<LocalHandle> Arbiter::getLocalHandle(
+LocalHandle Arbiter::getLocalHandle(
         const std::string path,
         const Endpoint& tempEndpoint) const
 {
@@ -362,7 +362,7 @@ std::unique_ptr<LocalHandle> Arbiter::getLocalHandle(
     return fromEndpoint.getLocalHandle(getBasename(path));
 }
 
-std::unique_ptr<LocalHandle> Arbiter::getLocalHandle(
+LocalHandle Arbiter::getLocalHandle(
         const std::string path,
         std::string tempPath) const
 {

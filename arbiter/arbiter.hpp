@@ -253,7 +253,7 @@ public:
      *
      * @return A LocalHandle for local access to the resulting file.
      */
-    std::unique_ptr<LocalHandle> getLocalHandle(
+    LocalHandle getLocalHandle(
             std::string path,
             const Endpoint& tempEndpoint) const;
 
@@ -262,7 +262,7 @@ public:
      * If @p tempPath is not specified, the environment will be searched for a
      * temporary location.
      */
-    std::unique_ptr<LocalHandle> getLocalHandle(
+    LocalHandle getLocalHandle(
             std::string path,
             std::string tempPath = "") const;
 

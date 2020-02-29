@@ -52,10 +52,9 @@ ARBITER_DLL std::vector<std::string> glob(std::string path);
  */
 class ARBITER_DLL LocalHandle
 {
-    friend class arbiter::Arbiter;
-    friend class arbiter::Endpoint;
-
 public:
+    LocalHandle(std::string localPath, bool isRemote);
+
     /** @brief Deletes the local path if the data was copied from a remote
      * source.
      *
@@ -83,8 +82,6 @@ public:
     }
 
 private:
-    LocalHandle(std::string localPath, bool isRemote);
-
     const std::string m_localPath;
     bool m_erase;
 };
