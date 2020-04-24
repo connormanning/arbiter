@@ -35,6 +35,7 @@ namespace
 
         json config;
         std::string path("~/.arbiter/config.json");
+        std::cout << "path is " << path << std::endl;
 
         if      (auto p = env("ARBITER_CONFIG_FILE")) path = *p;
         else if (auto p = env("ARBITER_CONFIG_PATH")) path = *p;
