@@ -21,7 +21,9 @@ using namespace arbiter;
 int main() {
     Arbiter a;
     std::string path("od://Documents/autzen.las");
-    a.get(path);
+    auto data = a.get(path);
+    auto size = a.tryGetSize(path);
+
     return 0;
 }
 

@@ -34,15 +34,13 @@ public:
     //return size of the file
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
-
-
-
 private:
     virtual bool get(
         std::string path,
         std::vector<char>& data,
         http::Headers headers,
         http::Query query) const override;
+
 
     std::unique_ptr<Auth> m_auth;
 
