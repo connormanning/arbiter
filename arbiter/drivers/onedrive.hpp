@@ -23,6 +23,7 @@ namespace drivers
 class OneDrive : public Https
 {
     class Auth;
+    class Resource;
 
 public:
     OneDrive(http::Pool& pool, std::unique_ptr<Auth> auth);
@@ -41,6 +42,11 @@ private:
         http::Headers headers,
         http::Query query) const override;
 
+    virtual std::vector<std::string> glob(
+            std::string path,
+            bool verbose) const override;
+
+    std::vector<std::string> processList(std::string path, bool recursive) const;
 
     std::unique_ptr<Auth> m_auth;
 
@@ -51,12 +57,43 @@ class OneDrive::Auth
 public:
     Auth(std::string s);
     static std::unique_ptr<Auth> create(std::string s);
-    http::Headers headers() const;
+    std::string getToken() { return m_token; };
+    // static std::string getToken(std::string s);
+    std::string getRefreshUrl() { return m_authUrl + "/common/oauth2/v2.0/token"; }
+    void refresh();
+    http::Headers headers();
 
 private:
-    const std::string m_token;
+    std::string m_refresh;
+    std::string m_redirect;
+    std::string m_id;
+    std::string m_secret;
+    std::string m_token;
+    std::string m_tenant;
+    int64_t m_expiration;
+
     mutable http::Headers m_headers;
     mutable std::mutex m_mutex;
+    const std::string m_authUrl = "https://login.microsoftonline.com/";
+};
+
+class OneDrive::Resource
+{
+public:
+    Resource(std::string path) {
+        m_path = path;
+        m_baseUrl = hostUrl + path;
+
+    }
+    const std::string endpoint() const { return std::string(m_baseUrl); }
+    const std::string binaryEndpoint() const { return std::string(m_baseUrl + ":/content"); }
+    const std::string childrenEndpoint() const { return std::string(m_baseUrl + ":/children"); }
+
+private:
+    std::string m_baseUrl;
+    std::string m_path;
+    const std::string hostUrl = "https://graph.microsoft.com/v1.0/me/drive/root:/";
+
 };
 
 } // namespace drivers
