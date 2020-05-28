@@ -307,7 +307,7 @@ void OneDrive::Auth::refresh()
     //reset the token, refresh, and expiration time
     m_token = response.at("access_token").get<std::string>();
     m_refresh = response.at("refresh_token").get<std::string>();
-    m_expiration = now + 3599;
+    m_expiration = now + response.at("expires_in").get<int64_t>();
 }
 
 http::Headers OneDrive::Auth::headers() {
