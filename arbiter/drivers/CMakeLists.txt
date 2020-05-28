@@ -21,7 +21,6 @@ set(
     "${BASE}/onedrive.hpp"
     "${BASE}/test.hpp"
 )
-message("SOURCES ${SOURCES}")
 
 install(FILES ${HEADERS} DESTINATION include/arbiter/${MODULE})
 
