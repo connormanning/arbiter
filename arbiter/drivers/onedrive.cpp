@@ -54,12 +54,12 @@ const std::string getChildrenEndpoint(const std::string path)
     return std::string(path + ":/children");
 }
 
-std::string getRefreshUrl()
+const std::string getRefreshUrl()
 {
     return "https://login.microsoftonline.com/common/oauth2/v2.0/token";
 }
 
-std::vector<char> buildBody(const http::Query& query)
+const std::vector<char> buildBody(const http::Query& query)
 {
     const std::string acc(std::accumulate(
             query.begin(),
