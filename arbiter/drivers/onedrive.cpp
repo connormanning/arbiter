@@ -39,27 +39,27 @@ namespace {
 
 const std::string hostUrl = "https://graph.microsoft.com/v1.0/me/drive/root:/";
 
-const std::string getBaseEndpoint(const std::string path)
+std::string getBaseEndpoint(const std::string path)
 {
     return std::string(hostUrl + path);
 }
 
-const std::string getBinaryEndpoint(const std::string path)
+std::string getBinaryEndpoint(const std::string path)
 {
     return std::string(path + ":/content");
 }
 
-const std::string getChildrenEndpoint(const std::string path)
+std::string getChildrenEndpoint(const std::string path)
 {
     return std::string(path + ":/children");
 }
 
-const std::string getRefreshUrl()
+std::string getRefreshUrl()
 {
     return "https://login.microsoftonline.com/common/oauth2/v2.0/token";
 }
 
-const std::vector<char> buildBody(const http::Query& query)
+std::vector<char> buildBody(const http::Query& query)
 {
     const std::string acc(std::accumulate(
             query.begin(),
@@ -72,7 +72,7 @@ const std::vector<char> buildBody(const http::Query& query)
     return std::vector<char>(acc.begin(), acc.end());
 }
 
-static std::string getQueries(const std::string url)
+std::string getQueries(const std::string url)
 {
     json result;
 
@@ -280,12 +280,12 @@ void OneDrive::Auth::refresh()
 
     http::Pool pool;
     drivers::Https https(pool);
-    http::Headers headers({
+    const http::Headers headers({
         { "Accept", "application/json" },
         { "Content-Type", "application/x-www-form-urlencoded" }
     });
 
-    http::Query body({
+    const auto encoded = buildBody({
         { "access_token", m_token },
         { "refresh_token", m_refresh },
         { "client_id", m_id },
@@ -293,8 +293,6 @@ void OneDrive::Auth::refresh()
         { "scope", "offline_access+files.read.all+user.read.all" },
         { "grant_type", "refresh_token" }
     });
-
-    const auto encoded = buildBody(body);
 
     const auto res(https.internalPost(getRefreshUrl(), encoded, headers));
     const auto response(json::parse(res.str()));
