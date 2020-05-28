@@ -30,9 +30,7 @@ public:
 
     static std::unique_ptr<OneDrive> create(http::Pool& pool, std::string j);
 
-    //return type of driver
     virtual std::string type() const override { return "od"; };
-    //return size of the file
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
 private:
@@ -64,12 +62,12 @@ public:
     http::Headers headers();
 
 private:
+    //auth variables necessary for refreshing token
     std::string m_refresh;
     std::string m_redirect;
     std::string m_id;
     std::string m_secret;
     std::string m_token;
-    std::string m_tenant;
     int64_t m_expiration;
 
     mutable http::Headers m_headers;
@@ -83,7 +81,6 @@ public:
     Resource(std::string path) {
         m_path = path;
         m_baseUrl = hostUrl + path;
-
     }
     const std::string endpoint() const { return std::string(m_baseUrl); }
     const std::string binaryEndpoint() const { return std::string(m_baseUrl + ":/content"); }

@@ -101,9 +101,7 @@ std::unique_ptr<std::size_t> OneDrive::tryGetSize(const std::string path) const
 {
     Resource resource(path);
     http::Headers headers(m_auth->headers());
-    headers["Authorization"] = m_auth->getToken();
     headers["Content-Type"] = "application/x-www-form-urlencoded";
-    headers["Accept"] = "application/json";
     drivers::Https https(m_pool);
 
     const auto res(https.internalGet(resource.endpoint(), headers));
@@ -145,6 +143,7 @@ std::vector<std::string> OneDrive::processList(std::string path, bool recursive)
         auto res(https.internalGet(resource.childrenEndpoint(), headers, queries));
         const json obj(json::parse(res.data()));
         const json parsedQueries(json::parse(getQueries(pageUrl)));
+
         for (auto& it: parsedQueries.items())
             queries[it.key()] = it.value();
 
@@ -155,6 +154,7 @@ std::vector<std::string> OneDrive::processList(std::string path, bool recursive)
             return std::vector<std::string>();
         }
 
+        //parse list
         const json list(obj.at("value"));
         for (auto& i: list.items())
         {
@@ -167,17 +167,19 @@ std::vector<std::string> OneDrive::processList(std::string path, bool recursive)
             {
                 //restart process with new file head
                 const auto children(processList(filePath, recursive));
-                //TODO: look into more efficient way to do this
+
+                //add result of children processes to the parent
                 result.insert(result.end(), children.begin(), children.end());
             }
         }
 
+        //check for link to next set
         if (obj.contains("@odata.nextLink"))
             pageUrl = obj.at("@odata.nextLink");
         else
-            pageUrl = "";
+            break;
 
-    } while (pageUrl.size() > 0);
+    } while (true);
 
     return result;
 }
@@ -219,15 +221,15 @@ bool OneDrive::get(
     return true;
 }
 
-OneDrive::Auth::Auth(std::string s)
-    : m_token(json::parse(s).at("access_token").get<std::string>())
-    , m_refresh(json::parse(s).at("refresh_token").get<std::string>())
-    , m_redirect(json::parse(s).at("redirect_uri").get<std::string>())
-    , m_id(json::parse(s).at("client_id").get<std::string>())
-    , m_secret(json::parse(s).at("client_secret").get<std::string>())
-    , m_tenant(json::parse(s).at("tenant_id").get<std::string>())
-    , m_expiration(Time().asUnix())
-    { }
+OneDrive::Auth::Auth(std::string s) {
+    const auto config = json::parse(s);
+    m_token = config.at("access_token").get<std::string>();
+    m_refresh = config.at("refresh_token").get<std::string>();
+    m_redirect = config.at("redirect_uri").get<std::string>();
+    m_id = config.at("client_id").get<std::string>();
+    m_secret = config.at("client_secret").get<std::string>();
+    m_expiration = Time().asUnix();
+}
 
 std::unique_ptr<OneDrive::Auth> OneDrive::Auth::create(const std::string s)
 {
@@ -236,6 +238,7 @@ std::unique_ptr<OneDrive::Auth> OneDrive::Auth::create(const std::string s)
 
 void OneDrive::Auth::refresh()
 {
+    //only refresh if we get within 2 minutes of the token ending
     const auto now(Time().asUnix());
     if (m_expiration - now > 120)
         return;
@@ -244,20 +247,20 @@ void OneDrive::Auth::refresh()
     drivers::Https https(pool);
     http::Headers headers({ });
 
-    headers["Content-Type"] = "application/x-www-form-urlencoded";
     headers["Accept"] = "application/json";
+    headers["Content-Type"] = "application/x-www-form-urlencoded";
 
-    std::string scope = "offline_access+files.readwrite.all+user.read+user.readwrite+user.readbasic.all+user.read.all+directory.read.all+directory.accessasuser.all";
     json bodyJson = {
         { "access_token", m_token },
         { "refresh_token", m_refresh },
         { "client_id", m_id },
         { "client_secret", m_secret },
-        { "scope", scope },
+        { "scope", "offline_access+files.read.all+user.read.all" },
         { "grant_type", "refresh_token" }
     };
-    std::string body = "";
 
+    //create url-encoded body
+    std::string body = "";
     for (auto& i: bodyJson.items())
         body += i.key() + "=" + i.value().get<std::string>() + "&";
     body.pop_back();
@@ -265,18 +268,17 @@ void OneDrive::Auth::refresh()
 
     const auto res(https.internalPost(this->getRefreshUrl(), content, headers));
     const auto response(json::parse(res.str()));
-    std::cout << "response, " << res.str() << std::endl;
 
+    //reset the token, refresh, and expiration time
     m_token = response.at("access_token").get<std::string>();
     m_refresh = response.at("refresh_token").get<std::string>();
-
     m_expiration = now + 3599;
-
 }
 
 http::Headers OneDrive::Auth::headers() {
     std::lock_guard<std::mutex> lock(m_mutex);
     refresh();
+    m_headers["Accept"] = "application/json";
     m_headers["Authorization"] = "Bearer " + getToken();
     return m_headers;
 }
