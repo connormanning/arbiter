@@ -36,6 +36,42 @@ using namespace internal;
 
 namespace {
 
+
+const std::string hostUrl = "https://graph.microsoft.com/v1.0/me/drive/root:/";
+
+const std::string getBaseEndpoint(const std::string path)
+{
+    return std::string(hostUrl + path);
+}
+
+const std::string getBinaryEndpoint(const std::string path)
+{
+    return std::string(path + ":/content");
+}
+
+const std::string getChildrenEndpoint(const std::string path)
+{
+    return std::string(path + ":/children");
+}
+
+std::string getRefreshUrl()
+{
+    return "https://login.microsoftonline.com/common/oauth2/v2.0/token";
+}
+
+std::vector<char> buildBody(const http::Query& query)
+{
+    const std::string acc(std::accumulate(
+            query.begin(),
+            query.end(),
+            std::string(),
+            [](const std::string& out, const http::Query::value_type& keyVal)
+            {
+                return out + '&' + keyVal.first + '=' + keyVal.second;
+            }));
+    return std::vector<char>(acc.begin(), acc.end());
+}
+
 static std::string getQueries(const std::string url)
 {
     json result;
@@ -99,12 +135,12 @@ std::unique_ptr<OneDrive> OneDrive::create(http::Pool& pool, const std::string s
 
 std::unique_ptr<std::size_t> OneDrive::tryGetSize(const std::string path) const
 {
-    Resource resource(path);
+    const std::string endpoint(getBaseEndpoint(path));
     http::Headers headers(m_auth->headers());
     headers["Content-Type"] = "application/x-www-form-urlencoded";
     drivers::Https https(m_pool);
 
-    const auto res(https.internalGet(resource.endpoint(), headers));
+    const auto res(https.internalGet(endpoint, headers));
 
     if (!res.ok())
     {
@@ -125,10 +161,10 @@ std::unique_ptr<std::size_t> OneDrive::tryGetSize(const std::string path) const
 
 std::vector<std::string> OneDrive::processList(std::string path, bool recursive) const
 {
+    const std::string endpoint(getBaseEndpoint(path));
     std::vector<std::string> result;
 
-    Resource resource(path);
-    std::string pageUrl(resource.childrenEndpoint());
+    std::string pageUrl(getChildrenEndpoint(endpoint));
 
     http::Headers headers(m_auth->headers());
     headers["Content-Type"] = "application/json";
@@ -140,7 +176,7 @@ std::vector<std::string> OneDrive::processList(std::string path, bool recursive)
     do
     {
         http::Query queries;
-        auto res(https.internalGet(resource.childrenEndpoint(), headers, queries));
+        auto res(https.internalGet(pageUrl, headers, queries));
         const json obj(json::parse(res.data()));
         const json parsedQueries(json::parse(getQueries(pageUrl)));
 
@@ -149,7 +185,7 @@ std::vector<std::string> OneDrive::processList(std::string path, bool recursive)
 
         if (!obj.contains("value") || !res.ok())
         {
-            std::cout << "Could not get OneDrive item  " << resource.childrenEndpoint()
+            std::cout << "Could not get OneDrive item  " << path
                 << " with response code " << res.code() << std::endl;
             return std::vector<std::string>();
         }
@@ -203,13 +239,13 @@ bool OneDrive::get(
         const http::Headers userHeaders,
         const http::Query query) const
 {
-    Resource resource(path);
+    const std::string endpoint(getBaseEndpoint(path));
     http::Headers headers(m_auth->headers());
     headers["Content-Type"] = "application/octet-stream";
     headers.insert(userHeaders.begin(), userHeaders.end());
 
     drivers::Https https(m_pool);
-    const auto res(https.internalGet(resource.binaryEndpoint(), headers));
+    const auto res(https.internalGet(getBinaryEndpoint(endpoint), headers));
 
     if (!res.ok()) {
         std::cout <<
@@ -222,13 +258,12 @@ bool OneDrive::get(
 }
 
 OneDrive::Auth::Auth(std::string s) {
-    const auto config = json::parse(s);
+    const json config = json::parse(s);
     m_token = config.at("access_token").get<std::string>();
     m_refresh = config.at("refresh_token").get<std::string>();
     m_redirect = config.at("redirect_uri").get<std::string>();
     m_id = config.at("client_id").get<std::string>();
     m_secret = config.at("client_secret").get<std::string>();
-    m_expiration = Time().asUnix();
 }
 
 std::unique_ptr<OneDrive::Auth> OneDrive::Auth::create(const std::string s)
@@ -245,29 +280,29 @@ void OneDrive::Auth::refresh()
 
     http::Pool pool;
     drivers::Https https(pool);
-    http::Headers headers({ });
+    http::Headers headers({
+        { "Accept", "application/json" },
+        { "Content-Type", "application/x-www-form-urlencoded" }
+    });
 
-    headers["Accept"] = "application/json";
-    headers["Content-Type"] = "application/x-www-form-urlencoded";
-
-    json bodyJson = {
+    http::Query body({
         { "access_token", m_token },
         { "refresh_token", m_refresh },
         { "client_id", m_id },
         { "client_secret", m_secret },
         { "scope", "offline_access+files.read.all+user.read.all" },
         { "grant_type", "refresh_token" }
-    };
+    });
 
-    //create url-encoded body
-    std::string body = "";
-    for (auto& i: bodyJson.items())
-        body += i.key() + "=" + i.value().get<std::string>() + "&";
-    body.pop_back();
-    std::vector<char> content(body.begin(), body.end());
+    const auto encoded = buildBody(body);
 
-    const auto res(https.internalPost(this->getRefreshUrl(), content, headers));
+    const auto res(https.internalPost(getRefreshUrl(), encoded, headers));
     const auto response(json::parse(res.str()));
+    if (res.code() != 200)
+    {
+        std::cout << res.code() + ": Failed to refresh token" + res.str() << std::endl;
+        throw new ArbiterError(res.code() + ": Failed to refresh token" + res.str());
+    }
 
     //reset the token, refresh, and expiration time
     m_token = response.at("access_token").get<std::string>();
