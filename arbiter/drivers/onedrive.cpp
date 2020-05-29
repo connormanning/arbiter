@@ -51,7 +51,7 @@ std::vector<char> buildBody(const http::Query& query)
     return std::vector<char>(body.begin(), body.end());
 }
 
-}
+}//unnamed
 
 namespace drivers
 {
@@ -107,13 +107,13 @@ std::vector<std::string> OneDrive::processList(std::string path, bool recursive)
     http::Headers headers(m_auth->headers());
     headers["Content-Type"] = "application/json";
     drivers::Https https(m_pool);
-    http::Query queries({ });
 
     //iterate through files and folders located in path parent
     //limit to 200 items per list, @odata.nextLink will be provided as url for
     //next set of items
     do
     {
+        const http::Query queries(http::getQueries(pageUrl));
         auto res(https.internalGet(getChildrenEndpoint(endpoint), headers, queries));
 
         const json obj(json::parse(res.data()));
@@ -146,15 +146,7 @@ std::vector<std::string> OneDrive::processList(std::string path, bool recursive)
 
         //check for link to next set
         if (obj.contains("@odata.nextLink"))
-        {
             pageUrl = obj.at("@odata.nextLink");
-            const http::Query parsedQueries(http::getQueries(pageUrl));
-
-            for (auto& it: parsedQueries)
-            {
-                queries[it.first] = it.second;
-            }
-        }
         else
             break;
 
@@ -241,8 +233,8 @@ void OneDrive::Auth::refresh()
     const auto response(json::parse(res.str()));
     if (res.code() != 200)
     {
-        std::cout << res.code() + ": Failed to refresh token" + res.str() << std::endl;
-        throw new ArbiterError(res.code() + ": Failed to refresh token" + res.str());
+        std::cout << res.code() << ": Failed to refresh token" << res.str() << std::endl;
+        throw new ArbiterError("Failed to refresh token. " + res.str());
     }
 
     //reset the token, refresh, and expiration time

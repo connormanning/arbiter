@@ -78,17 +78,17 @@ Query getQueries(const std::string url)
     }
 
     const std::string queries(url.substr(pos + 1));
-    ulong start = 0;
+    std::size_t start = 0;
 
     do
     {
         //get positional values
         //find next query
-        std::string::size_type nextQueryPos(queries.find_first_of("&", start));
-        std::string::size_type valuePos(queries.find_first_of("=", start));
-        std::string::size_type adjust(1);
-        //if it doesn't exist, go to the end of the string
+        std::size_t nextQueryPos(queries.find_first_of("&", start));
+        std::size_t valuePos(queries.find_first_of("=", start));
+        std::size_t adjust(1);
 
+        //if it doesn't exist, go to the end of the string
         if (nextQueryPos == std::string::npos)
             nextQueryPos = queries.size();
         if (valuePos == std::string::npos)
