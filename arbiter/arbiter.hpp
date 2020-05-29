@@ -13,6 +13,7 @@
 #include <arbiter/drivers/dropbox.hpp>
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/drivers/google.hpp>
+#include <arbiter/drivers/onedrive.hpp>
 #include <arbiter/drivers/http.hpp>
 #include <arbiter/drivers/s3.hpp>
 #include <arbiter/drivers/test.hpp>

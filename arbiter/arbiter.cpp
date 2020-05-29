@@ -102,6 +102,10 @@ Arbiter::Arbiter(const std::string s)
     {
         m_drivers[d->type()] = std::move(d);
     }
+    if (auto d = OneDrive::create(*m_pool, c.value("onedrive", json()).dump()))
+    {
+        m_drivers[d->type()] = std::move(d);
+    }
 #endif
 
 #endif

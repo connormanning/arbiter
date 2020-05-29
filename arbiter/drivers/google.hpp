@@ -79,4 +79,3 @@ private:
 #ifdef ARBITER_CUSTOM_NAMESPACE
 }
 #endif
-

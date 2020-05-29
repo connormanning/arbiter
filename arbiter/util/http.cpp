@@ -21,6 +21,28 @@ namespace ARBITER_CUSTOM_NAMESPACE
 
 namespace arbiter
 {
+
+namespace
+{
+
+// Slices a string between positions [begin, end), where end may be npos.
+std::string slice(
+    const std::string& s,
+    const std::size_t begin,
+    const std::size_t end)
+{
+    assert(end >= begin);
+    return s.substr(begin, end == std::string::npos ? end : end - begin);
+}
+
+std::size_t advance(const std::string& s, const std::size_t pos)
+{
+    if (pos == std::string::npos) return pos;
+    return pos + 1;
+};
+
+}
+
 namespace http
 {
 
@@ -58,9 +80,49 @@ std::string buildQueryString(const Query& query)
             std::string(),
             [](const std::string& out, const Query::value_type& keyVal)
             {
-                const char sep(out.empty() ? '?' : '&');
-                return out + sep + keyVal.first + '=' + keyVal.second;
+                return (
+                    (out.empty() ? out : out + '&') +
+                    keyVal.first +
+                    (keyVal.second.size() ? ('=' + keyVal.second) : "")
+                );
             });
+}
+
+Query parseQueryString(const std::string s)
+{
+    std::size_t cur = s.find_first_of("?");
+    if (cur == std::string::npos)
+        cur = 0;
+    else
+        cur += 1;
+
+    const std::size_t end = s.size();
+
+    http::Query result;
+    while (cur < end)
+    {
+        const std::size_t delimiterPos = s.find_first_of("&=", cur);
+        const std::string key = slice(s, cur, delimiterPos);
+
+        if (delimiterPos == std::string::npos || s.at(delimiterPos) == '&')
+        {
+            // If we've reached the end of the string, or the next delimiter is
+            // an '&' character, then we have a valueless key.
+            result[key] = "";
+            cur = advance(s, delimiterPos);
+        }
+        else
+        {
+            // Otherwise, extract the value.
+            cur = delimiterPos + 1;
+            const std::size_t ampersandPos = s.find_first_of("&", cur);
+            const std::string val = slice(s, cur, ampersandPos);
+            result[key] = val;
+            cur = advance(s, ampersandPos);
+        }
+    }
+
+    return result;
 }
 
 Resource::Resource(
@@ -200,4 +262,3 @@ void Pool::release(const std::size_t id)
 #ifdef ARBITER_CUSTOM_NAMESPACE
 }
 #endif
-

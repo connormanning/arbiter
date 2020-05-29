@@ -6,7 +6,6 @@ set_target_properties(arbiter-test
         COMPILE_DEFINITIONS ARBITER_DLL_IMPORT)
 
 
-    
 # We're overriding the test with a custom command for individual test output
 # and colors, which cmake doesn't like.
 set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
