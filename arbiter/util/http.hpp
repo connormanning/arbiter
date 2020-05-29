@@ -38,7 +38,7 @@ ARBITER_DLL std::string buildQueryString(const http::Query& query);
 
 /** Return Query from a given url path
  */
-ARBITER_DLL Query getQueries(const std::string url);
+ARBITER_DLL Query parseQueryString(const std::string url);
 
 /** @cond arbiter_internal */
 

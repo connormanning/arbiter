@@ -148,7 +148,7 @@ std::vector<std::string> OneDrive::processList(std::string path, bool recursive)
         if (obj.contains("@odata.nextLink"))
         {
             pageUrl = obj.at("@odata.nextLink");
-            const http::Query parsedQueries(http::getQueries(pageUrl));
+            const http::Query parsedQueries(http::parseQueryString(pageUrl));
 
             for (auto& it: parsedQueries)
             {
