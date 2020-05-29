@@ -235,7 +235,8 @@ void Curl::init(
     m_headers = nullptr;
 
     // Set path.
-    const std::string path(rawPath + buildQueryString(query));
+    const std::string qs(buildQueryString(query));
+    const std::string path(rawPath + (qs.size() ? "?" + qs : ""));
     curl_easy_setopt(m_curl, CURLOPT_URL, path.c_str());
 
     // Needed for multithreaded Curl usage.

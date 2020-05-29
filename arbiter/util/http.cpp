@@ -58,9 +58,62 @@ std::string buildQueryString(const Query& query)
             std::string(),
             [](const std::string& out, const Query::value_type& keyVal)
             {
-                const char sep(out.empty() ? '?' : '&');
-                return out + sep + keyVal.first + '=' + keyVal.second;
+                return (
+                    (out.empty() ? out : out + '&') +
+                    keyVal.first +
+                    (keyVal.second.size() ? ('=' + keyVal.second) : "")
+                );
             });
+}
+
+Query getQueries(const std::string url)
+{
+    http::Query result;
+
+    //find position of queries in url
+    std::string::size_type pos(url.find("?"));
+    if (pos == std::string::npos)
+    {
+        return result;
+    }
+
+    const std::string queries(url.substr(pos + 1));
+    ulong start = 0;
+
+    do
+    {
+        //get positional values
+        //find next query
+        std::string::size_type nextQueryPos(queries.find_first_of("&", start));
+        std::string::size_type valuePos(queries.find_first_of("=", start));
+        std::string::size_type adjust(1);
+        //if it doesn't exist, go to the end of the string
+
+        if (nextQueryPos == std::string::npos)
+            nextQueryPos = queries.size();
+        if (valuePos == std::string::npos)
+        {
+            valuePos = queries.size();
+            adjust = 0;
+        }
+
+        std::string::size_type separator(std::min(valuePos, nextQueryPos));
+
+        //create key-value pair for Query
+        const std::string key(queries.substr(start, separator - start));
+        const std::string value(queries.substr(separator + adjust, nextQueryPos - (separator + adjust)));
+        result[key] = value;
+
+        /*BREAK HERE*/
+        //was this the last one? if yes, break. if no, resize queries and continue
+        if (nextQueryPos >= queries.size())
+            break;
+
+        start = nextQueryPos + 1;
+
+    } while (true);
+
+    return result;
 }
 
 Resource::Resource(

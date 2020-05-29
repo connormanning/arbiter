@@ -10,20 +10,6 @@
 
 #include <vector>
 
-#ifdef ARBITER_OPENSSL
-#include <openssl/evp.h>
-#include <openssl/err.h>
-#include <openssl/pem.h>
-#include <openssl/rsa.h>
-#include <openssl/sha.h>
-
-// See: https://www.openssl.org/docs/manmaster/man3/OPENSSL_VERSION_NUMBER.html
-#   if OPENSSL_VERSION_NUMBER >= 0x010100000
-#   define ARBITER_OPENSSL_ATLEAST_1_1
-#   endif
-
-#endif
-
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
 {
@@ -41,17 +27,17 @@ const std::string hostUrl = "https://graph.microsoft.com/v1.0/me/drive/root:/";
 
 std::string getBaseEndpoint(const std::string path)
 {
-    return std::string(hostUrl + path);
+    return hostUrl + path;
 }
 
 std::string getBinaryEndpoint(const std::string path)
 {
-    return std::string(path + ":/content");
+    return path + ":/content";
 }
 
 std::string getChildrenEndpoint(const std::string path)
 {
-    return std::string(path + ":/children");
+    return path + ":/children";
 }
 
 std::string getRefreshUrl()
@@ -61,56 +47,8 @@ std::string getRefreshUrl()
 
 std::vector<char> buildBody(const http::Query& query)
 {
-    const std::string acc(std::accumulate(
-            query.begin(),
-            query.end(),
-            std::string(),
-            [](const std::string& out, const http::Query::value_type& keyVal)
-            {
-                return out + '&' + keyVal.first + '=' + keyVal.second;
-            }));
-    return std::vector<char>(acc.begin(), acc.end());
-}
-
-std::string getQueries(const std::string url)
-{
-    json result;
-
-    //find position of queries in url
-    std::string::size_type pos(url.find("?"));
-    if (pos == std::string::npos)
-    {
-        return result.dump();
-    }
-
-    std::string queries(url.substr(pos + 1));
-
-    do
-    {
-        //get positional values
-        //find next query
-        std::string::size_type nextQueryPos(queries.find_first_of("&"));
-        //if it doesn't exist, go to the end of the string
-        if (nextQueryPos == std::string::npos)
-            nextQueryPos = queries.size();
-        const std::string::size_type separator(queries.find("="));
-
-        //create key-value pair for json
-        const std::string key(queries.substr(0, separator));
-        const std::string value(queries.substr(separator + 1, nextQueryPos - (separator + 1)));
-
-        result.push_back(json::object_t::value_type(key, value));
-
-        /*BREAK HERE*/
-        //was this the last one? if yes, break. if no, resize queries and continue
-        if (nextQueryPos == queries.size())
-            break;
-
-        queries = queries.substr(nextQueryPos + 1);
-
-    } while (true);
-
-    return result.dump();
+    const std::string body(http::buildQueryString(query));
+    return std::vector<char>(body.begin(), body.end());
 }
 
 }
@@ -151,7 +89,7 @@ std::unique_ptr<std::size_t> OneDrive::tryGetSize(const std::string path) const
 
     //parse the data into a json object and extract size key value
     const auto obj = json::parse(res.data());
-    if (obj.find("size") != obj.end())
+    if (obj.count("size"))
     {
         return makeUnique<std::size_t>(obj.at("size").get<std::size_t>());
     }
@@ -169,24 +107,21 @@ std::vector<std::string> OneDrive::processList(std::string path, bool recursive)
     http::Headers headers(m_auth->headers());
     headers["Content-Type"] = "application/json";
     drivers::Https https(m_pool);
+    http::Query queries({ });
 
     //iterate through files and folders located in path parent
     //limit to 200 items per list, @odata.nextLink will be provided as url for
     //next set of items
     do
     {
-        http::Query queries;
-        auto res(https.internalGet(pageUrl, headers, queries));
-        const json obj(json::parse(res.data()));
-        const json parsedQueries(json::parse(getQueries(pageUrl)));
+        auto res(https.internalGet(getChildrenEndpoint(endpoint), headers, queries));
 
-        for (auto& it: parsedQueries.items())
-            queries[it.key()] = it.value();
+        const json obj(json::parse(res.data()));
 
         if (!obj.contains("value") || !res.ok())
         {
             std::cout << "Could not get OneDrive item  " << path
-                << " with response code " << res.code() << std::endl;
+                << " with response code " << res.code() << ":" << res.str() << std::endl;
             return std::vector<std::string>();
         }
 
@@ -211,7 +146,15 @@ std::vector<std::string> OneDrive::processList(std::string path, bool recursive)
 
         //check for link to next set
         if (obj.contains("@odata.nextLink"))
+        {
             pageUrl = obj.at("@odata.nextLink");
+            const http::Query parsedQueries(http::getQueries(pageUrl));
+
+            for (auto& it: parsedQueries)
+            {
+                queries[it.first] = it.second;
+            }
+        }
         else
             break;
 

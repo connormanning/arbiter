@@ -36,6 +36,10 @@ ARBITER_DLL std::string sanitize(std::string path, std::string exclusions = "/")
  */
 ARBITER_DLL std::string buildQueryString(const http::Query& query);
 
+/** Return Query from a given url path
+ */
+ARBITER_DLL Query getQueries(const std::string url);
+
 /** @cond arbiter_internal */
 
 class ARBITER_DLL Pool;
