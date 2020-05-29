@@ -21,6 +21,28 @@ namespace ARBITER_CUSTOM_NAMESPACE
 
 namespace arbiter
 {
+
+namespace
+{
+
+// Slices a string between positions [begin, end), where end may be npos.
+std::string slice(
+    const std::string& s,
+    const std::size_t begin,
+    const std::size_t end)
+{
+    assert(end >= begin);
+    return s.substr(begin, end == std::string::npos ? end : end - begin);
+}
+
+std::size_t advance(const std::string& s, const std::size_t pos)
+{
+    if (pos == std::string::npos) return pos;
+    return pos + 1;
+};
+
+}
+
 namespace http
 {
 
@@ -66,52 +88,39 @@ std::string buildQueryString(const Query& query)
             });
 }
 
-Query getQueries(const std::string url)
+Query parseQueryString(const std::string s)
 {
+    std::size_t cur = s.find_first_of("?");
+    if (cur == std::string::npos)
+        cur = 0;
+    else
+        cur += 1;
+
+    const std::size_t end = s.size();
+
     http::Query result;
-
-    //find position of queries in url
-    std::string::size_type pos(url.find("?"));
-    if (pos == std::string::npos)
+    while (cur < end)
     {
-        return result;
-    }
+        const std::size_t delimiterPos = s.find_first_of("&=", cur);
+        const std::string key = slice(s, cur, delimiterPos);
 
-    const std::string queries(url.substr(pos + 1));
-    std::size_t start = 0;
-
-    do
-    {
-        //get positional values
-        //find next query
-        std::size_t nextQueryPos(queries.find_first_of("&", start));
-        std::size_t valuePos(queries.find_first_of("=", start));
-        std::size_t adjust(1);
-
-        //if it doesn't exist, go to the end of the string
-        if (nextQueryPos == std::string::npos)
-            nextQueryPos = queries.size();
-        if (valuePos == std::string::npos)
+        if (delimiterPos == std::string::npos || s.at(delimiterPos) == '&')
         {
-            valuePos = queries.size();
-            adjust = 0;
+            // If we've reached the end of the string, or the next delimiter is
+            // an '&' character, then we have a valueless key.
+            result[key] = "";
+            cur = advance(s, delimiterPos);
         }
-
-        std::string::size_type separator(std::min(valuePos, nextQueryPos));
-
-        //create key-value pair for Query
-        const std::string key(queries.substr(start, separator - start));
-        const std::string value(queries.substr(separator + adjust, nextQueryPos - (separator + adjust)));
-        result[key] = value;
-
-        /*BREAK HERE*/
-        //was this the last one? if yes, break. if no, resize queries and continue
-        if (nextQueryPos >= queries.size())
-            break;
-
-        start = nextQueryPos + 1;
-
-    } while (true);
+        else
+        {
+            // Otherwise, extract the value.
+            cur = delimiterPos + 1;
+            const std::size_t ampersandPos = s.find_first_of("&", cur);
+            const std::string val = slice(s, cur, ampersandPos);
+            result[key] = val;
+            cur = advance(s, ampersandPos);
+        }
+    }
 
     return result;
 }
@@ -253,4 +262,3 @@ void Pool::release(const std::size_t id)
 #ifdef ARBITER_CUSTOM_NAMESPACE
 }
 #endif
-

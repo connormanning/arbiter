@@ -51,6 +51,11 @@ std::vector<char> buildBody(const http::Query& query)
     return std::vector<char>(body.begin(), body.end());
 }
 
+http::Query parseUrlQueryString(std::string url)
+{
+  return url.find("?") != std::string::npos ? http::parseQueryString(url) : http::Query({ });
+}
+
 }//unnamed
 
 namespace drivers
@@ -113,7 +118,8 @@ std::vector<std::string> OneDrive::processList(std::string path, bool recursive)
     //next set of items
     do
     {
-        const http::Query queries(http::getQueries(pageUrl));
+        const http::Query queries(parseUrlQueryString(pageUrl));
+
         auto res(https.internalGet(getChildrenEndpoint(endpoint), headers, queries));
 
         const json obj(json::parse(res.data()));
