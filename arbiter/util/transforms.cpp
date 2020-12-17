@@ -3,6 +3,7 @@
 #endif
 
 #include <cstdint>
+#include <stdexcept>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -19,6 +20,25 @@ namespace
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/");
 
     const std::string hexVals("0123456789abcdef");
+
+    static unsigned int posOfChar(const unsigned char chr) {
+     //
+     // Return the position of chr within base64_encode()
+     //
+    
+        if      (chr >= 'A' && chr <= 'Z') return chr - 'A';
+        else if (chr >= 'a' && chr <= 'z') return chr - 'a' + ('Z' - 'A')               + 1;
+        else if (chr >= '0' && chr <= '9') return chr - '0' + ('Z' - 'A') + ('z' - 'a') + 2;
+        else if (chr == '+' || chr == '-') return 62; // Be liberal with input and accept both url ('-') and non-url ('+') base 64 characters (
+        else if (chr == '/' || chr == '_') return 63; // Ditto for '/' and '_'
+        else
+     //
+     // 2020-10-23: Throw std::exception rather than const char*
+     //(Pablo Martin-Gomez, https://github.com/Bouska)
+     //
+        throw std::runtime_error("Input is not valid base64-encoded data.");
+    }
+
 } // unnamed namespace
 
 std::string encodeBase64(const std::vector<char>& data, const bool pad)
@@ -73,6 +93,43 @@ std::string encodeBase64(const std::vector<char>& data, const bool pad)
 std::string encodeBase64(const std::string& input, const bool pad)
 {
     return encodeBase64(std::vector<char>(input.begin(), input.end()), pad);
+}
+
+std::string decodeBase64(const std::string & input)
+{
+    size_t lengthOfString = input.length();
+    size_t pos = 0;
+
+ //
+ // The approximate length (bytes) of the decoded string might be one or
+ // two bytes smaller, depending on the amount of trailing equal signs
+ // in the encoded string. This approximation is needed to reserve
+ // enough space in the string to be returned.
+ //
+    size_t approxLengthOfDecodedString = lengthOfString / 4 * 3;
+    std::string ret;
+    ret.reserve(approxLengthOfDecodedString);
+
+    while (pos < lengthOfString) {
+
+       unsigned int posOfChar1 = posOfChar(input[pos+1] );
+
+       ret.push_back(static_cast<std::string::value_type>( ( (posOfChar(input[pos+0]) ) << 2 ) + ( (posOfChar1 & 0x30 ) >> 4)));
+
+       if (input[pos+2] != '=' && input[pos+2] != '.') { // accept URL-safe base 64 strings, too, so check for '.' also.
+
+          unsigned int posOfChar2 = posOfChar(input[pos+2] );
+          ret.push_back(static_cast<std::string::value_type>( (( posOfChar1 & 0x0f) << 4) + (( posOfChar2 & 0x3c) >> 2)));
+
+          if (input[pos+3] != '=' && input[pos+3] != '.') {
+             ret.push_back(static_cast<std::string::value_type>( ( (posOfChar2 & 0x03 ) << 6 ) + posOfChar(input[pos+3])));
+          }
+       }
+
+       pos += 4;
+    }
+
+    return ret;
 }
 
 std::string encodeAsHex(const std::vector<char>& input)
