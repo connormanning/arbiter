@@ -54,33 +54,6 @@ namespace
                     return out + static_cast<char>(::tolower(c));
                 });
     }
-
-    // Trims sequential whitespace into a single character, and trims all
-    // leading and trailing whitespace.
-    std::string trimStr(const std::string& in)
-    {
-        std::string s = std::accumulate(
-                in.begin(),
-                in.end(),
-                std::string(),
-                [](const std::string& out, const char c) -> std::string
-                {
-                    if (
-                        std::isspace(c) &&
-                        (out.empty() || std::isspace(out.back())))
-                    {
-                        return out;
-                    }
-                    else
-                    {
-                        return out + c;
-                    }
-                });
-
-        // Might have one trailing whitespace character.
-        if (s.size() && std::isspace(s.back())) s.pop_back();
-        return s;
-    }
 }
 
 namespace drivers
@@ -281,8 +254,8 @@ std::string AZ::Config::extractBaseUrl(
 
 std::string AZ::type() const
 {
-    if (m_profile == "default") return "AZ";
-    else return m_profile + "@AZ";
+    if (m_profile == "default") return "az";
+    else return m_profile + "@az";
 }
 
 std::unique_ptr<std::size_t> AZ::tryGetSize(std::string rawPath) const
@@ -500,7 +473,7 @@ AZ::ApiV1::ApiV1(
     , m_query(query)
 {
     Headers msHeaders;
-    msHeaders["x-ms-date"] = m_time.str(Time::iso8601NoSeparators);
+    msHeaders["x-ms-date"] = m_time.str(Time::rfc822);
     msHeaders["x-ms-version"] = "2019-12-12";
 
     if (verb == "PUT" || verb == "POST")
@@ -530,18 +503,28 @@ std::string AZ::ApiV1::buildCanonicalHeader(
         http::Headers & msHeaders,
         const http::Headers & existingHeaders) const
 {
+    auto trim([](const std::string& s)
+    {
+        const std::string whitespace = " \t\r\n";
+        const size_t left = s.find_first_not_of(whitespace);
+        const size_t right = s.find_first_of(whitespace);
+        if (left == std::string::npos)
+        {
+            return std::string();
+        }
+        return s.substr(left,right - left +1);
+    });
+
     for (auto & h : existingHeaders)
     {
         if (h.first.rfind("x-ms-") == 0 || h.first.rfind("Content-MD5") == 0)
         {
-            msHeaders[makeLower(h.first)] = trimStr(h.second);
+            msHeaders[makeLower(h.first)] = trim(h.second);
         }
     }
     auto canonicalizeHeaders([](const std::string& s, const Headers::value_type& h)
     {
-        const std::string keyVal(
-                sanitize(h.first, "") + ":" +
-                sanitize(h.second, ""));
+        const std::string keyVal(h.first + ":" + h.second);
 
         return s + (s.size() ? "\n" : "") + keyVal;
     });
@@ -578,7 +561,7 @@ std::string AZ::ApiV1::buildCanonicalResource(
                 std::string(),
                 canonicalizeQuery));
 
-    return makeLine(canonicalUri) + canonicalQuery;
+    return canonicalUri + canonicalQuery;
 }
 
 std::string AZ::ApiV1::buildStringToSign(
@@ -609,15 +592,15 @@ std::string AZ::ApiV1::buildStringToSign(
 
     return
         makeLine(verb) +
-        makeLine(canonicalHeaders) +
         makeLine(headerValues) +
+        makeLine(canonicalHeaders) +
         canonicalRequest;
 }
 
 std::string AZ::ApiV1::calculateSignature(
         const std::string& stringToSign) const
 {
-    return crypto::hmacSha256(crypto::decodeBase64(m_authFields.key()),stringToSign);
+    return crypto::encodeBase64(crypto::hmacSha256(crypto::decodeBase64(m_authFields.key()),stringToSign));
 }
 
 std::string AZ::ApiV1::getAuthHeader(
