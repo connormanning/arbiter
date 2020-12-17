@@ -125,9 +125,9 @@ private:
 
     const std::string m_service;
     const std::string m_storageAccount;
+    const std::string m_storageAccessKey;
     const std::string m_endpoint;
     const std::string m_baseUrl;
-    const std::string m_storageAccessKey;
     http::Headers m_baseHeaders;
     bool m_precheck;
 };

@@ -37,13 +37,13 @@ using namespace internal;
 
 namespace
 {
-    std::string line(const std::string& data) { return data + "\n"; }
-    const std::vector<char> empty;
+    std::string makeLine(const std::string& data) { return data + "\n"; }
+    const std::vector<char> emptyVect;
 
     typedef Xml::xml_node<> XmlNode;
-    const std::string badResponse("Unexpected contents in Azure response");
+    const std::string badAZResponse("Unexpected contents in Azure response");
 
-    std::string toLower(const std::string& in)
+    std::string makeLower(const std::string& in)
     {
         return std::accumulate(
                 in.begin(),
@@ -57,7 +57,7 @@ namespace
 
     // Trims sequential whitespace into a single character, and trims all
     // leading and trailing whitespace.
-    std::string trim(const std::string& in)
+    std::string trimStr(const std::string& in)
     {
         std::string s = std::accumulate(
                 in.begin(),
@@ -298,7 +298,7 @@ std::unique_ptr<std::size_t> AZ::tryGetSize(std::string rawPath) const
             m_config->authFields(),
             Query(),
             headers,
-            empty);
+            emptyVect);
 
     drivers::Http http(m_pool);
     Response res(http.internalHead(resource.url(), ApiV1.headers()));
@@ -332,7 +332,7 @@ bool AZ::get(
             m_config->authFields(),
             query,
             headers,
-            empty);
+            emptyVect);
 
     drivers::Http http(m_pool);
     Response res(
@@ -467,18 +467,18 @@ std::vector<std::string> AZ::glob(std::string path, bool verbose) const
                 }
                 else
                 {
-                    throw ArbiterError(badResponse);
+                    throw ArbiterError(badAZResponse);
                 }
             }
         }
         else
         {
-            throw ArbiterError(badResponse);
+            throw ArbiterError(badAZResponse);
         }
     }
     else
     {
-            throw ArbiterError(badResponse);
+            throw ArbiterError(badAZResponse);
     }
 
     xml.clear();
@@ -534,7 +534,7 @@ std::string AZ::ApiV1::buildCanonicalHeader(
     {
         if (h.first.rfind("x-ms-") == 0 || h.first.rfind("Content-MD5") == 0)
         {
-            msHeaders[toLower(h.first)] = trim(h.second);
+            msHeaders[makeLower(h.first)] = trimStr(h.second);
         }
     }
     auto canonicalizeHeaders([](const std::string& s, const Headers::value_type& h)
@@ -578,7 +578,7 @@ std::string AZ::ApiV1::buildCanonicalResource(
                 std::string(),
                 canonicalizeQuery));
 
-    return line(canonicalUri) + canonicalQuery;
+    return makeLine(canonicalUri) + canonicalQuery;
 }
 
 std::string AZ::ApiV1::buildStringToSign(
@@ -589,28 +589,28 @@ std::string AZ::ApiV1::buildStringToSign(
 {
     http::Headers h(headers);
     std::string headerValues;
-    headerValues += line(h["Content-Encoding"]);
-    headerValues += line(h["Content-Language"]);
+    headerValues += makeLine(h["Content-Encoding"]);
+    headerValues += makeLine(h["Content-Language"]);
 
     if (h["Content-Length"] == "0")
-        headerValues += line("");
+        headerValues += makeLine("");
     else
-        headerValues += line(h["Content-Length"]);
+        headerValues += makeLine(h["Content-Length"]);
     
-    headerValues += line(h["Content-MD5"]);
-    headerValues += line(h["Content-Type"]);
-    headerValues += line(h["Date"]);
-    headerValues += line(h["If-Modified-Since"]);
-    headerValues += line(h["If-Match"]);
-    headerValues += line(h["If-None-Match"]);
-    headerValues += line(h["If-Unmodified-Since"]);
+    headerValues += makeLine(h["Content-MD5"]);
+    headerValues += makeLine(h["Content-Type"]);
+    headerValues += makeLine(h["Date"]);
+    headerValues += makeLine(h["If-Modified-Since"]);
+    headerValues += makeLine(h["If-Match"]);
+    headerValues += makeLine(h["If-None-Match"]);
+    headerValues += makeLine(h["If-Unmodified-Since"]);
     headerValues += h["Range"];  
     
 
     return
-        line(verb) +
-        line(canonicalHeaders) +
-        line(headerValues) +
+        makeLine(verb) +
+        makeLine(canonicalHeaders) +
+        makeLine(headerValues) +
         canonicalRequest;
 }
 
