@@ -15,6 +15,7 @@
 #include <arbiter/drivers/google.hpp>
 #include <arbiter/drivers/http.hpp>
 #include <arbiter/drivers/s3.hpp>
+#include <arbiter/drivers/az.hpp>
 #include <arbiter/drivers/test.hpp>
 #include <arbiter/util/exports.hpp>
 #include <arbiter/util/types.hpp>
