@@ -22,6 +22,7 @@ class ARBITER_DLL Time
 {
 public:
     static const std::string iso8601;
+    static const std::string rfc822;
     static const std::string iso8601NoSeparators;
     static const std::string dateNoSeparators;
 
