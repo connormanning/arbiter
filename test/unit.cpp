@@ -62,6 +62,13 @@ TEST(Arbiter, Base64)
     EXPECT_EQ(crypto::encodeBase64("foob"), "Zm9vYg==");
     EXPECT_EQ(crypto::encodeBase64("fooba"), "Zm9vYmE=");
     EXPECT_EQ(crypto::encodeBase64("foobar"), "Zm9vYmFy");
+    EXPECT_EQ(crypto::decodeBase64(""), "");
+    EXPECT_EQ(crypto::decodeBase64("Zg=="), "f");
+    EXPECT_EQ(crypto::decodeBase64("Zm8="), "fo");
+    EXPECT_EQ(crypto::decodeBase64("Zm9v"), "foo");
+    EXPECT_EQ(crypto::decodeBase64("Zm9vYg=="), "foob");
+    EXPECT_EQ(crypto::decodeBase64("Zm9vYmE="), "fooba");
+    EXPECT_EQ(crypto::decodeBase64("Zm9vYmFy"), "foobar");
 }
 
 class DriverTest : public ::testing::TestWithParam<std::string> { };

@@ -90,6 +90,11 @@ Arbiter::Arbiter(const std::string s)
         for (auto& d : dlist) m_drivers[d->type()] = std::move(d);
     }
 
+    {
+        auto dlist(AZ::create(*m_pool, c.value("az", json()).dump()));
+        for (auto& d : dlist) m_drivers[d->type()] = std::move(d);
+    }
+
     // Credential-based drivers should probably all do something similar to the
     // S3 driver to support multiple profiles.
     if (auto d = Dropbox::create(*m_pool, c.value("dropbox", json()).dump()))

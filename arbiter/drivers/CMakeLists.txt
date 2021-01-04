@@ -8,6 +8,7 @@ set(
     "${BASE}/fs.cpp"
     "${BASE}/google.cpp"
     "${BASE}/s3.cpp"
+    "${BASE}/az.cpp"
 )
 
 set(
@@ -17,6 +18,7 @@ set(
     "${BASE}/fs.hpp"
     "${BASE}/google.hpp"
     "${BASE}/s3.hpp"
+    "${BASE}/az.hpp"
     "${BASE}/test.hpp"
 )
 

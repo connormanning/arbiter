@@ -34,6 +34,7 @@ namespace
 }
 
 const std::string Time::iso8601 = "%Y-%m-%dT%H:%M:%SZ";
+const std::string Time::rfc822 = "%a, %d %b %Y %H:%M:%S GMT";
 const std::string Time::iso8601NoSeparators = "%Y%m%dT%H%M%SZ";
 const std::string Time::dateNoSeparators = "%Y%m%d";
 

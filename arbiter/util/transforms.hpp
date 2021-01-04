@@ -23,6 +23,8 @@ ARBITER_DLL std::string encodeBase64(
         bool pad = true);
 ARBITER_DLL std::string encodeBase64(const std::string& data, bool pad = true);
 
+ARBITER_DLL std::string decodeBase64(const std::string& data);
+
 ARBITER_DLL std::string encodeAsHex(const std::vector<char>& data);
 ARBITER_DLL std::string encodeAsHex(const std::string& data);
 
