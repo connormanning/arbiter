@@ -126,6 +126,7 @@ Curl::Curl(const std::string s)
     //      - caBundle          (CURLOPT_CAPATH)
     //      - caInfo            (CURLOPT_CAINFO)
     //      - verifyPeer        (CURLOPT_SSL_VERIFYPEER)
+    //      - proxy             (CURLOPT_PROXY)
 
     using Keys = std::vector<std::string>;
     auto find([](const Keys& keys)->std::unique_ptr<std::string>
@@ -170,6 +171,11 @@ Curl::Curl(const std::string s)
                 m_caInfo = mk(h["caInfo"].get<std::string>());
             }
 
+            if (h.count("Proxy"))
+            {
+                m_proxy = mk(h["Proxy"].get<std::string>());
+            }
+
             if (h.count("verifyPeer"))
             {
                 m_verifyPeer = h["verifyPeer"].get<bool>();
@@ -192,6 +198,7 @@ Curl::Curl(const std::string s)
     };
     Keys caPathKeys{ "CURL_CA_PATH", "CURL_CA_BUNDLE", "ARBITER_CA_PATH" };
     Keys caInfoKeys{ "CURL_CAINFO", "CURL_CA_INFO", "ARBITER_CA_INFO" };
+    Keys ProxyKeys{ "CURL_PROXY", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "ARBITER_PROXY"};
 
     if (auto v = find(verboseKeys)) m_verbose = !!std::stol(*v);
     if (auto v = find(timeoutKeys)) m_timeout = std::stol(*v);
@@ -199,6 +206,7 @@ Curl::Curl(const std::string s)
     if (auto v = find(verifyKeys)) m_verifyPeer = !!std::stol(*v);
     if (auto v = find(caPathKeys)) m_caPath = mk(*v);
     if (auto v = find(caInfoKeys)) m_caInfo = mk(*v);
+    if (auto v = find(ProxyKeys)) m_proxy = mk(*v);
 
     static bool logged(false);
     if (m_verbose && !logged)
@@ -210,6 +218,7 @@ Curl::Curl(const std::string s)
             "\n\tverifyPeer: " << m_verifyPeer <<
             "\n\tcaBundle: " << (m_caPath ? *m_caPath : "(default)") <<
             "\n\tcaInfo: " << (m_caInfo ? *m_caInfo : "(default)") <<
+            "\n\tProxy: " << (m_proxy ? *m_proxy : "(default)") <<
             std::endl;
     }
 #endif
@@ -260,6 +269,7 @@ void Curl::init(
     curl_easy_setopt(m_curl, CURLOPT_SSL_VERIFYPEER, toLong(m_verifyPeer));
     if (m_caPath) curl_easy_setopt(m_curl, CURLOPT_CAPATH, m_caPath->c_str());
     if (m_caInfo) curl_easy_setopt(m_curl, CURLOPT_CAINFO, m_caInfo->c_str());
+    if (m_proxy) curl_easy_setopt(m_curl, CURLOPT_PROXY, m_proxy->c_str());
 
     // Insert supplied headers.
     for (const auto& h : headers)
