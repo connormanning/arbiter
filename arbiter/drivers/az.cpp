@@ -371,7 +371,7 @@ void AZ::copy(const std::string src, const std::string dst) const
 {
     Headers headers;
     const Resource resource(m_config->baseUrl(), src);
-    headers["x-ms-copy-source"] = resource.bucket() + '/' + resource.object();
+    headers["x-ms-copy-source"] = resource.object();
     put(dst, std::vector<char>(), headers, Query());
 }
 
@@ -385,7 +385,7 @@ std::vector<std::string> AZ::glob(std::string path, bool verbose) const
 
     const Resource resource(m_config->baseUrl(), path);
     const std::string& bucket(resource.bucket());
-    const std::string& object(resource.object());
+    const std::string& object(resource.blob());
 
     Query query;
 
@@ -398,7 +398,7 @@ std::vector<std::string> AZ::glob(std::string path, bool verbose) const
 
     if (verbose) std::cout << "." << std::flush;
 
-    if (!get(resource.bucket() + "/", data, Headers(), query))
+    if (!get(resource.bucket(), data, Headers(), query))
     {
         throw ArbiterError("Couldn't AZ GET " + resource.bucket());
     }
@@ -418,40 +418,43 @@ std::vector<std::string> AZ::glob(std::string path, bool verbose) const
     //read https://docs.microsoft.com/en-us/rest/api/storageservices/list-blobs
     if (XmlNode* topNode = xml.first_node("EnumerationResults"))
     {
-        if (XmlNode* conNode = topNode->first_node("Blobs"))
+        if (XmlNode* blobsNode = topNode->first_node("Blobs"))
         {
-            for ( ; conNode; conNode = conNode->next_sibling())
+            if (XmlNode* conNode = blobsNode->first_node("Blob"))
             {
-                if (XmlNode* keyNode = conNode->first_node("Name"))
+                for ( ; conNode; conNode = conNode->next_sibling())
                 {
-                    std::string key(keyNode->value());
-                    const bool isSubdir(
-                            key.find('/', object.size()) !=
-                            std::string::npos);
-
-                    // The prefix may contain slashes (i.e. is a sub-dir)
-                    // but we only want to traverse into subdirectories
-                    // beyond the prefix if recursive is true.
-                    if (recursive || !isSubdir)
+                    if (XmlNode* keyNode = conNode->first_node("Name"))
                     {
-                        results.push_back(
-                                type() + "://" + bucket + "/" + key);
+                        std::string key(keyNode->value());
+                        const bool isSubdir(
+                                key.find('/', object.size()) !=
+                                std::string::npos);
+
+                        // The prefix may contain slashes (i.e. is a sub-dir)
+                        // but we only want to traverse into subdirectories
+                        // beyond the prefix if recursive is true.
+                        if (recursive || !isSubdir)
+                        {
+                            results.push_back(
+                                    type() + "://" + bucket + "/" + key);
+                        }
                     }
                 }
-                else
-                {
-                    throw ArbiterError(badAZResponse);
-                }
+            }
+            else
+            {
+                throw ArbiterError("No blob node");
             }
         }
         else
         {
-            throw ArbiterError(badAZResponse);
+                throw ArbiterError("No blobs node");
         }
     }
     else
     {
-            throw ArbiterError(badAZResponse);
+            throw ArbiterError("No EnumerationResults node");
     }
 
     xml.clear();
@@ -552,9 +555,9 @@ std::string AZ::ApiV1::buildCanonicalResource(
     {
         const std::string keyVal(
                 sanitize(q.first, "") + ":" +
-                sanitize(q.second, ""));
+                q.second);
 
-        return s + (s.size() ? "\n" : "") + keyVal;
+        return s + "\n" + keyVal;
     });
 
     const std::string canonicalQuery(
@@ -653,6 +656,11 @@ std::string AZ::Resource::url() const
 std::string AZ::Resource::object() const
 {
     return m_bucket + "/" + m_object;
+}
+
+std::string AZ::Resource::blob() const
+{
+    return m_object;
 }
 
 std::string AZ::Resource::host() const
