@@ -482,8 +482,10 @@ AZ::ApiV1::ApiV1(
         {
             m_headers["Content-Type"] = "application/octet-stream";
         }
+        m_headers["Content-Length"] = std::to_string(data.size());
         m_headers.erase("Transfer-Encoding");
         m_headers.erase("Expect");
+        msHeaders["x-ms-blob-type"] = "BlockBlob";
     }
 
     const std::string canonicalHeaders(buildCanonicalHeader(msHeaders,m_headers));
@@ -497,6 +499,7 @@ AZ::ApiV1::ApiV1(
     m_headers["Authorization"] = getAuthHeader(signature);
     m_headers["x-ms-date"] = msHeaders["x-ms-date"];
     m_headers["x-ms-version"] = msHeaders["x-ms-version"];
+    m_headers["x-ms-blob-type"] = msHeaders["x-ms-blob-type"];
 }
 
 std::string AZ::ApiV1::buildCanonicalHeader(
