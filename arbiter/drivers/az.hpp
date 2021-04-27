@@ -144,6 +144,7 @@ public:
     std::string baseUrl() const;
     std::string bucket() const;
     std::string object() const;
+    std::string blob() const;
     std::string storageAccount() const;
 
 private:
