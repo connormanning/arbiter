@@ -96,12 +96,17 @@ std::vector<std::unique_ptr<AZ>> AZ::create(Pool& pool, const std::string s)
 
 std::unique_ptr<AZ> AZ::createOne(Pool& pool, const std::string s)
 {
-    const json j(s.size() ? json::parse(s) : json());
-    const std::string profile(extractProfile(j.dump()));
+    try
+    {
+        const json j(s.size() ? json::parse(s) : json());
+        const std::string profile(extractProfile(j.dump()));
 
-    std::unique_ptr<Config> config(new Config(j.dump(), profile));
-    auto az = makeUnique<AZ>(pool, profile, std::move(config));
-    return az;
+        std::unique_ptr<Config> config(new Config(j.dump(), profile));
+        return makeUnique<AZ>(pool, profile, std::move(config));
+    }
+    catch (...) { }
+
+    return std::unique_ptr<AZ>();
 }
 
 std::string AZ::extractProfile(const std::string s)
@@ -543,7 +548,7 @@ std::string AZ::ApiV1::buildCanonicalHeader(
        canonicalizeHeaders));
 
    return  canonicalHeader;
-}   
+}
 
 std::string AZ::ApiV1::buildCanonicalResource(
         const Resource& resource,
@@ -585,7 +590,7 @@ std::string AZ::ApiV1::buildStringToSign(
         headerValues += makeLine("");
     else
         headerValues += makeLine(h["Content-Length"]);
-    
+
     headerValues += makeLine(h["Content-MD5"]);
     headerValues += makeLine(h["Content-Type"]);
     headerValues += makeLine(h["Date"]);
@@ -593,8 +598,8 @@ std::string AZ::ApiV1::buildStringToSign(
     headerValues += makeLine(h["If-Match"]);
     headerValues += makeLine(h["If-None-Match"]);
     headerValues += makeLine(h["If-Unmodified-Since"]);
-    headerValues += h["Range"];  
-    
+    headerValues += h["Range"];
+
 
     return
         makeLine(verb) +
@@ -612,7 +617,7 @@ std::string AZ::ApiV1::calculateSignature(
 std::string AZ::ApiV1::getAuthHeader(
         const std::string& signedHeadersString) const
 {
-    return "SharedKey " + 
+    return "SharedKey " +
          m_authFields.account() + ":" +
             signedHeadersString;
 }

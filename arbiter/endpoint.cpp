@@ -86,7 +86,7 @@ LocalHandle Endpoint::getLocalHandle(
         const std::string local(tmp + basename);
         if (isHttpDerived())
         {
-            if (auto fileSize = tryGetSize(subpath))
+            if (auto fileSize = tryGetSize(subpath, headers, query))
             {
                 std::ofstream stream(local, streamFlags);
                 if (!stream.good())
@@ -162,6 +162,22 @@ std::unique_ptr<std::size_t> Endpoint::tryGetSize(
         const std::string subpath) const
 {
     return m_driver->tryGetSize(fullPath(subpath));
+}
+
+std::size_t Endpoint::getSize(
+        const std::string subpath,
+        const http::Headers headers,
+        const http::Query query) const
+{
+    return getHttpDriver().getSize(fullPath(subpath), headers, query);
+}
+
+std::unique_ptr<std::size_t> Endpoint::tryGetSize(
+        const std::string subpath,
+        const http::Headers headers,
+        const http::Query query) const
+{
+    return getHttpDriver().tryGetSize(fullPath(subpath), headers, query);
 }
 
 void Endpoint::put(const std::string subpath, const std::string& data) const

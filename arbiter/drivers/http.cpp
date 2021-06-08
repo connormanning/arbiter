@@ -39,10 +39,31 @@ std::unique_ptr<Http> Http::create(Pool& pool)
 
 std::unique_ptr<std::size_t> Http::tryGetSize(std::string path) const
 {
+    return tryGetSize(path, http::Headers());
+}
+
+std::size_t Http::getSize(
+        std::string path,
+        Headers headers,
+        Query query) const
+{
+    auto s = tryGetSize(path, headers, query);
+    if (!s)
+    {
+        throw ArbiterError("Could not get size from " + path);
+    }
+    return *s;
+}
+
+std::unique_ptr<std::size_t> Http::tryGetSize(
+        std::string path,
+        Headers headers,
+        Query query) const
+{
     std::unique_ptr<std::size_t> size;
 
     auto http(m_pool.acquire());
-    Response res(http.head(typedPath(path)));
+    Response res(http.head(typedPath(path), headers, query));
 
     if (res.ok() && res.headers().count("Content-Length"))
     {

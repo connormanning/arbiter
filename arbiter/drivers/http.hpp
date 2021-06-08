@@ -68,6 +68,18 @@ public:
             http::Headers headers = http::Headers(),
             http::Query query = http::Query()) const;
 
+    /* Perform an HTTP HEAD request. */
+    std::size_t getSize(
+            std::string path,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
+    /* Perform an HTTP HEAD request. */
+    std::unique_ptr<std::size_t> tryGetSize(
+            std::string path,
+            http::Headers headers,
+            http::Query query = http::Query()) const;
+
     /** Perform an HTTP GET request. */
     std::vector<char> getBinary(
             std::string path,

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.8)
+cmake_minimum_required(VERSION 2.8.12)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" ${CMAKE_MODULE_PATH} )
 project(arbiter)
@@ -25,17 +25,6 @@ if (OPENSSL_FOUND)
 else()
     message("OpenSSL NOT found")
 endif()
-
-find_package(ZLIB)
-if (ZLIB_FOUND)
-    message("Found Zlib ${ZLIB_INCLUDE_DIR} ${ZLIB_LIBRARIES}")
-    include_directories(${ZLIB_INCLUDE_DIR})
-    set(ARBITER_ZLIB TRUE)
-    add_definitions("-DARBITER_ZLIB")
-else()
-    message("Zlib NOT found - gzipped data not supported")
-endif()
-
 
 MESSAGE(${CMAKE_CXX_COMPILER_ID})
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR

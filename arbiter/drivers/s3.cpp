@@ -838,6 +838,10 @@ S3::Resource::Resource(std::string base, std::string fullPath)
 
     // Dots in bucket name limitation with virtual-hosting over HTTPS:
     // https://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html#VirtualHostingLimitations
+
+    // 2021 note: the deprecation date got delayed, and buckets containing
+    // dots still has no fix - see the note at the top of the first link above.
+    // So for the time being, we'll keep this forked logic below.
     m_virtualHosted = m_bucket.find_first_of('.') == std::string::npos;
 }
 

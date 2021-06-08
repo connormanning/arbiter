@@ -8,12 +8,6 @@
 #include <arbiter/util/http.hpp>
 #include <arbiter/util/util.hpp>
 #include <arbiter/util/json.hpp>
-
-
-#ifdef ARBITER_ZLIB
-#include <arbiter/third/gzip/decompress.hpp>
-#endif
-
 #endif
 
 #ifdef ARBITER_CURL
@@ -253,6 +247,14 @@ void Curl::init(
     // Substantially faster DNS lookups without IPv6.
     curl_easy_setopt(m_curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
 
+    // See https://curl.se/libcurl/c/CURLOPT_ACCEPT_ENCODING.html
+    //
+    // To aid applications not having to bother about what specific algorithms
+    // this particular libcurl build supports, libcurl allows a zero-length
+    // string to be set ("") to ask for an Accept-Encoding: header to be used
+    // that contains all built-in supported encodings.
+    curl_easy_setopt(m_curl, CURLOPT_ACCEPT_ENCODING, "");
+
     // Don't wait forever.  Use the low-speed options instead of the timeout
     // option to make the timeout a sliding window instead of an absolute.
     curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_LIMIT, 1L);
@@ -333,16 +335,6 @@ Response Curl::get(
         std::string& v(h.second);
         while (v.size() && v.front() == ' ') v = v.substr(1);
         while (v.size() && v.back() == ' ') v.pop_back();
-    }
-
-    if (receivedHeaders["Content-Encoding"] == "gzip")
-    {
-#ifdef ARBITER_ZLIB
-        std::string s(gzip::decompress(data.data(), data.size()));
-        data.assign(s.begin(), s.end());
-#else
-        throw ArbiterError("Cannot decompress zlib");
-#endif
     }
 
     return Response(httpCode, data, receivedHeaders);

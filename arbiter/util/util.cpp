@@ -57,11 +57,7 @@ std::string getBasename(const std::string fullPath)
     const std::string stripped(stripPostfixing(stripProtocol(fullPath)));
 
     // Now do the real slash searching.
-    std::size_t pos(stripped.rfind('/'));
-
-    // Maybe windows
-    if (pos == std::string::npos)
-        pos = stripped.rfind('\\');
+    std::size_t pos(stripped.find_last_of("/\\"));
 
     if (pos != std::string::npos)
     {
@@ -79,7 +75,7 @@ std::string getDirname(const std::string fullPath)
     const std::string stripped(stripPostfixing(stripProtocol(fullPath)));
 
     // Now do the real slash searching.
-    const std::size_t pos(stripped.rfind('/'));
+    std::size_t pos(stripped.find_last_of("/\\"));
 
     if (pos != std::string::npos)
     {

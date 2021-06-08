@@ -131,6 +131,22 @@ public:
             http::Query query = http::Query()) const;
 
     /** Passthrough to
+     * drivers::Http::getSize(std::string, http::Headers, http::Query) const.
+     */
+    std::size_t getSize(
+            std::string subpath,
+            http::Headers headers,
+            http::Query = http::Query()) const;
+
+    /** Passthrough to
+     * drivers::Http::tryGetSize(std::string, http::Headers, http::Query) const.
+     */
+    std::unique_ptr<std::size_t> tryGetSize(
+            std::string subpath,
+            http::Headers headers,
+            http::Query = http::Query()) const;
+
+    /** Passthrough to
      * drivers::Http::put(std::string, const std::string&, http::Headers, http::Query) const.
      */
     void put(
