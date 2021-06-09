@@ -102,12 +102,6 @@ def amalgamate_source(source_top_dir=None,
         header.add_file("arbiter/third/xml/rapidxml.hpp")
         header.add_file("arbiter/third/xml/xml.hpp")
 
-    header.add_file("arbiter/third/gzip/config.hpp");
-    header.add_file("arbiter/third/gzip/utils.hpp");
-    header.add_file("arbiter/third/gzip/version.hpp");
-    header.add_file("arbiter/third/gzip/compress.hpp");
-    header.add_file("arbiter/third/gzip/decompress.hpp");
-
     if define_curl:
         header.add_text("\n#pragma once")
         header.add_text("#define ARBITER_CURL")
