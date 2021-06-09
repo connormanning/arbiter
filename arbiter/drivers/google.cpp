@@ -23,6 +23,7 @@
 #include <arbiter/drivers/fs.hpp>
 #include <arbiter/util/json.hpp>
 #include <arbiter/util/transforms.hpp>
+#include <arbiter/util/util.hpp>
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
@@ -114,16 +115,8 @@ std::unique_ptr<std::size_t> Google::tryGetSize(const std::string path) const
 
     if (res.ok())
     {
-        if (res.headers().count("Content-Length"))
-        {
-            const auto& s(res.headers().at("Content-Length"));
-            return makeUnique<std::size_t>(std::stoull(s));
-        }
-        else if (res.headers().count("content-length"))
-        {
-            const auto& s(res.headers().at("content-length"));
-            return makeUnique<std::size_t>(std::stoull(s));
-        }
+        const auto cl = findHeader(res.headers(), "Content-Length");
+        if (cl) return makeUnique<std::size_t>(std::stoull(*cl));
     }
 
     return std::unique_ptr<std::size_t>();

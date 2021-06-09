@@ -8,6 +8,7 @@
 
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/util/exports.hpp>
+#include <arbiter/util/types.hpp>
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
@@ -19,6 +20,10 @@ namespace arbiter
 {
 
 /** General utilities. */
+
+ARBITER_DLL std::unique_ptr<std::string> findHeader(
+        const http::Headers& headers,
+        std::string key);
 
 /** Returns @p path, less any trailing glob indicators (one or two
  * asterisks) as well as any possible trailing slash.

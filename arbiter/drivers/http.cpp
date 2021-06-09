@@ -1,6 +1,7 @@
 #ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/arbiter.hpp>
 #include <arbiter/drivers/http.hpp>
+#include <arbiter/util/util.hpp>
 #endif
 
 #ifdef ARBITER_WINDOWS
@@ -19,6 +20,9 @@ namespace ARBITER_CUSTOM_NAMESPACE
 
 namespace arbiter
 {
+
+using namespace internal;
+
 namespace drivers
 {
 
@@ -60,18 +64,16 @@ std::unique_ptr<std::size_t> Http::tryGetSize(
         Headers headers,
         Query query) const
 {
-    std::unique_ptr<std::size_t> size;
-
     auto http(m_pool.acquire());
     Response res(http.head(typedPath(path), headers, query));
 
-    if (res.ok() && res.headers().count("Content-Length"))
+    if (res.ok())
     {
-        const std::string& str(res.headers().at("Content-Length"));
-        size.reset(new std::size_t(std::stoul(str)));
+        const auto cl = findHeader(res.headers(), "Content-Length");
+        if (cl) return makeUnique<std::size_t>(std::stoull(*cl));
     }
 
-    return size;
+    return std::unique_ptr<std::size_t>();
 }
 
 std::string Http::get(
@@ -217,7 +219,7 @@ Response Http::internalPost(
         Headers headers,
         const Query query) const
 {
-    if (!headers.count("Content-Length"))
+    if (!findHeader(headers, "Content-Length"))
     {
         headers["Content-Length"] = std::to_string(data.size());
     }

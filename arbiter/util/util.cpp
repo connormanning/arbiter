@@ -8,6 +8,7 @@
 #include <cctype>
 #include <mutex>
 #include <random>
+#include <string>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -17,6 +18,8 @@ namespace ARBITER_CUSTOM_NAMESPACE
 namespace arbiter
 {
 
+using namespace internal;
+
 namespace
 {
     const std::string protocolDelimiter("://");
@@ -25,6 +28,31 @@ namespace
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<unsigned long long> distribution;
+
+    bool iequals(const std::string& s, const std::string& s2)
+    {
+        if (s.length() != s2.length())
+            return false;
+        for (std::size_t i = 0; i < s.length(); ++i)
+        {
+            if (std::tolower(s[i]) != std::tolower(s2[i])) return false;
+        }
+        return true;
+    }
+}
+
+std::unique_ptr<std::string> findHeader(
+        const http::Headers& headers,
+        const std::string key)
+{
+    for (const auto& p : headers)
+    {
+        if (iequals(p.first, key))
+        {
+            return makeUnique<std::string>(p.second);
+        }
+    }
+    return std::unique_ptr<std::string>();
 }
 
 uint64_t randomNumber()

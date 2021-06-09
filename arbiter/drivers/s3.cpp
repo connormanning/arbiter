@@ -23,6 +23,7 @@
 #include <arbiter/util/md5.hpp>
 #include <arbiter/util/sha256.hpp>
 #include <arbiter/util/transforms.hpp>
+#include <arbiter/util/util.hpp>
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
@@ -441,8 +442,6 @@ std::string S3::type() const
 
 std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
 {
-    std::unique_ptr<std::size_t> size;
-
     Headers headers(m_config->baseHeaders());
     headers.erase("x-amz-server-side-encryption");
 
@@ -459,13 +458,13 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
     drivers::Http http(m_pool);
     Response res(http.internalHead(resource.url(), apiV4.headers()));
 
-    if (res.ok() && res.headers().count("Content-Length"))
+    if (res.ok())
     {
-        const std::string& str(res.headers().at("Content-Length"));
-        size.reset(new std::size_t(std::stoul(str)));
+        const auto cl = findHeader(res.headers(), "Content-Length");
+        if (cl) return makeUnique<std::size_t>(std::stoull(*cl));
     }
 
-    return size;
+    return std::unique_ptr<std::size_t>();
 }
 
 bool S3::get(
