@@ -119,8 +119,8 @@ public:
         , m_token(token)
     { }
 
-    Auth(std::string iamRole)
-        : m_role(internal::makeUnique<std::string>(iamRole))
+    Auth(std::string credUrl)
+        : m_credUrl(internal::makeUnique<std::string>(credUrl))
     { }
 
     static std::unique_ptr<Auth> create(std::string j, std::string profile);
@@ -132,7 +132,7 @@ private:
     mutable std::string m_hidden;
     mutable std::string m_token;
 
-    std::unique_ptr<std::string> m_role;
+    std::unique_ptr<std::string> m_credUrl;
     mutable std::unique_ptr<Time> m_expiration;
     mutable std::mutex m_mutex;
 };

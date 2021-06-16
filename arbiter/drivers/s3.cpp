@@ -46,9 +46,12 @@ namespace
 
     // See:
     // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
-    const std::string credIp("169.254.169.254/");
-    const std::string credBase(
-            credIp + "latest/meta-data/iam/security-credentials/");
+    const std::string ec2CredIp("169.254.169.254");
+    const std::string ec2CredBase(
+            ec2CredIp + "/latest/meta-data/iam/security-credentials");
+
+    // https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html
+    const std::string fargateCredIp("169.254.170.2");
 
     std::string line(const std::string& data) { return data + "\n"; }
     const std::vector<char> empty;
@@ -231,6 +234,9 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
     }
 
 #ifdef ARBITER_CURL
+    http::Pool pool;
+    drivers::Http httpDriver(pool);
+
     // Nothing found in the environment or on the filesystem.  However we may
     // be running in an EC2 instance with an instance profile set up.
     //
@@ -238,17 +244,20 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
     // an HTTP request on every Arbiter construction - but if we're allowed,
     // see if we can request an instance profile configuration.
     if (
-            (!config.is_null() &&
-                config.value("allowInstanceProfile", false)) ||
-            env("AWS_ALLOW_INSTANCE_PROFILE"))
+        (!config.is_null() && config.value("allowInstanceProfile", false)) ||
+        env("AWS_ALLOW_INSTANCE_PROFILE"))
     {
-        http::Pool pool;
-        drivers::Http httpDriver(pool);
-
-        if (const auto iamRole = httpDriver.tryGet(credBase))
+        if (const auto iamRole = httpDriver.tryGet(ec2CredBase))
         {
-            return makeUnique<Auth>(*iamRole);
+            return makeUnique<Auth>(ec2CredBase + "/" + *iamRole);
         }
+    }
+
+    // We also may be running in Fargate, which looks very similar but with a
+    // different IP.
+    if (const auto relUri = env("AWS_CONTAINER_CREDENTIALS_RELATIVE_URI"))
+    {
+        return makeUnique<Auth>(fargateCredIp + "/" + *relUri);
     }
 #endif
 
@@ -400,7 +409,7 @@ std::string S3::Config::extractBaseUrl(
 S3::AuthFields S3::Auth::fields() const
 {
 #ifdef ARBITER_CURL
-    if (m_role)
+    if (m_credUrl)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -410,7 +419,7 @@ S3::AuthFields S3::Auth::fields() const
             http::Pool pool;
             drivers::Http httpDriver(pool);
 
-            const json creds(json::parse(httpDriver.get(credBase + *m_role)));
+            const json creds(json::parse(httpDriver.get(*m_credUrl)));
             m_access = creds.at("AccessKeyId").get<std::string>();
             m_hidden = creds.at("SecretAccessKey").get<std::string>();
             m_token = creds.at("Token").get<std::string>();
