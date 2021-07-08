@@ -220,11 +220,18 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
     {
         const std::string accessKey("aws_access_key_id");
         const std::string hiddenKey("aws_secret_access_key");
+        const std::string tokenKey("aws_session_token");
         const ini::Contents creds(ini::parse(*c));
         if (creds.count(profile))
         {
             const auto section(creds.at(profile));
-            if (section.count(accessKey) && section.count(hiddenKey))
+            if (section.count(accessKey) && section.count(hiddenKey) && section.count(tokenKey))
+            {
+                const auto access(section.at(accessKey));
+                const auto hidden(section.at(hiddenKey));
+                const auto token(section.at(tokenKey));
+                return makeUnique<Auth>(access, hidden, token);
+            } else if (section.count(accessKey) && section.count(hiddenKey))
             {
                 const auto access(section.at(accessKey));
                 const auto hidden(section.at(hiddenKey));
