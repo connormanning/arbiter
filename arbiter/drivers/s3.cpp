@@ -225,18 +225,17 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
         if (creds.count(profile))
         {
             const auto section(creds.at(profile));
-            if (section.count(accessKey) && section.count(hiddenKey) && section.count(tokenKey))
+            if (section.count(accessKey) && section.count(hiddenKey))
             {
                 const auto access(section.at(accessKey));
                 const auto hidden(section.at(hiddenKey));
-                const auto token(section.at(tokenKey));
-                return makeUnique<Auth>(access, hidden, token);
-            } else if (section.count(accessKey) && section.count(hiddenKey))
-            {
-                const auto access(section.at(accessKey));
-                const auto hidden(section.at(hiddenKey));
+                if (section.count(tokenKey))
+                {
+                    const auto token(section.at(tokenKey));
+                    return makeUnique<Auth>(access, hidden, token);
+                }
                 return makeUnique<Auth>(access, hidden);
-            }
+           }
         }
     }
 
