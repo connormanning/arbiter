@@ -169,6 +169,7 @@ public:
     std::string baseUrl() const;
     std::string bucket() const;
     std::string object() const;
+    std::string canonicalUri() const;
 
 private:
     std::string m_baseUrl;
