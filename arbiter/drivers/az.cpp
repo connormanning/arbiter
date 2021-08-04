@@ -134,6 +134,17 @@ AZ::Config::Config(const std::string s, const std::string profile)
     , m_endpoint(extractEndpoint(s, profile))
     , m_baseUrl(extractBaseUrl(s, m_service, m_endpoint, m_storageAccount))
 {
+    const std::string sasString = extractSasToken(s);
+    if (!sasString.empty())
+    {
+        const auto params = split(sasString, '&');
+        for (const auto& param : params)
+        {
+            const auto kv = split(param, '=');
+            m_sasToken[kv.at(0)] = kv.at(1);
+        }
+    }
+
     const json c(s.size() ? json::parse(s) : json());
     if (c.is_null()) return;
 
@@ -172,6 +183,10 @@ std::string AZ::Config::extractStorageAccount(
     {
         return *p;
     }
+    else if (auto p = env("AZ_STORAGE_ACCOUNT"))
+    {
+        return *p;
+    }
 
    throw ArbiterError("Couldn't find Azure Storage account value - this is mandatory");
 }
@@ -190,12 +205,35 @@ std::string AZ::Config::extractStorageAccessKey(
     {
         return *p;
     }
+    else if (auto p = env("AZ_STORAGE_ACCESS_KEY"))
+    {
+        return *p;
+    }
 
     if (!c.is_null() && c.value("verbose", false))
     {
         std::cout << "access key not found - request signin will be disable" << std::endl;
     }
 
+    return "";
+}
+
+std::string AZ::Config::extractSasToken(const std::string s)
+{
+    const json c(s.size() ? json::parse(s) : json());
+
+    if (!c.is_null() && c.count("sas"))
+    {
+        return c.at("sas").get<std::string>();
+    }
+    else if (auto p = env("AZURE_SAS_TOKEN"))
+    {
+        return *p;
+    }
+    else if (auto p = env("AZ_SAS_TOKEN"))
+    {
+        return *p;
+    }
     return "";
 }
 
@@ -298,35 +336,43 @@ bool AZ::get(
     Headers headers(m_config->baseHeaders());
     headers.insert(userHeaders.begin(), userHeaders.end());
 
-    std::unique_ptr<std::size_t> size(
-            m_config->precheck() && !headers.count("Range") ?
-                tryGetSize(rawPath) : nullptr);
-
     const Resource resource(m_config->baseUrl(), rawPath);
-    const ApiV1 ApiV1(
-            "GET",
-            resource,
-            m_config->authFields(),
-            query,
-            headers,
-            emptyVect);
-
     drivers::Http http(m_pool);
-    Response res(
-            http.internalGet(
-                resource.url(),
-                ApiV1.headers(),
-                ApiV1.query(),
-                size ? *size : 0));
 
-    if (res.ok())
+    std::unique_ptr<Response> res;
+
+    if (m_config->hasSasToken())
     {
-        data = res.data();
+        Query q = m_config->sasToken();
+        q.insert(query.begin(), query.end());
+        res.reset(new Response(http.internalGet(resource.url(), headers, q)));
+    }
+    else
+    {
+        const ApiV1 ApiV1(
+                "GET",
+                resource,
+                m_config->authFields(),
+                query,
+                headers,
+                emptyVect);
+
+        res.reset(
+            new Response(
+                http.internalGet(
+                    resource.url(),
+                    ApiV1.headers(),
+                    ApiV1.query())));
+    }
+
+    if (res->ok())
+    {
+        data = res->data();
         return true;
     }
     else
     {
-        std::cout << res.code() << ": " << res.str() << std::endl;
+        std::cout << res->code() << ": " << res->str() << std::endl;
         return false;
     }
 }
@@ -342,9 +388,37 @@ void AZ::put(
     Headers headers(m_config->baseHeaders());
     headers.insert(userHeaders.begin(), userHeaders.end());
 
-    if (getExtension(rawPath) == "json")
+
+    drivers::Http http(m_pool);
+
+    if (m_config->hasSasToken())
     {
-        headers["Content-Type"] = "application/json";
+        Headers headers(userHeaders);
+        headers["Content-Type"] = "application/octet-stream";
+        if (getExtension(rawPath) == "json")
+        {
+            headers["Content-Type"] = "application/json";
+        }
+        headers["Content-Length"] = std::to_string(data.size());
+        headers["x-ms-blob-type"] = "BlockBlob";
+
+        Query q = m_config->sasToken();
+        q.insert(query.begin(), query.end());
+
+        Response res(
+            http.internalPut(
+                resource.url(),
+                data,
+                headers,
+                q));
+
+        if (!res.ok())
+        {
+            throw ArbiterError(
+                    "Couldn't Azure PUT to " + rawPath + ": " +
+                    std::string(res.data().data(), res.data().size()));
+        }
+        return;
     }
 
     const ApiV1 ApiV1(
@@ -355,7 +429,6 @@ void AZ::put(
             headers,
             data);
 
-    drivers::Http http(m_pool);
     Response res(
             http.internalPut(
                 resource.url(),

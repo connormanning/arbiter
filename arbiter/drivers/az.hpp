@@ -107,6 +107,8 @@ class AZ::Config
 public:
     Config(std::string j, std::string profile);
 
+    const http::Query& sasToken() const { return m_sasToken; }
+    bool hasSasToken() const { return m_sasToken.size() > 0; }
     const std::string& service() const { return m_service; }
     const std::string& storageAccount() const { return m_storageAccount; }
     const std::string& endpoint() const { return m_endpoint; }
@@ -122,7 +124,9 @@ private:
     static std::string extractBaseUrl(std::string j, std::string endpoint, std::string service, std::string account);
     static std::string extractStorageAccount(std::string j, std::string profile);
     static std::string extractStorageAccessKey(std::string j, std::string profile);
+    static std::string extractSasToken(std::string j);
 
+    http::Query m_sasToken;
     const std::string m_service;
     const std::string m_storageAccount;
     const std::string m_storageAccessKey;
