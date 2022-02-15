@@ -306,21 +306,30 @@ std::unique_ptr<std::size_t> AZ::tryGetSize(std::string rawPath) const
 {
     Headers headers(m_config->baseHeaders());
 
-    const Resource resource(m_config->baseUrl(), rawPath);
-    const ApiV1 ApiV1(
-            "HEAD",
-            resource,
-            m_config->authFields(),
-            Query(),
-            headers,
-            emptyVect);
-
     drivers::Http http(m_pool);
-    Response res(http.internalHead(resource.url(), ApiV1.headers()));
+    const Resource resource(m_config->baseUrl(), rawPath);
+    std::unique_ptr<Response> res;
 
-    if (res.ok())
+    if (m_config->hasSasToken())
     {
-        const auto cl = findHeader(res.headers(), "Content-Length");
+        Query q = m_config->sasToken();
+        res.reset(new Response(http.internalHead(resource.url(), headers, q)));
+    }
+    else
+    {
+        const ApiV1 ApiV1(
+                "HEAD",
+                resource,
+                m_config->authFields(),
+                Query(),
+                headers,
+                emptyVect);
+        res.reset(new Response(http.internalHead(resource.url(), ApiV1.headers())));
+    }
+
+    if (res->ok())
+    {
+        const auto cl = findHeader(res->headers(), "Content-Length");
         if (cl) return makeUnique<std::size_t>(std::stoull(*cl));
     }
 
