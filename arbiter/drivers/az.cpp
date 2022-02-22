@@ -540,10 +540,6 @@ std::vector<std::string> AZ::glob(std::string path, bool verbose) const
                     }
                 }
             }
-            else
-            {
-                throw ArbiterError("No blob node");
-            }
         }
         else
         {
