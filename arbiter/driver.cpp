@@ -2,6 +2,8 @@
 #include <arbiter/driver.hpp>
 
 #include <arbiter/arbiter.hpp>
+#include <arbiter/util/json.hpp>
+#include <arbiter/util/util.hpp>
 #endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
@@ -11,6 +13,34 @@ namespace ARBITER_CUSTOM_NAMESPACE
 
 namespace arbiter
 {
+
+std::shared_ptr<Driver> Driver::create(
+    http::Pool& pool,
+    const std::string protocol,
+    const std::string s)
+{
+    using namespace drivers;
+
+    const json config = json::parse(s);
+    const json entry = config.value(protocol, json());
+
+    const std::string profile = getProfile(protocol);
+    const std::string type = stripProfile(protocol);
+
+    if (type == "file") return Fs::create();
+    if (type == "test") return Test::create();
+#ifdef ARBITER_CURL
+    if (type == "http") return Http::create(pool);
+    if (type == "https") return Https::create(pool);
+    if (type == "s3") return S3::create(pool, entry.dump(), profile);
+    if (type == "az") return AZ::create(pool, entry.dump(), profile);
+    if (type == "dbx") return Dropbox::create(pool, entry.dump(), profile);
+#ifdef ARBITER_OPENSSL
+    if (type == "gs") return Google::create(pool, entry.dump(), profile);
+#endif
+#endif
+    return std::shared_ptr<Driver>();
+}
 
 std::string Driver::get(const std::string path) const
 {
@@ -66,8 +96,8 @@ std::vector<std::string> Driver::resolve(
     {
         if (verbose)
         {
-            std::cout << "Resolving [" << type() << "]: " << path << " ..." <<
-                std::flush;
+            std::cout << "Resolving [" << profiledProtocol() << "]: "
+                << path << " ..." << std::flush;
         }
 
         results = glob(path, verbose);
@@ -80,7 +110,7 @@ std::vector<std::string> Driver::resolve(
     }
     else
     {
-        if (isRemote()) path = type() + "://" + path;
+        if (isRemote()) path = profiledProtocol() + "://" + path;
         else path = expandTilde(path);
 
         results.push_back(path);

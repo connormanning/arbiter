@@ -51,12 +51,18 @@ namespace drivers
 
 using namespace http;
 
-Dropbox::Dropbox(Pool& pool, const Dropbox::Auth& auth)
-    : Http(pool)
+Dropbox::Dropbox(
+        Pool& pool,
+        const Dropbox::Auth& auth,
+        const std::string profile)
+    : Http(pool, "dbx", profile)
     , m_auth(auth)
 { }
 
-std::unique_ptr<Dropbox> Dropbox::create(Pool& pool, const std::string s)
+std::unique_ptr<Dropbox> Dropbox::create(
+    Pool& pool,
+    const std::string s,
+    const std::string profile)
 {
     const json j(json::parse(s));
     if (!j.is_null())
@@ -65,11 +71,15 @@ std::unique_ptr<Dropbox> Dropbox::create(Pool& pool, const std::string s)
         {
             return makeUnique<Dropbox>(
                     pool,
-                    Auth(j.at("token").get<std::string>()));
+                    Auth(j.at("token").get<std::string>()),
+                    profile);
         }
         else if (j.is_string())
         {
-            return makeUnique<Dropbox>(pool, Auth(j.get<std::string>()));
+            return makeUnique<Dropbox>(
+                    pool,
+                    Auth(j.get<std::string>()),
+                    profile);
         }
     }
 
@@ -308,7 +318,9 @@ std::vector<std::string> Dropbox::glob(std::string path, bool verbose) const
             {
                 // Results already begin with a slash.
                 results.push_back(
-                        type() + ":/" + v.at("path_lower").get<std::string>());
+                        profiledProtocol() +
+                        ":/" +
+                        v.at("path_lower").get<std::string>());
             }
         }
     };

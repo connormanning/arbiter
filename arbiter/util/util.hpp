@@ -215,6 +215,15 @@ ARBITER_DLL std::string getExtension(std::string path);
  * '.' if one exists, otherwise return the full path. */
 ARBITER_DLL std::string stripExtension(std::string path);
 
+/** Get the characters up to the last instance of "@" in the protocol, or an
+ * empty string if no "@" character exists. */
+ARBITER_DLL std::string getProfile(std::string protocol);
+
+/** Get the characters following the last instance of "@" in the protocol, or
+ * the original @p protocol if no profile exists.
+*/
+ARBITER_DLL std::string stripProfile(std::string protocol);
+
 } // namespace arbiter
 
 #ifdef ARBITER_CUSTOM_NAMESPACE

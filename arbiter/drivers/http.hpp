@@ -29,11 +29,12 @@ namespace drivers
 class ARBITER_DLL Http : public Driver
 {
 public:
-    Http(http::Pool& pool);
+    Http(
+            http::Pool& pool,
+            std::string protocol = "http",
+            std::string httpProtocol = "http",
+            std::string profile = "");
     static std::unique_ptr<Http> create(http::Pool& pool);
-
-    // Inherited from Driver.
-    virtual std::string type() const override { return "http"; }
 
     /** By default, performs a HEAD request and returns the contents of the
      * Content-Length header.
@@ -158,6 +159,7 @@ protected:
             http::Query query) const;
 
     http::Pool& m_pool;
+    std::string m_httpProtocol;
 
 private:
     virtual bool get(
@@ -176,14 +178,18 @@ private:
 class Https : public Http
 {
 public:
-    Https(http::Pool& pool) : Http(pool) { }
+    Https(
+            http::Pool& pool,
+            std::string driverProtocol = "https",
+            std::string httpProtocol = "https",
+            std::string profile = "")
+        : Http(pool, driverProtocol, httpProtocol, profile)
+    { }
 
     static std::unique_ptr<Https> create(http::Pool& pool)
     {
         return std::unique_ptr<Https>(new Https(pool));
     }
-
-    virtual std::string type() const override { return "https"; }
 };
 
 } // namespace drivers

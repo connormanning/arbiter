@@ -55,9 +55,6 @@ public:
     /** @brief Construct an Arbiter with driver configurations. */
     Arbiter(std::string stringifiedJson);
 
-    /** True if a Driver has been registered for this file type. */
-    bool hasDriver(std::string path) const;
-
     /** @brief Add a custom driver for the supplied type.
      *
      * After this operation completes, future requests into arbiter beginning
@@ -69,7 +66,7 @@ public:
      *
      * @note This operation is not thread-safe.
      */
-    void addDriver(std::string type, std::unique_ptr<Driver> driver);
+    void addDriver(std::string type, std::shared_ptr<Driver> driver);
 
     /** Get data or throw if inaccessible. */
     std::string get(std::string path) const;
@@ -232,7 +229,7 @@ public:
      *
      * Optionally, filesystem paths may be explicitly prefixed with `file://`.
      */
-    const Driver& getDriver(std::string path) const;
+    std::shared_ptr<Driver> getDriver(std::string path) const;
 
     /** @brief Get a LocalHandle to a possibly remote file.
      *
@@ -283,10 +280,12 @@ public:
     http::Pool& httpPool() { return *m_pool; }
 
 private:
-    const drivers::Http* tryGetHttpDriver(std::string path) const;
-    const drivers::Http& getHttpDriver(std::string path) const;
+    std::shared_ptr<drivers::Http> tryGetHttpDriver(std::string path) const;
+    std::shared_ptr<drivers::Http> getHttpDriver(std::string path) const;
 
-    DriverMap m_drivers;
+    std::string m_config;
+    mutable std::mutex m_mutex;
+    mutable DriverMap m_drivers;
     std::unique_ptr<http::Pool> m_pool;
 };
 

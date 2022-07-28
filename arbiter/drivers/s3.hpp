@@ -39,20 +39,17 @@ public:
     /** Try to construct an S3 driver.  The configuration/credential discovery
      * follows, in order:
      *      - Environment settings.
-     *      - Arbiter JSON configuration.
+     *      - JSON configuration
      *      - Well-known files or their environment overrides, like
      *          `~/.aws/credentials` or the file at AWS_CREDENTIAL_FILE.
      *      - EC2 instance profile.
      */
-    static std::vector<std::unique_ptr<S3>> create(
-            http::Pool& pool,
-            std::string j);
-
-    static std::unique_ptr<S3> createOne(http::Pool& pool, std::string j);
+    static std::unique_ptr<S3> create(
+        http::Pool& pool,
+        std::string json,
+        std::string profile = "default");
 
     // Overrides.
-    virtual std::string type() const override;
-
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
 
@@ -66,14 +63,6 @@ public:
     virtual void copy(std::string src, std::string dst) const override;
 
 private:
-    static std::string extractProfile(std::string j);
-
-    /*
-    static std::unique_ptr<Config> extractConfig(
-            std::string j,
-            std::string profile);
-
-            */
     /** Inherited from Drivers::Http. */
     virtual bool get(
             std::string path,
@@ -88,7 +77,6 @@ private:
     class ApiV4;
     class Resource;
 
-    std::string m_profile;
     std::unique_ptr<Auth> m_auth;
     std::unique_ptr<Config> m_config;
 };
@@ -123,7 +111,7 @@ public:
         : m_credUrl(internal::makeUnique<std::string>(credUrl))
     { }
 
-    static std::unique_ptr<Auth> create(std::string j, std::string profile);
+    static std::unique_ptr<Auth> create(std::string profile, std::string s);
 
     AuthFields fields() const;
 
@@ -140,7 +128,7 @@ private:
 class S3::Config
 {
 public:
-    Config(std::string j, std::string profile);
+    Config(std::string json, std::string profile);
 
     const std::string& region() const { return m_region; }
     const std::string& baseUrl() const { return m_baseUrl; }
@@ -148,8 +136,8 @@ public:
     bool precheck() const { return m_precheck; }
 
 private:
-    static std::string extractRegion(std::string j, std::string profile);
-    static std::string extractBaseUrl(std::string j, std::string region);
+    static std::string extractRegion(std::string json, std::string profile);
+    static std::string extractBaseUrl(std::string json, std::string region);
 
     const std::string m_region;
     const std::string m_baseUrl;

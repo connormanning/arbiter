@@ -217,6 +217,24 @@ std::string stripExtension(const std::string path)
     return path.substr(0, pos);
 }
 
+std::string getProfile(std::string protocol)
+{
+    const std::size_t pos(protocol.find_last_of('@'));
+
+    if (pos != std::string::npos) return protocol.substr(0, pos);
+    return "";
+}
+
+std::string stripProfile(std::string protocol)
+{
+    const std::string profile = getProfile(protocol);
+    if (profile.size() && protocol.size() >= profile.size() + 1)
+    {
+        return protocol.substr(profile.size() + 1);
+    }
+    return protocol;
+}
+
 } // namespace arbiter
 
 #ifdef ARBITER_CUSTOM_NAMESPACE

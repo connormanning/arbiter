@@ -66,72 +66,28 @@ AZ::AZ(
         Pool& pool,
         std::string profile,
         std::unique_ptr<Config> config)
-    : Http(pool)
-    , m_profile(profile)
+    : Http(pool, "az", profile == "default" ? "" : profile)
     , m_config(std::move(config))
 { }
 
-std::vector<std::unique_ptr<AZ>> AZ::create(Pool& pool, const std::string s)
+std::unique_ptr<AZ> AZ::create(
+    Pool& pool,
+    const std::string s,
+    std::string profile)
 {
-    std::vector<std::unique_ptr<AZ>> result;
+    if (profile.empty()) profile = "default";
+    if (auto p = env("AZ_DEFAULT_PROFILE")) profile = *p;
+    if (auto p = env("AZ_PROFILE")) profile = *p;
 
-    const json config(s.size() ? json::parse(s) : json());
-
-    if (config.is_array())
-    {
-        for (const json& curr : config)
-        {
-            if (auto s = createOne(pool, curr.dump()))
-            {
-                result.push_back(std::move(s));
-            }
-        }
-    }
-    else if (auto s = createOne(pool, config.dump()))
-    {
-        result.push_back(std::move(s));
-    }
-
-    return result;
+    std::unique_ptr<Config> config(new Config(s));
+    return makeUnique<AZ>(pool, profile, std::move(config));
 }
 
-std::unique_ptr<AZ> AZ::createOne(Pool& pool, const std::string s)
-{
-    try
-    {
-        const json j(s.size() ? json::parse(s) : json());
-        const std::string profile(extractProfile(j.dump()));
-
-        std::unique_ptr<Config> config(new Config(j.dump(), profile));
-        return makeUnique<AZ>(pool, profile, std::move(config));
-    }
-    catch (...) { }
-
-    return std::unique_ptr<AZ>();
-}
-
-std::string AZ::extractProfile(const std::string s)
-{
-    const json config(s.size() ? json::parse(s) : json());
-
-    if (
-            !config.is_null() &&
-            config.count("profile") &&
-            config["profile"].get<std::string>().size())
-    {
-        return config["profile"].get<std::string>();
-    }
-
-    if (auto p = env("AZ_PROFILE")) return *p;
-    if (auto p = env("AZ_DEFAULT_PROFILE")) return *p;
-    else return "default";
-}
-
-AZ::Config::Config(const std::string s, const std::string profile)
-    : m_service(extractService(s, profile))
-    , m_storageAccount(extractStorageAccount(s,profile))
-    , m_storageAccessKey(extractStorageAccessKey(s,profile))
-    , m_endpoint(extractEndpoint(s, profile))
+AZ::Config::Config(const std::string s)
+    : m_service(extractService(s))
+    , m_storageAccount(extractStorageAccount(s))
+    , m_storageAccessKey(extractStorageAccessKey(s))
+    , m_endpoint(extractEndpoint(s))
     , m_baseUrl(extractBaseUrl(s, m_service, m_endpoint, m_storageAccount))
 {
     const std::string sasString = extractSasToken(s);
@@ -169,9 +125,7 @@ AZ::Config::Config(const std::string s, const std::string profile)
     }
 }
 
-std::string AZ::Config::extractStorageAccount(
-    const std::string s,
-    const std::string profile)
+std::string AZ::Config::extractStorageAccount(const std::string s)
 {
     const json c(s.size() ? json::parse(s) : json());
 
@@ -191,9 +145,7 @@ std::string AZ::Config::extractStorageAccount(
    throw ArbiterError("Couldn't find Azure Storage account value - this is mandatory");
 }
 
-std::string AZ::Config::extractStorageAccessKey(
-    const std::string s,
-    const std::string profile)
+std::string AZ::Config::extractStorageAccessKey(const std::string s)
 {
     const json c(s.size() ? json::parse(s) : json());
 
@@ -237,9 +189,7 @@ std::string AZ::Config::extractSasToken(const std::string s)
     return "";
 }
 
-std::string AZ::Config::extractService(
-        const std::string s,
-        const std::string profile)
+std::string AZ::Config::extractService(const std::string s)
 {
     const json c(s.size() ? json::parse(s) : json());
 
@@ -272,9 +222,7 @@ std::string AZ::Config::extractService(
     return "blob";
 }
 
-std::string AZ::Config::extractEndpoint(
-    const std::string s,
-    const std::string profile)
+std::string AZ::Config::extractEndpoint(const std::string s)
 {
     const json c(s.size() ? json::parse(s) : json());
 
@@ -306,12 +254,6 @@ std::string AZ::Config::extractBaseUrl(
      const std::string account)
 {
     return account + "." + service + "." + endpoint + "/";
-}
-
-std::string AZ::type() const
-{
-    if (m_profile == "default") return "az";
-    else return m_profile + "@az";
 }
 
 std::unique_ptr<std::size_t> AZ::tryGetSize(std::string rawPath) const
@@ -535,7 +477,8 @@ std::vector<std::string> AZ::glob(std::string path, bool verbose) const
                         if (recursive || !isSubdir)
                         {
                             results.push_back(
-                                    type() + "://" + bucket + "/" + key);
+                                    profiledProtocol() + "://" +
+                                    bucket + "/" + key);
                         }
                     }
                 }

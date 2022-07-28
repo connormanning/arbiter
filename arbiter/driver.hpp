@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -17,8 +18,8 @@ namespace ARBITER_CUSTOM_NAMESPACE
 
 namespace arbiter
 {
+namespace http { class Pool; }
 
-class HttpPool;
 
 /** @brief Base class for interacting with a storage type.
  *
@@ -38,17 +39,24 @@ class HttpPool;
 class ARBITER_DLL Driver
 {
 public:
+    Driver(std::string protocol, std::string profile = "")
+        : m_profile(profile)
+        , m_protocol(protocol)
+    { }
+
     virtual ~Driver() { }
 
-    /**
-     * Returns a string identifying this driver type, which should be unique
-     * among all other drivers.  Paths that begin with the substring
-     * `<type>://` will be routed to this driver.  For example, `fs`, `s3`, or
-     * `http`.
-     *
-     * @note Derived classes must override.
-     */
-    virtual std::string type() const = 0;
+    static std::shared_ptr<Driver> create(
+        http::Pool& pool,
+        std::string protocol,
+        std::string config);
+
+    std::string profile() const { return m_profile; }
+    std::string protocol() const { return m_protocol; }
+    std::string profiledProtocol() const
+    {
+        return m_profile.size() ? m_profile + "@" + m_protocol : m_protocol;
+    }
 
     /** Get string data. */
     std::string get(std::string path) const;
@@ -122,9 +130,12 @@ protected:
      * @param[out] data Empty vector in which to write resulting data.
      */
     virtual bool get(std::string path, std::vector<char>& data) const = 0;
+
+    const std::string m_profile;
+    const std::string m_protocol;
 };
 
-typedef std::map<std::string, std::unique_ptr<Driver>> DriverMap;
+typedef std::map<std::string, std::shared_ptr<Driver>> DriverMap;
 
 } // namespace arbiter
 

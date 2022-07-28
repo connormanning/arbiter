@@ -28,8 +28,14 @@ namespace drivers
 
 using namespace http;
 
-Http::Http(Pool& pool)
-    : m_pool(pool)
+Http::Http(
+        Pool& pool,
+        const std::string driverProtocol,
+        const std::string httpProtocol,
+        const std::string profile)
+    : Driver(driverProtocol, profile)
+    , m_pool(pool)
+    , m_httpProtocol(httpProtocol)
 {
 #ifndef ARBITER_CURL
     throw ArbiterError("Cannot create HTTP driver - no curl support was built");
@@ -229,7 +235,7 @@ Response Http::internalPost(
 std::string Http::typedPath(const std::string& p) const
 {
     if (getProtocol(p) != "file") return p;
-    else return type() + "://" + p;
+    else return m_httpProtocol + "://" + p;
 }
 
 } // namespace drivers

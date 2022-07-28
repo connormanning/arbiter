@@ -94,13 +94,11 @@ namespace drivers
 class ARBITER_DLL Fs : public Driver
 {
 public:
-    Fs() { }
+    Fs(std::string protocol = "file"): Driver(protocol) { }
 
     using Driver::get;
 
     static std::unique_ptr<Fs> create();
-
-    virtual std::string type() const override { return "file"; }
 
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;

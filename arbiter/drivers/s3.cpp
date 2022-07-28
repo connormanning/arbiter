@@ -109,73 +109,36 @@ S3::S3(
         std::string profile,
         std::unique_ptr<Auth> auth,
         std::unique_ptr<Config> config)
-    : Http(pool)
-    , m_profile(profile)
+    : Http(pool, "s3", "http", profile == "default" ? "" : profile)
     , m_auth(std::move(auth))
     , m_config(std::move(config))
 { }
 
-std::vector<std::unique_ptr<S3>> S3::create(Pool& pool, const std::string s)
+std::unique_ptr<S3> S3::create(
+    Pool& pool,
+    const std::string s,
+    std::string profile)
 {
-    std::vector<std::unique_ptr<S3>> result;
-
-    const json config(s.size() ? json::parse(s) : json());
-
-    if (config.is_array())
+    if (profile.empty())
     {
-        for (const json& curr : config)
-        {
-            if (auto s = createOne(pool, curr.dump()))
-            {
-                result.push_back(std::move(s));
-            }
-        }
-    }
-    else if (auto s = createOne(pool, config.dump()))
-    {
-        result.push_back(std::move(s));
+        profile = "default";
+        if (auto p = env("AWS_DEFAULT_PROFILE")) profile = *p;
+        if (auto p = env("AWS_PROFILE")) profile = *p;
     }
 
-    return result;
-}
-
-std::unique_ptr<S3> S3::createOne(Pool& pool, const std::string s)
-{
-    const json j(s.size() ? json::parse(s) : json());
-    const std::string profile(extractProfile(j.dump()));
-
-    auto auth(Auth::create(j.dump(), profile));
+    auto auth(Auth::create(s, profile));
     if (!auth) return std::unique_ptr<S3>();
 
-    std::unique_ptr<Config> config(new Config(j.dump(), profile));
-    auto s3 = makeUnique<S3>(pool, profile, std::move(auth), std::move(config));
-    return s3;
-}
-
-std::string S3::extractProfile(const std::string s)
-{
-    const json config(s.size() ? json::parse(s) : json());
-
-    if (
-            !config.is_null() &&
-            config.count("profile") &&
-            config["profile"].get<std::string>().size())
-    {
-        return config["profile"].get<std::string>();
-    }
-
-    if (auto p = env("AWS_PROFILE")) return *p;
-    if (auto p = env("AWS_DEFAULT_PROFILE")) return *p;
-    else return "default";
+    auto config = makeUnique<Config>(s, profile);
+    return makeUnique<S3>(pool, profile, std::move(auth), std::move(config));
 }
 
 std::unique_ptr<S3::Auth> S3::Auth::create(
-        const std::string s,
-        const std::string profile)
+    const std::string s,
+    const std::string profile)
 {
-    const json config(s.size() ? json::parse(s) : json());
+    const json config = s.size() ? json::parse(s) : json();
 
-    // Try explicit JSON configuration first.
     if (
             !config.is_null() &&
             config.count("access") &&
@@ -189,7 +152,8 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
                 config.value("token", ""));
     }
 
-    // Try environment settings next.
+    // Try environment settings next - this only works for the default profile.
+    if (profile == "default")
     {
         auto access(env("AWS_ACCESS_KEY_ID"));
         auto hidden(env("AWS_SECRET_ACCESS_KEY"));
@@ -214,7 +178,7 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
             env("AWS_CREDENTIAL_FILE") ?
                 *env("AWS_CREDENTIAL_FILE") : "~/.aws/credentials");
 
-    // Finally, try reading credentials file.
+    // Try reading credentials file.
     drivers::Fs fsDriver;
     if (std::unique_ptr<std::string> c = fsDriver.tryGet(credPath))
     {
@@ -245,18 +209,9 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
 
     // Nothing found in the environment or on the filesystem.  However we may
     // be running in an EC2 instance with an instance profile set up.
-    //
-    // By default we won't search for this since we don't really want to make
-    // an HTTP request on every Arbiter construction - but if we're allowed,
-    // see if we can request an instance profile configuration.
-    if (
-        (!config.is_null() && config.value("allowInstanceProfile", false)) ||
-        env("AWS_ALLOW_INSTANCE_PROFILE"))
+    if (const auto iamRole = httpDriver.tryGet(ec2CredBase))
     {
-        if (const auto iamRole = httpDriver.tryGet(ec2CredBase))
-        {
-            return makeUnique<Auth>(ec2CredBase + "/" + *iamRole);
-        }
+        return makeUnique<Auth>(ec2CredBase + "/" + *iamRole);
     }
 
     // We also may be running in Fargate, which looks very similar but with a
@@ -309,8 +264,8 @@ S3::Config::Config(const std::string s, const std::string profile)
 }
 
 std::string S3::Config::extractRegion(
-        const std::string s,
-        const std::string profile)
+    const std::string s,
+    const std::string profile)
 {
     const std::string configPath(
             env("AWS_CONFIG_FILE") ?
@@ -351,8 +306,8 @@ std::string S3::Config::extractRegion(
 }
 
 std::string S3::Config::extractBaseUrl(
-        const std::string s,
-        const std::string region)
+    const std::string s,
+    const std::string region)
 {
     const json c(s.size() ? json::parse(s) : json());
 
@@ -369,10 +324,6 @@ std::string S3::Config::extractBaseUrl(
     if (const auto e = env("AWS_ENDPOINTS_FILE"))
     {
         endpointsPath = *e;
-    }
-    else if (c.count("endpointsFile"))
-    {
-        endpointsPath = c["endpointsFile"].get<std::string>();
     }
 
     std::string dnsSuffix("amazonaws.com");
@@ -447,12 +398,6 @@ S3::AuthFields S3::Auth::fields() const
 #endif
 
     return S3::AuthFields(m_access, m_hidden, m_token);
-}
-
-std::string S3::type() const
-{
-    if (m_profile == "default") return "s3";
-    else return m_profile + "@s3";
 }
 
 std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
@@ -644,7 +589,8 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
                         if (recursive || !isSubdir)
                         {
                             results.push_back(
-                                    type() + "://" + bucket + "/" + key);
+                                    profiledProtocol() + "://" +
+                                    bucket + "/" + key);
                         }
 
                         if (more)

@@ -50,9 +50,19 @@ std::string Endpoint::prefixedRoot() const
     return softPrefix() + root();
 }
 
-std::string Endpoint::type() const
+std::string Endpoint::protocol() const
 {
-    return m_driver->type();
+    return m_driver->protocol();
+}
+
+std::string Endpoint::profile() const
+{
+    return m_driver->profile();
+}
+
+std::string Endpoint::profiledProtocol() const
+{
+    return m_driver->profiledProtocol();
 }
 
 bool Endpoint::isRemote() const
@@ -294,7 +304,7 @@ Endpoint Endpoint::getSubEndpoint(std::string subpath) const
 
 std::string Endpoint::softPrefix() const
 {
-    return isRemote() ? type() + "://" : "";
+    return isRemote() ? profiledProtocol() + "://" : "";
 }
 
 const drivers::Http* Endpoint::tryGetHttpDriver() const
@@ -305,7 +315,8 @@ const drivers::Http* Endpoint::tryGetHttpDriver() const
 const drivers::Http& Endpoint::getHttpDriver() const
 {
     if (auto d = tryGetHttpDriver()) return *d;
-    else throw ArbiterError("Cannot get driver of type " + type() + " as HTTP");
+    else throw ArbiterError(
+        "Cannot get driver of type " + profiledProtocol() + " as HTTP");
 }
 
 } // namespace arbiter

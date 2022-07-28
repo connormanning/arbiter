@@ -21,13 +21,17 @@ class Google : public Https
 {
     class Auth;
 public:
-    Google(http::Pool& pool, std::unique_ptr<Auth> auth);
+    Google(
+            http::Pool& pool,
+            std::unique_ptr<Auth> auth,
+            std::string profile = "");
 
-    static std::unique_ptr<Google> create(http::Pool& pool, std::string j);
+    static std::unique_ptr<Google> create(
+            http::Pool& pool,
+            std::string j,
+            std::string profile);
 
     // Overrides.
-    virtual std::string type() const override { return "gs"; }  // Match gsutil.
-
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
 

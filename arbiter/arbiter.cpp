@@ -34,8 +34,7 @@ namespace
         json in(s.size() ? json::parse(s) : json::object());
 
         json config;
-        std::string path("~/.arbiter/config.json");
-
+        std::string path = in.value("configFile", "~/.arbiter/config.json");
         if      (auto p = env("ARBITER_CONFIG_FILE")) path = *p;
         else if (auto p = env("ARBITER_CONFIG_PATH")) path = *p;
 
@@ -48,10 +47,10 @@ namespace
     }
 }
 
-Arbiter::Arbiter() : Arbiter(json().dump()) { }
+Arbiter::Arbiter() : Arbiter("") { }
 
 Arbiter::Arbiter(const std::string s)
-    : m_drivers()
+    : m_config(s)
 #ifdef ARBITER_CURL
     , m_pool(
             new http::Pool(
@@ -59,108 +58,53 @@ Arbiter::Arbiter(const std::string s)
                 httpRetryCount,
                 getConfig(s).dump()))
 #endif
-{
-    using namespace drivers;
+{ }
 
-    const json c(getConfig(s));
-
-    if (auto d = Fs::create())
-    {
-        m_drivers[d->type()] = std::move(d);
-    }
-
-    if (auto d = Test::create())
-    {
-        m_drivers[d->type()] = std::move(d);
-    }
-
-#ifdef ARBITER_CURL
-    if (auto d = Http::create(*m_pool))
-    {
-        m_drivers[d->type()] = std::move(d);
-    }
-
-    if (auto d = Https::create(*m_pool))
-    {
-        m_drivers[d->type()] = std::move(d);
-    }
-
-    {
-        auto dlist(S3::create(*m_pool, c.value("s3", json()).dump()));
-        for (auto& d : dlist) m_drivers[d->type()] = std::move(d);
-    }
-
-    {
-        auto dlist(AZ::create(*m_pool, c.value("az", json()).dump()));
-        for (auto& d : dlist) m_drivers[d->type()] = std::move(d);
-    }
-
-    // Credential-based drivers should probably all do something similar to the
-    // S3 driver to support multiple profiles.
-    if (auto d = Dropbox::create(*m_pool, c.value("dropbox", json()).dump()))
-    {
-        m_drivers[d->type()] = std::move(d);
-    }
-
-#ifdef ARBITER_OPENSSL
-    if (auto d = Google::create(*m_pool, c.value("gs", json()).dump()))
-    {
-        m_drivers[d->type()] = std::move(d);
-    }
-#endif
-
-#endif
-}
-
-bool Arbiter::hasDriver(const std::string path) const
-{
-    return m_drivers.count(getProtocol(path));
-}
-
-void Arbiter::addDriver(const std::string type, std::unique_ptr<Driver> driver)
+void Arbiter::addDriver(const std::string type, std::shared_ptr<Driver> driver)
 {
     if (!driver) throw ArbiterError("Cannot add empty driver for " + type);
-    m_drivers[type] = std::move(driver);
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_drivers[type] = driver;
 }
 
 std::string Arbiter::get(const std::string path) const
 {
-    return getDriver(path).get(stripProtocol(path));
+    return getDriver(path)->get(stripProtocol(path));
 }
 
 std::vector<char> Arbiter::getBinary(const std::string path) const
 {
-    return getDriver(path).getBinary(stripProtocol(path));
+    return getDriver(path)->getBinary(stripProtocol(path));
 }
 
 std::unique_ptr<std::string> Arbiter::tryGet(std::string path) const
 {
-    return getDriver(path).tryGet(stripProtocol(path));
+    return getDriver(path)->tryGet(stripProtocol(path));
 }
 
 std::unique_ptr<std::vector<char>> Arbiter::tryGetBinary(std::string path) const
 {
-    return getDriver(path).tryGetBinary(stripProtocol(path));
+    return getDriver(path)->tryGetBinary(stripProtocol(path));
 }
 
 std::size_t Arbiter::getSize(const std::string path) const
 {
-    return getDriver(path).getSize(stripProtocol(path));
+    return getDriver(path)->getSize(stripProtocol(path));
 }
 
 std::unique_ptr<std::size_t> Arbiter::tryGetSize(const std::string path) const
 {
-    return getDriver(path).tryGetSize(stripProtocol(path));
+    return getDriver(path)->tryGetSize(stripProtocol(path));
 }
 
 void Arbiter::put(const std::string path, const std::string& data) const
 {
-    return getDriver(path).put(stripProtocol(path), data);
+    return getDriver(path)->put(stripProtocol(path), data);
 }
 
 void Arbiter::put(const std::string path, const std::vector<char>& data) const
 {
-    return getDriver(path).put(stripProtocol(path), data);
+    return getDriver(path)->put(stripProtocol(path), data);
 }
 
 std::string Arbiter::get(
@@ -168,7 +112,7 @@ std::string Arbiter::get(
         const http::Headers headers,
         const http::Query query) const
 {
-    return getHttpDriver(path).get(stripProtocol(path), headers, query);
+    return getHttpDriver(path)->get(stripProtocol(path), headers, query);
 }
 
 std::unique_ptr<std::string> Arbiter::tryGet(
@@ -176,7 +120,7 @@ std::unique_ptr<std::string> Arbiter::tryGet(
         const http::Headers headers,
         const http::Query query) const
 {
-    return getHttpDriver(path).tryGet(stripProtocol(path), headers, query);
+    return getHttpDriver(path)->tryGet(stripProtocol(path), headers, query);
 }
 
 std::vector<char> Arbiter::getBinary(
@@ -184,7 +128,7 @@ std::vector<char> Arbiter::getBinary(
         const http::Headers headers,
         const http::Query query) const
 {
-    return getHttpDriver(path).getBinary(stripProtocol(path), headers, query);
+    return getHttpDriver(path)->getBinary(stripProtocol(path), headers, query);
 }
 
 std::unique_ptr<std::vector<char>> Arbiter::tryGetBinary(
@@ -192,7 +136,7 @@ std::unique_ptr<std::vector<char>> Arbiter::tryGetBinary(
         const http::Headers headers,
         const http::Query query) const
 {
-    return getHttpDriver(path).tryGetBinary(stripProtocol(path), headers, query);
+    return getHttpDriver(path)->tryGetBinary(stripProtocol(path), headers, query);
 }
 
 void Arbiter::put(
@@ -201,7 +145,7 @@ void Arbiter::put(
         const http::Headers headers,
         const http::Query query) const
 {
-    return getHttpDriver(path).put(stripProtocol(path), data, headers, query);
+    return getHttpDriver(path)->put(stripProtocol(path), data, headers, query);
 }
 
 void Arbiter::put(
@@ -210,7 +154,7 @@ void Arbiter::put(
         const http::Headers headers,
         const http::Query query) const
 {
-    return getHttpDriver(path).put(stripProtocol(path), data, headers, query);
+    return getHttpDriver(path)->put(stripProtocol(path), data, headers, query);
 }
 
 void Arbiter::copy(
@@ -291,11 +235,11 @@ void Arbiter::copyFile(
 
     if (dstEndpoint.isLocal()) mkdirp(getDirname(dst));
 
-    if (getEndpoint(file).type() == dstEndpoint.type())
+    if (getEndpoint(file).profiledProtocol() == dstEndpoint.profiledProtocol())
     {
         // If this copy is within the same driver domain, defer to the
         // hopefully specialized copy method.
-        getDriver(file).copy(stripProtocol(file), stripProtocol(dst));
+        getDriver(file)->copy(stripProtocol(file), stripProtocol(dst));
     }
     else
     {
@@ -306,7 +250,7 @@ void Arbiter::copyFile(
 
 bool Arbiter::isRemote(const std::string path) const
 {
-    return getDriver(path).isRemote();
+    return getDriver(path)->isRemote();
 }
 
 bool Arbiter::isLocal(const std::string path) const
@@ -328,34 +272,46 @@ std::vector<std::string> Arbiter::resolve(
         const std::string path,
         const bool verbose) const
 {
-    return getDriver(path).resolve(stripProtocol(path), verbose);
+    return getDriver(path)->resolve(stripProtocol(path), verbose);
 }
 
 Endpoint Arbiter::getEndpoint(const std::string root) const
 {
-    return Endpoint(getDriver(root), stripProtocol(root));
+    return Endpoint(*getDriver(root), stripProtocol(root));
 }
 
-const Driver& Arbiter::getDriver(const std::string path) const
+std::shared_ptr<Driver> Arbiter::getDriver(const std::string path) const
 {
     const auto type(getProtocol(path));
 
-    if (!m_drivers.count(type))
     {
-        throw ArbiterError("No driver for " + path);
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_drivers.find(type);
+        if (it != m_drivers.end()) return it->second;
     }
 
-    return *m_drivers.at(type);
+    const json config = getConfig(m_config);
+    if (auto driver = Driver::create(*m_pool, type, config.dump()))
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_drivers[type] = driver;
+        return driver;
+    }
+
+    throw ArbiterError("No driver for " + path);
 }
 
-const drivers::Http* Arbiter::tryGetHttpDriver(const std::string path) const
+std::shared_ptr<drivers::Http> Arbiter::tryGetHttpDriver(
+    const std::string path) const
 {
-    return dynamic_cast<const drivers::Http*>(&getDriver(path));
+    std::shared_ptr<Driver> driver = getDriver(path);
+    if (!driver) return std::shared_ptr<drivers::Http>();
+    return std::dynamic_pointer_cast<drivers::Http>(driver);
 }
 
-const drivers::Http& Arbiter::getHttpDriver(const std::string path) const
+std::shared_ptr<drivers::Http> Arbiter::getHttpDriver(const std::string path) const
 {
-    if (auto d = tryGetHttpDriver(path)) return *d;
+    if (auto d = tryGetHttpDriver(path)) return d;
     else throw ArbiterError("Cannot get driver for " + path + " as HTTP");
 }
 

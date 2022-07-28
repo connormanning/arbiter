@@ -33,20 +33,17 @@ public:
             std::string profile,
             std::unique_ptr<Config> config);
 
-    /** Try to construct an Azure blob driver.  The configuration/credential discovery
-     * follows, in order:
+    /** Try to construct an Azure blob driver.  The configuration/credential
+     * discovery follows, in order:
      *      - Environment settings.
-     *      - Arbiter JSON configuration.
+     *      - JSON configuration.
      */
-    static std::vector<std::unique_ptr<AZ>> create(
+    static std::unique_ptr<AZ> create(
             http::Pool& pool,
-            std::string j);
-
-    static std::unique_ptr<AZ> createOne(http::Pool& pool, std::string j);
+            std::string j,
+            std::string profile);
 
     // Overrides.
-    virtual std::string type() const override;
-
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
 
@@ -60,14 +57,6 @@ public:
     virtual void copy(std::string src, std::string dst) const override;
 
 private:
-    static std::string extractProfile(std::string j);
-
-    /*
-    static std::unique_ptr<Config> extractConfig(
-            std::string j,
-            std::string profile);
-
-            */
     /** Inherited from Drivers::Http. */
     virtual bool get(
             std::string path,
@@ -82,7 +71,6 @@ private:
     class ApiV1;
     class Resource;
 
-    std::string m_profile;
     std::unique_ptr<Config> m_config;
 };
 
@@ -105,7 +93,7 @@ class AZ::Config
 {
 
 public:
-    Config(std::string j, std::string profile);
+    Config(std::string j);
 
     const http::Query& sasToken() const { return m_sasToken; }
     bool hasSasToken() const { return m_sasToken.size() > 0; }
@@ -119,11 +107,11 @@ public:
     AuthFields authFields() const { return AuthFields(m_storageAccount, m_storageAccessKey); }
 
 private:
-    static std::string extractService(std::string j, std::string profile);
-    static std::string extractEndpoint(std::string j, std::string profile);
+    static std::string extractService(std::string j);
+    static std::string extractEndpoint(std::string j);
     static std::string extractBaseUrl(std::string j, std::string endpoint, std::string service, std::string account);
-    static std::string extractStorageAccount(std::string j, std::string profile);
-    static std::string extractStorageAccessKey(std::string j, std::string profile);
+    static std::string extractStorageAccount(std::string j);
+    static std::string extractStorageAccessKey(std::string j);
     static std::string extractSasToken(std::string j);
 
     http::Query m_sasToken;

@@ -57,8 +57,12 @@ public:
 
     // Driver passthroughs.
 
-    /** Passthrough to Driver::type. */
-    std::string type() const;
+    /** Passthrough to Driver::protocol. */
+    std::string protocol() const;
+    /** Passthrough to Driver::profile. */
+    std::string profile() const;
+    /** Passthrough to Driver::profiledProtocol. */
+    std::string profiledProtocol() const;
 
     /** Passthrough to Driver::isRemote. */
     bool isRemote() const;

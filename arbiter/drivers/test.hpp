@@ -25,12 +25,13 @@ namespace drivers
 class Test : public Fs
 {
 public:
+    Test(): Fs("test") { }
+
     static std::unique_ptr<Test> create()
     {
         return std::unique_ptr<Test>(new Test());
     }
 
-    virtual std::string type() const override { return "test"; }
     virtual bool isRemote() const override { return true; }
 
 private:
@@ -39,7 +40,7 @@ private:
             bool verbose) const override
     {
         auto results(Fs::glob(path, verbose));
-        for (auto& p : results) p = type() + "://" + p;
+        for (auto& p : results) p = profiledProtocol() + "://" + p;
         return results;
     }
 };

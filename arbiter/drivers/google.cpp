@@ -89,16 +89,22 @@ namespace
 namespace drivers
 {
 
-Google::Google(http::Pool& pool, std::unique_ptr<Auth> auth)
-    : Https(pool)
+Google::Google(
+        http::Pool& pool,
+        std::unique_ptr<Auth> auth,
+        const std::string profile)
+    : Https(pool, "gs", profile == "default" ? "" : profile)
     , m_auth(std::move(auth))
 { }
 
-std::unique_ptr<Google> Google::create(http::Pool& pool, const std::string s)
+std::unique_ptr<Google> Google::create(
+    http::Pool& pool,
+    const std::string s,
+    const std::string profile)
 {
     if (auto auth = Auth::create(s))
     {
-        return makeUnique<Google>(pool, std::move(auth));
+        return makeUnique<Google>(pool, std::move(auth), profile);
     }
 
     return std::unique_ptr<Google>();
@@ -206,7 +212,7 @@ std::vector<std::string> Google::glob(std::string path, bool verbose) const
         for (const json& item : j.at("items"))
         {
             results.push_back(
-                    type() + "://" +
+                    profiledProtocol() + "://" +
                     resource.bucket() + item.at("name").get<std::string>());
         }
 
