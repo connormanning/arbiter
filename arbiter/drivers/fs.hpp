@@ -105,7 +105,7 @@ public:
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
 
-    virtual void put(
+    virtual std::vector<char> put(
             std::string path,
             const std::vector<char>& data) const override;
 

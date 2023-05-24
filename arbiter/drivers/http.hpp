@@ -41,11 +41,11 @@ public:
     virtual std::unique_ptr<std::size_t> tryGetSize(
             std::string path) const override;
 
-    virtual void put(
+    virtual std::vector<char> put(
             std::string path,
             const std::vector<char>& data) const final override
     {
-        put(path, data, http::Headers(), http::Query());
+        return put(path, data, http::Headers(), http::Query());
     }
 
     /* HTTP-specific driver methods follow.  Since many drivers (S3, Dropbox,
@@ -93,7 +93,7 @@ public:
             http::Query query) const;
 
     /** Perform an HTTP PUT request. */
-    void put(
+    std::vector<char> put(
             std::string path,
             const std::string& data,
             http::Headers headers,
@@ -104,7 +104,7 @@ public:
      */
 
     /** Perform an HTTP PUT request. */
-    virtual void put(
+    virtual std::vector<char> put(
             std::string path,
             const std::vector<char>& data,
             http::Headers headers,

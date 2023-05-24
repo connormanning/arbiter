@@ -33,7 +33,7 @@ public:
     static std::unique_ptr<Dropbox> create(http::Pool& pool, std::string j);
 
     virtual std::string type() const override { return "dropbox"; }
-    virtual void put(
+    virtual std::vector<char> put(
             std::string path,
             const std::vector<char>& data,
             http::Headers headers,

@@ -119,13 +119,17 @@ std::unique_ptr<std::vector<char>> Http::tryGetBinary(
     return data;
 }
 
-void Http::put(
+std::vector<char> Http::put(
         std::string path,
         const std::string& data,
         const Headers headers,
         const Query query) const
 {
-    put(path, std::vector<char>(data.begin(), data.end()), headers, query);
+    return put(
+        path, 
+        std::vector<char>(data.begin(), data.end()), 
+        headers, 
+        query);
 }
 
 bool Http::get(
@@ -148,18 +152,21 @@ bool Http::get(
     return good;
 }
 
-void Http::put(
+std::vector<char> Http::put(
         const std::string path,
         const std::vector<char>& data,
         const Headers headers,
         const Query query) const
 {
     auto http(m_pool.acquire());
+    auto res(http.put(typedPath(path), data, headers, query));
 
-    if (!http.put(typedPath(path), data, headers, query).ok())
+    if (!res.ok())
     {
         throw ArbiterError("Couldn't HTTP PUT to " + path);
     }
+
+    return res.data();
 }
 
 void Http::post(
