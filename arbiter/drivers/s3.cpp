@@ -47,6 +47,7 @@ namespace
     // See:
     // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
     const std::string ec2CredIp("169.254.169.254");
+    const std::string ec2TokenBase(ec2CredIp + "/latest/api/token");
     const std::string ec2CredBase(
             ec2CredIp + "/latest/meta-data/iam/security-credentials");
 
@@ -253,10 +254,25 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
         (!config.is_null() && config.value("allowInstanceProfile", false)) ||
         env("AWS_ALLOW_INSTANCE_PROFILE"))
     {
-        if (const auto iamRole = httpDriver.tryGet(ec2CredBase))
+        try
         {
-            return makeUnique<Auth>(ec2CredBase + "/" + *iamRole);
+            const auto token = httpDriver.put(
+                ec2TokenBase, 
+                std::vector<char>(),
+                {{ "X-aws-ec2-metadata-token-ttl-seconds", "21600" }}, 
+                {{ }});
+
+            if (const auto iamRole = httpDriver.tryGet(
+                ec2CredBase,
+                {{ 
+                    "X-aws-ec2-metadata-token", 
+                    std::string(token.data(), token.size())
+                }}))
+            {
+                return makeUnique<Auth>(ec2CredBase + "/" + *iamRole);
+            }
         }
+        catch (...) { }
     }
 
     // We also may be running in Fargate, which looks very similar but with a
@@ -425,7 +441,24 @@ S3::AuthFields S3::Auth::fields() const
             http::Pool pool;
             drivers::Http httpDriver(pool);
 
-            const json creds(json::parse(httpDriver.get(*m_credUrl)));
+            // We could cache our token from our initial IAM role query and
+            // refresh it only on expiration, but this flow for the S3-level
+            // temporary creds/token only happens on an hourly basis so it
+            // doesn't much matter.
+            const auto token = httpDriver.put(
+                ec2TokenBase, 
+                std::vector<char>(),
+                {{ "X-aws-ec2-metadata-token-ttl-seconds", "21600" }},
+                {{ }});
+
+            const json creds = json::parse(
+                httpDriver.get(
+                    *m_credUrl,
+                    {{ 
+                        "X-aws-ec2-metadata-token", 
+                        std::string(token.data(), token.size())
+                    }}));
+
             m_access = creds.at("AccessKeyId").get<std::string>();
             m_hidden = creds.at("SecretAccessKey").get<std::string>();
             m_token = creds.at("Token").get<std::string>();
@@ -526,7 +559,7 @@ bool S3::get(
     }
 }
 
-void S3::put(
+std::vector<char> S3::put(
         const std::string rawPath,
         const std::vector<char>& data,
         const Headers userHeaders,
@@ -565,6 +598,8 @@ void S3::put(
                 "Couldn't S3 PUT to " + rawPath + ": " +
                 std::string(res.data().data(), res.data().size()));
     }
+
+    return res.data();
 }
 
 void S3::copy(const std::string src, const std::string dst) const

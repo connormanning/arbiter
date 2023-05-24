@@ -90,10 +90,12 @@ public:
     std::unique_ptr<std::size_t> tryGetSize(std::string path) const;
 
     /** Write data to path. */
-    void put(std::string path, const std::string& data) const;
+    std::vector<char> put(std::string path, const std::string& data) const;
 
     /** Write data to path. */
-    void put(std::string path, const std::vector<char>& data) const;
+    std::vector<char> put(
+            std::string path, 
+            const std::vector<char>& data) const;
 
     /** Get data with additional HTTP-specific parameters.  Throws if
      * isHttpDerived is false for this path. */
@@ -125,7 +127,7 @@ public:
 
     /** Write data to path with additional HTTP-specific parameters.
      * Throws if isHttpDerived is false for this path. */
-    void put(
+    std::vector<char> put(
             std::string path,
             const std::string& data,
             http::Headers headers,
@@ -133,7 +135,7 @@ public:
 
     /** Write data to path with additional HTTP-specific parameters.
      * Throws if isHttpDerived is false for this path. */
-    void put(
+    std::vector<char> put(
             std::string path,
             const std::vector<char>& data,
             http::Headers headers,

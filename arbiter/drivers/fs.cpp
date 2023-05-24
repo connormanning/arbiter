@@ -108,7 +108,7 @@ bool Fs::get(std::string path, std::vector<char>& data) const
     return good;
 }
 
-void Fs::put(std::string path, const std::vector<char>& data) const
+std::vector<char> Fs::put(std::string path, const std::vector<char>& data) const
 {
     path = expandTilde(path);
     std::ofstream stream(path, binaryTruncMode);
@@ -124,6 +124,7 @@ void Fs::put(std::string path, const std::vector<char>& data) const
     {
         throw ArbiterError("Error occurred while writing " + path);
     }
+    return std::vector<char>();
 }
 
 void Fs::copy(std::string src, std::string dst) const

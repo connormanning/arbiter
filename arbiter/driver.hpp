@@ -69,7 +69,9 @@ public:
      *
      * @param path Path with the type-specifying prefix information stripped.
      */
-    virtual void put(std::string path, const std::vector<char>& data) const = 0;
+    virtual std::vector<char> put(
+        std::string path, 
+        const std::vector<char>& data) const = 0;
 
     /** True for remote paths, otherwise false.  If `true`, a fs::LocalHandle
      * request will download and write this file to the local filesystem.
@@ -83,7 +85,7 @@ public:
     std::size_t getSize(std::string path) const;
 
     /** Write string data. */
-    void put(std::string path, const std::string& data) const;
+    std::vector<char> put(std::string path, const std::string& data) const;
 
     /** Copy a file, where @p src and @p dst must both be of this driver
      * type.  Type-prefixes must be stripped from the input parameters.
