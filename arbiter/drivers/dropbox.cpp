@@ -203,7 +203,7 @@ bool Dropbox::get(
     return false;
 }
 
-void Dropbox::put(
+std::vector<char> Dropbox::put(
         const std::string path,
         const std::vector<char>& data,
         const Headers userHeaders,
@@ -218,6 +218,7 @@ void Dropbox::put(
     const Response res(Http::internalPost(putUrl, data, headers, query));
 
     if (!res.ok()) throw ArbiterError(res.str());
+    return res.data();
 }
 
 std::string Dropbox::continueFileInfo(std::string cursor) const

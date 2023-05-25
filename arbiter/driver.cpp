@@ -76,9 +76,9 @@ std::size_t Driver::getSize(const std::string path) const
     else throw ArbiterError("Could not get size of " + path);
 }
 
-void Driver::put(std::string path, const std::string& data) const
+std::vector<char> Driver::put(std::string path, const std::string& data) const
 {
-    put(path, std::vector<char>(data.begin(), data.end()));
+    return put(path, std::vector<char>(data.begin(), data.end()));
 }
 
 void Driver::copy(std::string src, std::string dst) const

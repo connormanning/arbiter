@@ -155,7 +155,7 @@ bool Google::get(
     }
 }
 
-void Google::put(
+std::vector<char> Google::put(
         const std::string path,
         const std::vector<char>& data,
         const http::Headers userHeaders,
@@ -174,6 +174,8 @@ void Google::put(
 
     drivers::Https https(m_pool);
     const auto res(https.internalPost(url, data, headers, query));
+    if (!res.ok()) throw ArbiterError(res.str());
+    return res.data();
 }
 
 std::vector<std::string> Google::glob(std::string path, bool verbose) const

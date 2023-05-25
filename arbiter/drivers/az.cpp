@@ -340,7 +340,7 @@ bool AZ::get(
     }
 }
 
-void AZ::put(
+std::vector<char> AZ::put(
         const std::string rawPath,
         const std::vector<char>& data,
         const Headers userHeaders,
@@ -381,7 +381,7 @@ void AZ::put(
                     "Couldn't Azure PUT to " + rawPath + ": " +
                     std::string(res.data().data(), res.data().size()));
         }
-        return;
+        return res.data();
     }
 
     const ApiV1 ApiV1(
@@ -405,6 +405,8 @@ void AZ::put(
                 "Couldn't Azure PUT to " + rawPath + ": " +
                 std::string(res.data().data(), res.data().size()));
     }
+
+    return res.data();
 }
 
 void AZ::copy(const std::string src, const std::string dst) const

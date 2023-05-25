@@ -97,12 +97,16 @@ std::unique_ptr<std::size_t> Arbiter::tryGetSize(const std::string path) const
     return getDriver(path)->tryGetSize(stripProtocol(path));
 }
 
-void Arbiter::put(const std::string path, const std::string& data) const
+std::vector<char> Arbiter::put(
+        const std::string path, 
+        const std::string& data) const
 {
     return getDriver(path)->put(stripProtocol(path), data);
 }
 
-void Arbiter::put(const std::string path, const std::vector<char>& data) const
+std::vector<char> Arbiter::put(
+        const std::string path, 
+        const std::vector<char>& data) const
 {
     return getDriver(path)->put(stripProtocol(path), data);
 }
@@ -139,7 +143,7 @@ std::unique_ptr<std::vector<char>> Arbiter::tryGetBinary(
     return getHttpDriver(path)->tryGetBinary(stripProtocol(path), headers, query);
 }
 
-void Arbiter::put(
+std::vector<char> Arbiter::put(
         const std::string path,
         const std::string& data,
         const http::Headers headers,
@@ -148,7 +152,7 @@ void Arbiter::put(
     return getHttpDriver(path)->put(stripProtocol(path), data, headers, query);
 }
 
-void Arbiter::put(
+std::vector<char> Arbiter::put(
         const std::string path,
         const std::vector<char>& data,
         const http::Headers headers,

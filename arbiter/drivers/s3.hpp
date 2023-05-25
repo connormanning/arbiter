@@ -54,7 +54,7 @@ public:
             std::string path) const override;
 
     /** Inherited from Drivers::Http. */
-    virtual void put(
+    virtual std::vector<char> put(
             std::string path,
             const std::vector<char>& data,
             http::Headers headers,

@@ -35,7 +35,7 @@ public:
         std::string j,
         std::string profile);
 
-    virtual void put(
+    virtual std::vector<char> put(
             std::string path,
             const std::vector<char>& data,
             http::Headers headers,
