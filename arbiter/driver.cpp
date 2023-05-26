@@ -59,7 +59,10 @@ std::unique_ptr<std::string> Driver::tryGet(const std::string path) const
 std::vector<char> Driver::getBinary(std::string path) const
 {
     std::vector<char> data;
-    if (!get(path, data)) throw ArbiterError("Could not read file " + path);
+    if (!get(path, data))
+    {
+        throw ArbiterError("Could not read file " + m_protocol + "://" + path);
+    }
     return data;
 }
 
@@ -73,7 +76,8 @@ std::unique_ptr<std::vector<char>> Driver::tryGetBinary(std::string path) const
 std::size_t Driver::getSize(const std::string path) const
 {
     if (auto size = tryGetSize(path)) return *size;
-    else throw ArbiterError("Could not get size of " + path);
+    else throw ArbiterError(
+        "Could not get size of " + m_protocol + "://" + path);
 }
 
 std::vector<char> Driver::put(std::string path, const std::string& data) const

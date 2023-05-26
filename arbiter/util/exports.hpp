@@ -14,11 +14,7 @@
 #   define ARBITER_DLL
 #endif
 #else
-#  if defined(USE_GCC_VISIBILITY_FLAG)
 #    define ARBITER_DLL     __attribute__ ((visibility("default")))
-#  else
-#    define ARBITER_DLL
-#  endif
 #endif
 #endif
 
