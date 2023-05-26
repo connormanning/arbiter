@@ -294,7 +294,11 @@ int Curl::perform()
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
     curl_easy_reset(m_curl);
 
-    if (code != CURLE_OK) httpCode = 500;
+    if (code != CURLE_OK)
+    {
+        std::cerr << "Curl failure: " << curl_easy_strerror(code) << std::endl;
+        httpCode = 500;
+    }
 
     return httpCode;
 #else

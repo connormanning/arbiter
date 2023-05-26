@@ -436,10 +436,14 @@ S3::AuthFields S3::Auth::fields() const
     return S3::AuthFields(m_access, m_hidden, m_token);
 }
 
-std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
+std::unique_ptr<std::size_t> S3::tryGetSize(
+    std::string rawPath,
+    const http::Headers userHeaders,
+    const http::Query query) const
 {
     Headers headers(m_config->baseHeaders());
     headers.erase("x-amz-server-side-encryption");
+    headers.insert(userHeaders.begin(), userHeaders.end());
 
     const Resource resource(m_config->baseUrl(), rawPath);
     const ApiV4 apiV4(
@@ -447,7 +451,7 @@ std::unique_ptr<std::size_t> S3::tryGetSize(std::string rawPath) const
             m_config->region(),
             resource,
             m_auth->fields(),
-            Query(),
+            query,
             headers,
             empty);
 
@@ -475,7 +479,7 @@ bool S3::get(
 
     std::unique_ptr<std::size_t> size(
             m_config->precheck() && !headers.count("Range") ?
-                tryGetSize(rawPath) : nullptr);
+                tryGetSize(rawPath, userHeaders, query) : nullptr);
 
     const Resource resource(m_config->baseUrl(), rawPath);
     const ApiV4 apiV4(
