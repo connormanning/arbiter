@@ -437,7 +437,7 @@ S3::AuthFields S3::Auth::fields() const
 }
 
 std::unique_ptr<std::size_t> S3::tryGetSize(
-    std::string rawPath,
+    const std::string rawPath,
     const http::Headers userHeaders,
     const http::Query query) const
 {

@@ -8,11 +8,13 @@
 #endif
 
 #include <cctype>
+#include <chrono>
 #include <iomanip>
 #include <iostream>
 #include <numeric>
 #include <set>
 #include <sstream>
+#include <thread>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -133,6 +135,12 @@ Response Resource::exec(std::function<Response()> f)
 
     do
     {
+        if (tries)
+        {
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds((int)std::pow(2, tries) * 500));
+        }
+
         res = f();
     }
     while (res.serverError() && tries++ < m_retry);

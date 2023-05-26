@@ -241,8 +241,11 @@ void Curl::init(
     const std::string path(rawPath + buildQueryString(query));
     curl_easy_setopt(m_curl, CURLOPT_URL, path.c_str());
 
-    // Needed for multithreaded Curl usage.
-    curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1L);
+    curl_version_info_data* versioninfo = curl_version_info(CURLVERSION_NOW);
+    if (!(versioninfo->features & CURL_VERSION_ASYNCHDNS))
+    {
+        curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1L);
+    }
 
     // Substantially faster DNS lookups without IPv6.
     curl_easy_setopt(m_curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
@@ -297,7 +300,7 @@ int Curl::perform()
     if (code != CURLE_OK)
     {
         std::cerr << "Curl failure: " << curl_easy_strerror(code) << std::endl;
-        httpCode = 500;
+        httpCode = 550;
     }
 
     return httpCode;

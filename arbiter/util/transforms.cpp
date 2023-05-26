@@ -25,7 +25,7 @@ namespace
      //
      // Return the position of chr within base64_encode()
      //
-    
+
         if      (chr >= 'A' && chr <= 'Z') return chr - 'A';
         else if (chr >= 'a' && chr <= 'z') return chr - 'a' + ('Z' - 'A')               + 1;
         else if (chr >= '0' && chr <= '9') return chr - '0' + ('Z' - 'A') + ('z' - 'a') + 2;
