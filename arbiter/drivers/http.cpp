@@ -205,14 +205,16 @@ Response Http::internalGet(
         const Headers headers,
         const Query query,
         const std::size_t reserve,
-        const int retry) const
+        const int retry,
+        const std::size_t timeout) const
 {
     return m_pool.acquire().get(
         typedPath(path),
         headers,
         query,
         reserve,
-        retry);
+        retry,
+        timeout);
 }
 
 Response Http::internalPut(
@@ -220,9 +222,16 @@ Response Http::internalPut(
         const std::vector<char>& data,
         const Headers headers,
         const Query query,
-        const int retry) const
+        const int retry,
+        const std::size_t timeout) const
 {
-    return m_pool.acquire().put(typedPath(path), data, headers, query, retry);
+    return m_pool.acquire().put(
+        typedPath(path),
+        data,
+        headers,
+        query,
+        retry,
+        timeout);
 }
 
 Response Http::internalHead(

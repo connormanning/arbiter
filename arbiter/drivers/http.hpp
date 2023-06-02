@@ -130,14 +130,16 @@ public:
             http::Headers headers = http::Headers(),
             http::Query query = http::Query(),
             std::size_t reserve = 0,
-            int retry = -1) const;
+            int retry = -1,
+            std::size_t timeout = 0) const;
 
     http::Response internalPut(
             std::string path,
             const std::vector<char>& data,
             http::Headers headers = http::Headers(),
             http::Query query = http::Query(),
-            int retry = -1) const;
+            int retry = -1,
+            std::size_t timeout = 0) const;
 
     http::Response internalHead(
             std::string path,
