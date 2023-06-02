@@ -50,7 +50,8 @@ public:
             std::string path,
             Headers headers = Headers(),
             Query query = Query(),
-            std::size_t reserve = 0);
+            std::size_t reserve = 0,
+            int retry = -1);
 
     http::Response head(
             std::string path,
@@ -61,7 +62,8 @@ public:
             std::string path,
             const std::vector<char>& data,
             Headers headers = Headers(),
-            Query query = Query());
+            Query query = Query(),
+            int retry = -1);
 
     http::Response post(
             std::string path,
@@ -75,7 +77,7 @@ private:
     std::size_t m_id;
     std::size_t m_retry;
 
-    http::Response exec(std::function<http::Response()> f);
+    http::Response exec(std::function<http::Response()> f, int retry = -1);
 };
 
 class ARBITER_DLL Pool

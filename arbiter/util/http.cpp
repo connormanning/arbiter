@@ -85,12 +85,13 @@ Response Resource::get(
         const std::string path,
         const Headers headers,
         const Query query,
-        const std::size_t reserve)
+        const std::size_t reserve,
+        const int retry)
 {
     return exec([this, path, headers, query, reserve]()->Response
     {
         return m_curl.get(path, headers, query, reserve);
-    });
+    }, retry);
 }
 
 Response Resource::head(
@@ -108,12 +109,13 @@ Response Resource::put(
         std::string path,
         const std::vector<char>& data,
         const Headers headers,
-        const Query query)
+        const Query query,
+        const int retry)
 {
     return exec([this, path, &data, headers, query]()->Response
     {
         return m_curl.put(path, data, headers, query);
-    });
+    }, retry);
 }
 
 Response Resource::post(
@@ -128,10 +130,14 @@ Response Resource::post(
     });
 }
 
-Response Resource::exec(std::function<Response()> f)
+Response Resource::exec(std::function<Response()> f, const int userRetry)
 {
     Response res;
     std::size_t tries(0);
+
+    const std::size_t retry = userRetry == -1
+        ? m_retry
+        : static_cast<std::size_t>(userRetry);
 
     do
     {
@@ -143,7 +149,7 @@ Response Resource::exec(std::function<Response()> f)
 
         res = f();
     }
-    while (res.serverError() && tries++ < m_retry);
+    while (res.serverError() && tries++ < retry);
 
     return res;
 }
