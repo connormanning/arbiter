@@ -132,9 +132,9 @@ std::vector<char> Http::put(
         const Query query) const
 {
     return put(
-        path, 
-        std::vector<char>(data.begin(), data.end()), 
-        headers, 
+        path,
+        std::vector<char>(data.begin(), data.end()),
+        headers,
         query);
 }
 
@@ -204,18 +204,34 @@ Response Http::internalGet(
         const std::string path,
         const Headers headers,
         const Query query,
-        const std::size_t reserve) const
+        const std::size_t reserve,
+        const int retry,
+        const std::size_t timeout) const
 {
-    return m_pool.acquire().get(typedPath(path), headers, query, reserve);
+    return m_pool.acquire().get(
+        typedPath(path),
+        headers,
+        query,
+        reserve,
+        retry,
+        timeout);
 }
 
 Response Http::internalPut(
         const std::string path,
         const std::vector<char>& data,
         const Headers headers,
-        const Query query) const
+        const Query query,
+        const int retry,
+        const std::size_t timeout) const
 {
-    return m_pool.acquire().put(typedPath(path), data, headers, query);
+    return m_pool.acquire().put(
+        typedPath(path),
+        data,
+        headers,
+        query,
+        retry,
+        timeout);
 }
 
 Response Http::internalHead(

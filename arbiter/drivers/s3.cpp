@@ -220,22 +220,40 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
             // which only support v1, this request will fail.  That's ok, the
             // next request looks the same anyway (except without the token of
             // course), and that corresponds to the IMDSv1 flow as a fallback.
-            const auto tokenvec = httpDriver.put(
+            const auto res = httpDriver.internalPut(
                 ec2TokenBase,
                 std::vector<char>(),
                 {{ "X-aws-ec2-metadata-token-ttl-seconds", "21600" }},
-                {{ }});
+                {{ }},
+                0,
+                1);
 
-            token = std::string(token.data(), token.size());
+
+            if (!res.ok()) throw ArbiterError("Failed to get IMDSv2 token");
+
+            const auto tokenvec = res.data();
+            token = std::string(tokenvec.data(), tokenvec.size());
         }
         catch (...) { }
 
         http::Headers headers;
         if (!token.empty()) headers["X-aws-ec2-metadata-token"] = token;
 
-        if (const auto iamRole = httpDriver.tryGet(ec2CredBase, headers))
+        const auto res = httpDriver.internalGet(
+            ec2CredBase,
+            headers,
+            {{ }},
+            0,
+            0,
+            1);
+        if (!res.ok()) throw ArbiterError("Failed to get IAM role");
+
+        const auto rolevec = res.data();
+        const auto iamRole = std::string(rolevec.begin(), rolevec.end());
+
+        if (!iamRole.empty())
         {
-            return makeUnique<Auth>(ec2CredBase + "/" + *iamRole);
+            return makeUnique<Auth>(ec2CredBase + "/" + iamRole);
         }
     }
     catch (...) { }
@@ -410,13 +428,19 @@ S3::AuthFields S3::Auth::fields() const
 
             try
             {
-                const auto tokenvec = httpDriver.put(
+                const auto res = httpDriver.internalPut(
                     ec2TokenBase,
                     std::vector<char>(),
                     {{ "X-aws-ec2-metadata-token-ttl-seconds", "21600" }},
-                    {{ }});
+                    {{ }},
+                    0,
+                    1);
 
-                token = std::string(token.data(), token.size());
+
+                if (!res.ok()) throw ArbiterError("Failed to get IMDSv2 token");
+
+                const auto tokenvec = res.data();
+                token = std::string(tokenvec.data(), tokenvec.size());
             }
             catch (...) { }
 
