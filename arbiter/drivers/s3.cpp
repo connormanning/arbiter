@@ -225,7 +225,8 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
                 std::vector<char>(),
                 {{ "X-aws-ec2-metadata-token-ttl-seconds", "21600" }},
                 {{ }},
-                0);
+                0,
+                1);
 
 
             if (!res.ok()) throw ArbiterError("Failed to get IMDSv2 token");
@@ -243,7 +244,8 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
             headers,
             {{ }},
             0,
-            0);
+            0,
+            1);
         if (!res.ok()) throw ArbiterError("Failed to get IAM role");
 
         const auto rolevec = res.data();
@@ -431,7 +433,8 @@ S3::AuthFields S3::Auth::fields() const
                     std::vector<char>(),
                     {{ "X-aws-ec2-metadata-token-ttl-seconds", "21600" }},
                     {{ }},
-                    0);
+                    0,
+                    1);
 
 
                 if (!res.ok()) throw ArbiterError("Failed to get IMDSv2 token");

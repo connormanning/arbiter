@@ -86,11 +86,12 @@ Response Resource::get(
         const Headers headers,
         const Query query,
         const std::size_t reserve,
-        const int retry)
+        const int retry,
+        const std::size_t timeout)
 {
-    return exec([this, path, headers, query, reserve]()->Response
+    return exec([this, path, headers, query, reserve, timeout]()->Response
     {
-        return m_curl.get(path, headers, query, reserve);
+        return m_curl.get(path, headers, query, reserve, timeout);
     }, retry);
 }
 
@@ -110,11 +111,12 @@ Response Resource::put(
         const std::vector<char>& data,
         const Headers headers,
         const Query query,
-        const int retry)
+        const int retry,
+        const std::size_t timeout)
 {
-    return exec([this, path, &data, headers, query]()->Response
+    return exec([this, path, &data, headers, query, timeout]()->Response
     {
-        return m_curl.put(path, data, headers, query);
+        return m_curl.put(path, data, headers, query, timeout);
     }, retry);
 }
 

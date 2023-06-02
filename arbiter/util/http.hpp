@@ -51,7 +51,8 @@ public:
             Headers headers = Headers(),
             Query query = Query(),
             std::size_t reserve = 0,
-            int retry = -1);
+            int retry = -1,
+            std::size_t timeout = 0);
 
     http::Response head(
             std::string path,
@@ -63,7 +64,8 @@ public:
             const std::vector<char>& data,
             Headers headers = Headers(),
             Query query = Query(),
-            int retry = -1);
+            int retry = -1,
+            std::size_t timeout = 0);
 
     http::Response post(
             std::string path,

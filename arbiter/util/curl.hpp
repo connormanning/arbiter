@@ -45,21 +45,28 @@ public:
             std::string path,
             Headers headers,
             Query query,
-            std::size_t reserve);
+            std::size_t reserve,
+            std::size_t timeout = 0);
 
-    http::Response head(std::string path, Headers headers, Query query);
+    http::Response head(
+            std::string path,
+            Headers headers,
+            Query query,
+            std::size_t timeout = 0);
 
     http::Response put(
             std::string path,
             const std::vector<char>& data,
             Headers headers,
-            Query query);
+            Query query,
+            std::size_t timeout = 0);
 
     http::Response post(
             std::string path,
             const std::vector<char>& data,
             Headers headers,
-            Query query);
+            Query query,
+            std::size_t timeout = 0);
 
 private:
     Curl(std::string j);

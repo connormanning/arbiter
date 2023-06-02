@@ -313,7 +313,8 @@ Response Curl::get(
         std::string path,
         Headers headers,
         Query query,
-        const std::size_t reserve)
+        const std::size_t reserve,
+        const std::size_t timeout)
 {
 #ifdef ARBITER_CURL
     std::vector<char> data;
@@ -321,6 +322,7 @@ Response Curl::get(
     if (reserve) data.reserve(reserve);
 
     init(path, headers, query);
+    if (timeout) curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_TIME, timeout);
 
     // Register callback function and data pointer to consume the result.
     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
@@ -350,12 +352,17 @@ Response Curl::get(
 #endif
 }
 
-Response Curl::head(std::string path, Headers headers, Query query)
+Response Curl::head(
+    std::string path,
+    Headers headers,
+    Query query,
+    const std::size_t timeout)
 {
 #ifdef ARBITER_CURL
     std::vector<char> data;
 
     init(path, headers, query);
+    if (timeout) curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_TIME, timeout);
 
     // Register callback function and data pointer to consume the result.
     curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
@@ -384,10 +391,12 @@ Response Curl::put(
         std::string path,
         const std::vector<char>& data,
         Headers headers,
-        Query query)
+        Query query,
+        const std::size_t timeout)
 {
 #ifdef ARBITER_CURL
     init(path, headers, query);
+    if (timeout) curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_TIME, timeout);
 
     std::unique_ptr<PutData> putData(new PutData(data));
 
@@ -424,10 +433,12 @@ Response Curl::post(
         std::string path,
         const std::vector<char>& data,
         Headers headers,
-        Query query)
+        Query query,
+        const std::size_t timeout)
 {
 #ifdef ARBITER_CURL
     init(path, headers, query);
+    if (timeout) curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_TIME, timeout);
 
     std::unique_ptr<PutData> putData(new PutData(data));
     std::vector<char> writeData;
