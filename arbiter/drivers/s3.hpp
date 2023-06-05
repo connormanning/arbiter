@@ -109,8 +109,9 @@ public:
         , m_token(token)
     { }
 
-    Auth(std::string credUrl)
+    Auth(std::string credUrl, bool imdsv2 = true)
         : m_credUrl(internal::makeUnique<std::string>(credUrl))
+        , m_imdsv2(imdsv2)
     { }
 
     static std::unique_ptr<Auth> create(std::string profile, std::string s);
@@ -123,6 +124,7 @@ private:
     mutable std::string m_token;
 
     std::unique_ptr<std::string> m_credUrl;
+    bool m_imdsv2 = true;
     mutable std::unique_ptr<Time> m_expiration;
     mutable std::mutex m_mutex;
 };

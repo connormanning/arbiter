@@ -263,8 +263,8 @@ void Curl::init(
     curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_LIMIT, 1L);
     curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_TIME, m_timeout);
 
-    curl_easy_setopt(m_curl, CURLOPT_CONNECTTIMEOUT_MS, 2000L);
-    curl_easy_setopt(m_curl, CURLOPT_ACCEPTTIMEOUT_MS, 2000L);
+    curl_easy_setopt(m_curl, CURLOPT_CONNECTTIMEOUT_MS, 1000L);
+    curl_easy_setopt(m_curl, CURLOPT_ACCEPTTIMEOUT_MS, 1000L);
 
     auto toLong([](bool b) { return b ? 1L : 0L; });
 
