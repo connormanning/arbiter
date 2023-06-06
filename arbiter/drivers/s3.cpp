@@ -639,6 +639,8 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
             throw ArbiterError("Couldn't S3 GET " + bucket);
         }
 
+        // XML parsing mucks with the data, so copy it out in case we need it.
+        const std::string datastring(data.data(), data.size());
         data.push_back('\0');
 
         Xml::xml_document<> xml;
@@ -693,8 +695,8 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
                     {
                         if (isVerbose())
                         {
-                            const std::string xml(data.data(), data.size());
-                            std::cout << "Missing Key: " << xml << std::endl;
+                            std::cout << "Missing Key: " << datastring <<
+                             std::endl;
                         }
                         throw ArbiterError(badResponse);
                     }
@@ -704,8 +706,8 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
             {
                 if (isVerbose())
                 {
-                    const std::string xml(data.data(), data.size());
-                    std::cout << "Missing Contents: " << xml << std::endl;
+                    std::cout << "Missing Contents: " << datastring <<
+                        std::endl;
                 }
                 throw ArbiterError(badResponse);
             }
@@ -714,8 +716,8 @@ std::vector<std::string> S3::glob(std::string path, bool verbose) const
         {
             if (isVerbose())
             {
-                const std::string xml(data.data(), data.size());
-                std::cout << "Missing ListBucketResult: " << xml << std::endl;
+                std::cout << "Missing ListBucketResult: " << datastring <<
+                    std::endl;
             }
             throw ArbiterError(badResponse);
         }

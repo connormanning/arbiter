@@ -32,6 +32,7 @@ namespace
     json getConfig(const std::string& s)
     {
         json in(s.size() ? json::parse(s) : json::object());
+        if (in.is_null()) in = json::object();
 
         json config;
         std::string path = in.value("configFile", "~/.arbiter/config.json");
@@ -109,14 +110,14 @@ std::unique_ptr<std::size_t> Arbiter::tryGetSize(const std::string path) const
 }
 
 std::vector<char> Arbiter::put(
-        const std::string path, 
+        const std::string path,
         const std::string& data) const
 {
     return getDriver(path)->put(stripProtocol(path), data);
 }
 
 std::vector<char> Arbiter::put(
-        const std::string path, 
+        const std::string path,
         const std::vector<char>& data) const
 {
     return getDriver(path)->put(stripProtocol(path), data);
