@@ -279,7 +279,7 @@ std::unique_ptr<std::size_t> AZ::tryGetSize(
                 "HEAD",
                 resource,
                 m_config->authFields(),
-                Query(),
+                query,
                 headers,
                 emptyVect);
         res.reset(new Response(http.internalHead(resource.url(), ApiV1.headers())));
