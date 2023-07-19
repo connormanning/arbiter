@@ -66,7 +66,7 @@ AZ::AZ(
         Pool& pool,
         std::string profile,
         std::unique_ptr<Config> config)
-    : Http(pool, "az", profile == "default" ? "" : profile)
+    : Http(pool, "az", "http", profile == "default" ? "" : profile)
     , m_config(std::move(config))
 { }
 
@@ -256,7 +256,10 @@ std::string AZ::Config::extractBaseUrl(
     return account + "." + service + "." + endpoint + "/";
 }
 
-std::unique_ptr<std::size_t> AZ::tryGetSize(std::string rawPath) const
+std::unique_ptr<std::size_t> AZ::tryGetSize(
+    const std::string rawPath,
+    const http::Headers userHeaders,
+    const http::Query query) const
 {
     Headers headers(m_config->baseHeaders());
 
@@ -267,6 +270,7 @@ std::unique_ptr<std::size_t> AZ::tryGetSize(std::string rawPath) const
     if (m_config->hasSasToken())
     {
         Query q = m_config->sasToken();
+        q.insert(std::cbegin(query),std::cend(query));
         res.reset(new Response(http.internalHead(resource.url(), headers, q)));
     }
     else
