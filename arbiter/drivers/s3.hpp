@@ -76,6 +76,8 @@ private:
             std::string path,
             bool verbose) const override;
 
+    AuthFields authFields() const;
+
     class ApiV4;
     class Resource;
 
@@ -86,13 +88,15 @@ private:
 class S3::AuthFields
 {
 public:
-    AuthFields(std::string access, std::string hidden, std::string token = "")
+    AuthFields(std::string access = "", std::string hidden = "", std::string token = "")
         : m_access(access), m_hidden(hidden), m_token(token)
     { }
 
     const std::string& access() const { return m_access; }
     const std::string& hidden() const { return m_hidden; }
     const std::string& token() const { return m_token; }
+
+    explicit operator bool() const { return m_access.size() || m_hidden.size() || m_token.size(); }
 
 private:
     std::string m_access;
