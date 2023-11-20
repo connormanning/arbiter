@@ -270,7 +270,7 @@ std::unique_ptr<std::size_t> AZ::tryGetSize(
     if (m_config->hasSasToken())
     {
         Query q = m_config->sasToken();
-        q.insert(query.cbegin(), query.cend());
+        q.insert(std::begin(query), std::end(query));
         res.reset(new Response(http.internalHead(resource.url(), headers, q)));
     }
     else
