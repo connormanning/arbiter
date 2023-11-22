@@ -312,11 +312,6 @@ S3::Config::Config(const std::string s, const std::string profile)
                 m_baseHeaders[p.key()] = p.value().get<std::string>();
             }
         }
-        else
-        {
-            std::cout << "s3.headers expected to be object - skipping" <<
-                std::endl;
-        }
     }
 }
 
@@ -555,11 +550,10 @@ bool S3::get(
         data = res.data();
         return true;
     }
-    else
-    {
-        std::cout << res.code() << ": " << res.str() << std::endl;
-        return false;
-    }
+
+    if (isVerbose()) std::cout << res.code() << ": " << res.str() << std::endl;
+
+    return false;
 }
 
 std::vector<char> S3::put(
