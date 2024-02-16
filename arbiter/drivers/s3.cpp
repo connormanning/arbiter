@@ -363,6 +363,12 @@ std::string S3::Config::extractBaseUrl(
     const std::string s,
     const std::string region)
 {
+    if (auto p = env("AWS_ENDPOINT_URL"))
+    {
+        const std::string path = *p;
+        return path.back() == '/' ? path : path + '/';
+    }
+
     const json c(s.size() ? json::parse(s) : json());
 
     if (!c.is_null() &&
