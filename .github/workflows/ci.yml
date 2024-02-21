@@ -31,7 +31,14 @@ jobs:
     - name: CMake setup Unix
       if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macos')
       run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=install -DBUILD_SHARED_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_TOOLCHAIN_FILE=build/conan/conan_toolchain.cmake
+        cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_TESTING=ON \
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+          -DCMAKE_INSTALL_PREFIX=install \
+          -DBUILD_SHARED_LIBS=ON \
+          -DCMAKE_VERBOSE_MAKEFILE=ON \
+          -DCMAKE_TOOLCHAIN_FILE=build/conan/conan_toolchain.cmake
 
     - name: CMake setup Windows
       if: startsWith(matrix.os, 'windows')
