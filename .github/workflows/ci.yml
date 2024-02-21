@@ -33,7 +33,7 @@ jobs:
       run: |
         cmake -S . \
           -B build \
-          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_TESTING=ON \
           -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
           -DCMAKE_INSTALL_PREFIX=install \
@@ -43,7 +43,7 @@ jobs:
 
     - name: CMake build
       shell: bash
-      run: cmake --build build
+      run: cmake --build build --config Release
 
     - name: CMake install
       shell: bash
