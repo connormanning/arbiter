@@ -28,9 +28,7 @@ jobs:
         conan profile detect
         conan install -r conancenter --requires=gtest/1.8.1 --requires=openssl/3.2.1 --requires=libcurl/7.88.1 -g CMakeDeps -g CMakeToolchain -of build/conan --build=missing
 
-    - name: CMake setup Unix
-      if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macos')
-      shell: bash
+    - name: CMake setup
       run: |
         cmake -S . \
           -B build \
@@ -40,31 +38,14 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=install \
           -DBUILD_SHARED_LIBS=ON \
           -DCMAKE_VERBOSE_MAKEFILE=ON \
+          -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
           -DCMAKE_TOOLCHAIN_FILE=build/conan/conan_toolchain.cmake
 
-    - name: CMake setup Windows
-      if: startsWith(matrix.os, 'windows')
-      shell: bash
-      run: |
-        cmake -S . \
-          -B build \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DBUILD_TESTING=ON \
-          -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-          -DCMAKE_INSTALL_PREFIX=install \
-          -DBUILD_SHARED_LIBS=ON \
-          -DCMAKE_VERBOSE_MAKEFILE=ON \
-          -DCMAKE_TOOLCHAIN_FILE=build/conan/conan_toolchain.cmake
-
-    - name: CMake build Windows
-      if: startsWith(matrix.os, 'windows')
-      shell: bash
+    - name: CMake build
       run: cmake --build build --config Release
 
     - name: CMake install
-      shell: bash
       run: cmake --build build --target install
 
     - name: CMake test
-      shell: bash
       run: cmake --build build --target test
