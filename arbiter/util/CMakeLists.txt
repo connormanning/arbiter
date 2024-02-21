@@ -35,10 +35,9 @@ if (WIN32)
         PROPERTIES
             COMPILE_DEFINITIONS ARBITER_DLL_EXPORT)
     target_include_directories(util PRIVATE "${CURL_INCLUDE_DIR}")
-
+    target_include_directories(${MODULE} PRIVATE ${CMAKE_SOURCE_DIR})
 else()
     add_library(${MODULE} OBJECT ${SOURCES})
 endif()
 
-install(FILES ${HEADERS} DESTINATION include/arbiter/${MODULE})
-
+install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/arbiter/${MODULE})

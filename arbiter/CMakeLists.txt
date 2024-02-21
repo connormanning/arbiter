@@ -3,6 +3,7 @@ set(BASE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_subdirectory(drivers)
 add_subdirectory(third)
+add_subdirectory(util)
 
 set(
     SOURCES
@@ -22,6 +23,7 @@ set_target_properties(arbiter PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
 if (WIN32)
     add_library(${MODULE} OBJECT ${SOURCES} ${HEADERS})
+    target_include_directories(${MODULE} PRIVATE ${CMAKE_SOURCE_DIR})
     set_target_properties(${MODULE}
         PROPERTIES
             COMPILE_DEFINITIONS ARBITER_DLL_EXPORT)
