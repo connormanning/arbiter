@@ -31,23 +31,20 @@ jobs:
     - name: CMake setup
       shell: bash
       run: |
-        pwd
-        ls
-        cmake --version
-        cmake -S ${{runner.workspace}}
-          -B ${{runner.workspace}}/build \
+        cmake -S .
+          -B build \
           -DCMAKE_BUILD_TYPE=Debug \
           -DBUILD_TESTING=ON \
-          -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install
+          -DCMAKE_INSTALL_PREFIX=install
 
     - name: CMake build
       shell: bash
-      run: cmake --build ${{runner.workspace}}/build
+      run: cmake --build build
 
     - name: CMake install
       shell: bash
-      run: cmake --build ${{runner.workspace}}/build --target install
+      run: cmake --build build --target install
 
     - name: CMake test
       shell: bash
-      run: cmake --build ${{runner.workspace}}/build --target test
+      run: cmake --build build --target test
