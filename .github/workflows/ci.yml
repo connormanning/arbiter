@@ -16,11 +16,11 @@ jobs:
     steps:
     - name: Install dependencies on Ubuntu
       if: matrix.os == 'ubuntu-latest'
-      run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev
+      run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev libgtest-dev
 
     - name: Install dependencies on MacOS
       if: matrix.os == 'macos-latest'
-      run: brew install curl openssl
+      run: brew install curl openssl googletest
 
     - name: Install dependencies on Windows
       if: matrix.os == 'windows-latest'
@@ -36,7 +36,9 @@ jobs:
           -DCMAKE_BUILD_TYPE=Debug \
           -DBUILD_TESTING=ON \
           -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-          -DCMAKE_INSTALL_PREFIX=install
+          -DCMAKE_INSTALL_PREFIX=install\
+          -DARBITER_EXTERNAL_GTEST=OFF \
+          -DBUILD_SHARED_LIBS=ON
 
     - name: CMake build
       shell: bash
