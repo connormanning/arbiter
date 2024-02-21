@@ -9,7 +9,7 @@ option(ARBITER_CURL "Use curl for HTTP requests" ON)
 option(ARBITER_OPENSSL "Use OpenSSL for HTTPS requests" ON)
 
 file(GLOB_RECURSE SOURCES arbiter/*.cpp arbiter/drivers/*.cpp arbiters/util/*.cpp)
-file(GLOB_RECURSE HEADERS arbiter/*.hpp arbiter/drivers/*.hpp arbiters/util/*.hpp)
+file(GLOB_RECURSE HEADERS arbiter/*.hpp arbiter/drivers/*.hpp arbiters/util/*.hpp arbiters/third/*.hpp)
 
 add_library(arbiter ${SOURCES} ${HEADERS})
 target_compile_features(arbiter PUBLIC cxx_std_11)
