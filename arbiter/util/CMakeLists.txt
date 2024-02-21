@@ -28,16 +28,15 @@ set(
     "${BASE}/util.hpp"
 )
 
+add_library(${MODULE} OBJECT ${SOURCES} ${HEADERS})
 
-if (WIN32)
-    add_library(${MODULE} OBJECT ${SOURCES} ${HEADERS})
+if (WIN32 AND BUILD_SHARED_LIBS)
     set_target_properties(${MODULE}
         PROPERTIES
             COMPILE_DEFINITIONS ARBITER_DLL_EXPORT)
-    target_include_directories(util PRIVATE "${CURL_INCLUDE_DIR}")
-    target_include_directories(${MODULE} PRIVATE ${CMAKE_SOURCE_DIR})
-else()
-    add_library(${MODULE} OBJECT ${SOURCES})
+    if (ARBITER_CURL)
+        target_include_directories(${MODULE} PRIVATE "${CURL_INCLUDE_DIR}")
+    endif()
 endif()
 
-install(FILES ${HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/arbiter/${MODULE})
+install(FILES ${HEADERS} DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/arbiter/${MODULE}")
