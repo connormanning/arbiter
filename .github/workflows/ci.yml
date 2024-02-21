@@ -16,7 +16,7 @@ jobs:
     steps:
     - name: Install dependencies on Ubuntu
       if: matrix.os == 'ubuntu-latest'
-      run: sudo apt-get update && sudo apt-get install -y libcurl-dev libssl-dev
+      run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev
 
     - name: Install dependencies on MacOS
       if: matrix.os == 'macos-latest'
