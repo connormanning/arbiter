@@ -30,10 +30,12 @@ jobs:
 
     - name: CMake setup
       shell: bash
-      run: cmake -S ${{runner.workspace}} -B ${{runner.workspace}}/build \
-                 -DCMAKE_BUILD_TYPE=Debug \
-                 -DBUILD_TESTING=ON \
-                 -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install
+      run: |
+        cmake -S ${{runner.workspace}}
+          -B ${{runner.workspace}}/build \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTING=ON \
+          -DCMAKE_INSTALL_PREFIX=${{runner.workspace}}/install
 
     - name: CMake build
       shell: bash
