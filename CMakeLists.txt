@@ -8,16 +8,6 @@ option(ARBITER_EXTERNAL_XML "Use system rapidxml as dependency" ON)
 option(ARBITER_CURL "Use curl for HTTP requests" ON)
 option(ARBITER_OPENSSL "Use OpenSSL for HTTPS requests" ON)
 
-if (ARBITER_CURL)
-    find_package(CURL REQUIRED)
-    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-    find_package(Threads REQUIRED)
-endif()
-
-if (ARBITER_OPENSSL)
-    find_package(OpenSSL REQUIRED)
-endif()
-
 file(GLOB_RECURSE SOURCES arbiter/*.cpp arbiter/drivers/*.cpp arbiters/util/*.cpp)
 file(GLOB_RECURSE HEADERS arbiter/*.hpp arbiter/drivers/*.hpp arbiters/util/*.hpp)
 
@@ -28,13 +18,34 @@ target_include_directories(arbiter PUBLIC
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 if (ARBITER_CURL)
+    find_package(CURL REQUIRED)
+    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+    find_package(Threads REQUIRED)
     target_compile_definitions(arbiter PUBLIC ARBITER_CURL)
     target_link_libraries(arbiter PUBLIC CURL::libcurl Threads::Threads)
 endif()
 
 if (ARBITER_OPENSSL)
+    find_package(OpenSSL REQUIRED)
     target_link_libraries(arbiter PUBLIC OpenSSL::SSL OpenSSL::Crypto)
     target_compile_definitions(arbiter PUBLIC ARBITER_OPENSSL)
+endif()
+
+if (ARBITER_EXTERNAL_XML)
+    find_package(rapidxml)
+    if (rapidxml_FOUND)
+        target_link_libraries(arbiter PUBLIC rapidxml::rapidxml)
+    else()
+        find_library(RAPIDXML rapidxml)
+        target_link_libraries(arbiter PUBLIC ${RAPIDXML})
+    endif()
+    target_compile_definitions(arbiter PUBLIC ARBITER_EXTERNAL_XML)
+endif()
+
+if (ARBITER_EXTERNAL_JSON)
+    find_package(nlohmann_json REQUIRED)
+    target_link_libraries(arbiter PUBLIC nlohmann_json::nlohmann_json)
+    target_compile_definitions(arbiter PUBLIC ARBITER_EXTERNAL_JSON)
 endif()
 
 if (WIN32 AND BUILD_SHARED_LIBS)
