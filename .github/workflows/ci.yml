@@ -30,15 +30,15 @@ jobs:
 
     - name: CMake setup
       run: |
-        cmake -S . \
-          -B build \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DBUILD_TESTING=ON \
-          -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-          -DCMAKE_INSTALL_PREFIX=install \
-          -DBUILD_SHARED_LIBS=ON \
-          -DCMAKE_VERBOSE_MAKEFILE=ON \
-          -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
+        cmake -S . \\
+          -B build \\
+          -DCMAKE_BUILD_TYPE=Release \\
+          -DBUILD_TESTING=ON \\
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON \\
+          -DCMAKE_INSTALL_PREFIX=install \\
+          -DBUILD_SHARED_LIBS=ON \\
+          -DCMAKE_VERBOSE_MAKEFILE=ON \\
+          -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \\
           -DCMAKE_TOOLCHAIN_FILE=build/conan/conan_toolchain.cmake
 
     - name: CMake build
