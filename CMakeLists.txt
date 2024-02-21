@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.4)
 project(arbiter LANGUAGES CXX)
 
 include(GNUInstallDirs)
@@ -18,23 +18,14 @@ if (ARBITER_OPENSSL)
     find_package(OpenSSL REQUIRED)
 endif()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-add_subdirectory(arbiter)
+file(GLOB_RECURSE SOURCES arbiter/*.cpp arbiter/drivers/*.cpp arbiters/util/*.cpp)
+file(GLOB_RECURSE HEADERS arbiter/*.hpp arbiter/drivers/*.hpp arbiters/util/*.hpp)
 
-add_library(arbiter)
-target_sources(arbiter PRIVATE  $<TARGET_OBJECTS:src> $<TARGET_OBJECTS:drivers> $<TARGET_OBJECTS:util>)
+add_library(arbiter ${SOURCES} ${HEADERS})
 target_compile_features(arbiter PUBLIC cxx_std_11)
-target_include_directories(arbiter PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
-        ${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
-    target_compile_definitions(arbiter PUBLIC UNIX)
-    target_compile_options(arbiter PRIVATE -Wall -Wno-deprecated-declarations -pedantic -fexceptions)
-elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
-    target_compile_definitions(arbiter PUBLIC WINDOWS _CRT_SECURE_NO_WARNINGS)
-    find_library(SHLWAPI Shlwapi.lib)
-    target_link_libraries(arbiter PUBLIC ${SHLWAPI})
-endif()
+target_include_directories(arbiter PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 if (ARBITER_CURL)
     target_compile_definitions(arbiter PUBLIC ARBITER_CURL)
@@ -42,20 +33,41 @@ if (ARBITER_CURL)
 endif()
 
 if (ARBITER_OPENSSL)
-    find_package(OpenSSL REQUIRED)
     target_link_libraries(arbiter PUBLIC OpenSSL::SSL OpenSSL::Crypto)
     target_compile_definitions(arbiter PUBLIC ARBITER_OPENSSL)
 endif()
 
+if (WIN32 AND BUILD_SHARED_LIBS)
+    set_target_properties(arbiter
+        PROPERTIES
+            COMPILE_DEFINITIONS ARBITER_DLL_EXPORT)
+endif()
+
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
+        ${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
+    target_compile_definitions(arbiter PUBLIC UNIX)
+    target_compile_options(arbiter PUBLIC -Wall -Wno-deprecated-declarations -pedantic -fexceptions)
+elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
+    target_compile_definitions(arbiter PUBLIC WINDOWS _CRT_SECURE_NO_WARNINGS)
+    find_library(SHLWAPI Shlwapi.lib)
+    target_link_libraries(arbiter PUBLIC ${SHLWAPI})
+endif()
+
 if (BUILD_TESTING)
     enable_testing()
-    add_subdirectory(third/gtest-1.7.0)
-    include_directories(src third/gtest-1.7.0/include third/gtest-1.7.0)
+    option(ARBITER_EXTERNAL_GTEST "Use system gtest as dependency" ON)
+    if (ARBITER_EXTERNAL_GTEST)
+        find_package(GTest REQUIRED)
+    else()
+        add_subdirectory(third/gtest-1.7.0)
+        include_directories(third/gtest-1.7.0/include third/gtest-1.7.0)
+    endif()
     add_subdirectory(test)
 endif()
 
 install(TARGETS arbiter
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(DIRECTORY arbiter/ DESTINATION include
+        FILES_MATCHING PATTERN "*.hpp")
