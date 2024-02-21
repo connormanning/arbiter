@@ -7,7 +7,7 @@
 #endif
 
 #ifdef ARBITER_EXTERNAL_XML
-#include <rapidxml/rapidxml.hpp>
+#include <rapidxml.hpp>
 #endif
 
 namespace Xml = rapidxml;
