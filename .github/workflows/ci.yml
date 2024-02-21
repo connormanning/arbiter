@@ -43,7 +43,7 @@ jobs:
     - name: CMake setup Windows
       if: startsWith(matrix.os, 'windows')
       run: |
-        cmake -S . -B build -DBUILD_TESTING=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=install -DBUILD_SHARED_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_TOOLCHAIN_FILE=build/conan/conan_toolchain.cmake
+        cmake -S . -B build -DBUILD_TESTING=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX=install -DBUILD_SHARED_LIBS=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_TOOLCHAIN_FILE=build/conan/conan_toolchain.cmake -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
 
     - name: CMake build
       run: cmake --build build --config Release

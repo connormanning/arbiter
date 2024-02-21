@@ -49,8 +49,10 @@ if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
     target_compile_options(arbiter PUBLIC -Wall -Wno-deprecated-declarations -pedantic -fexceptions)
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     target_compile_definitions(arbiter PUBLIC WINDOWS _CRT_SECURE_NO_WARNINGS)
-    find_library(SHLWAPI Shlwapi.lib)
-    target_link_libraries(arbiter PUBLIC ${SHLWAPI})
+    find_library(SHLWAPI Shlwapi)
+    if (SHLWAPI)
+        target_link_libraries(arbiter PUBLIC ${SHLWAPI})
+    endif()
 endif()
 
 if (BUILD_TESTING)
