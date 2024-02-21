@@ -3,7 +3,6 @@ set(BASE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_subdirectory(drivers)
 add_subdirectory(third)
-add_subdirectory(util)
 
 set(
     SOURCES
@@ -19,7 +18,7 @@ set(
     "${BASE}/endpoint.hpp"
 )
 
-install(FILES ${HEADERS} DESTINATION include/arbiter)
+set_target_properties(arbiter PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
 if (WIN32)
     add_library(${MODULE} OBJECT ${SOURCES} ${HEADERS})
@@ -29,4 +28,3 @@ if (WIN32)
 else()
     add_library(${MODULE} OBJECT ${SOURCES})
 endif()
-
