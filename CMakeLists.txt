@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.12)
 project(arbiter LANGUAGES CXX)
 
 include(GNUInstallDirs)
@@ -9,7 +9,7 @@ option(ARBITER_CURL "Use curl for HTTP requests" ON)
 option(ARBITER_OPENSSL "Use OpenSSL for HTTPS requests" ON)
 
 if (ARBITER_CURL)
-    find_package(Curl REQUIRED)
+    find_package(CURL REQUIRED)
     set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
     find_package(Threads REQUIRED)
 endif()
