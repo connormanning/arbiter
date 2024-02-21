@@ -1,6 +1,8 @@
 #pragma once
 
+#ifndef ARBITER_IS_AMALGAMATION
 #include <arbiter/third/json/json.hpp>
+#endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -55,3 +57,4 @@ inline json merge(const json& a, const json& b)
 #ifdef ARBITER_CUSTOM_NAMESPACE
 }
 #endif
+
