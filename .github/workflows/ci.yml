@@ -14,9 +14,14 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+
     - name: Install dependencies
       run: |
-        pip install conan
+        python -m pip install conan
         conan profile detect
         conan install -r conancenter \
           --tool-requires=gtest/1.8.1 \
@@ -26,8 +31,6 @@ jobs:
           -g CMakeToolchain \
           -of build/conan \
           --build=missing
-
-    - uses: actions/checkout@v4
 
     - name: CMake setup
       shell: bash
