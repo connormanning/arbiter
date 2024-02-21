@@ -31,10 +31,11 @@ jobs:
     - name: CMake setup
       shell: bash
       run: |
-        cmake -S .
+        cmake -S . \
           -B build \
           -DCMAKE_BUILD_TYPE=Debug \
           -DBUILD_TESTING=ON \
+          -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
           -DCMAKE_INSTALL_PREFIX=install
 
     - name: CMake build
