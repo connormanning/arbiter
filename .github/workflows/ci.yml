@@ -1,0 +1,36 @@
+name: Build Arbiter
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  build-and-test:
+    name: Testing on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: CMake setup
+      shell: bash
+      run: cmake -S $GITHUB_WORKSPACE -B build \
+                 -DCMAKE_BUILD_TYPE=Debug \
+                 -DBUILD_TESTING=ON \
+                 -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/install
+
+    - name: CMake build
+      shell: bash
+      run: cmake --build $GITHUB_WORKSPACE/build
+
+    - name: CMake install
+      shell: bash
+      run: cmake --build $GITHUB_WORKSPACE/build --target install
+
+    - name: CMake test
+      shell: bash
+      working-directory: ${{runner.workspace}}/build
+      run: ctest --output-on-failure
