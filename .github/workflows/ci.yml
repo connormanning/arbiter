@@ -30,20 +30,19 @@ jobs:
 
     - name: CMake setup
       shell: bash
-      run: cmake -S $GITHUB_WORKSPACE -B build \
+      run: cmake -S "${{runner.workspace}}" -B "${{runner.workspace}}/build" \
                  -DCMAKE_BUILD_TYPE=Debug \
                  -DBUILD_TESTING=ON \
-                 -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/install
+                 -DCMAKE_INSTALL_PREFIX="${{runner.workspace}}/install"
 
     - name: CMake build
       shell: bash
-      run: cmake --build $GITHUB_WORKSPACE/build
+      run: cmake --build "${{runner.workspace}}/build"
 
     - name: CMake install
       shell: bash
-      run: cmake --build $GITHUB_WORKSPACE/build --target install
+      run: cmake --build "${{runner.workspace}}/build" --target install
 
     - name: CMake test
       shell: bash
-      working-directory: ${{runner.workspace}}/build
-      run: ctest --output-on-failure
+      run: cmake --build "${{runner.workspace}}/build" --target test
