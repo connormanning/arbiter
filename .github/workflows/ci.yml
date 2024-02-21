@@ -31,6 +31,8 @@ jobs:
     - name: CMake setup
       shell: bash
       run: |
+        pwd
+        ls
         cmake -S ${{runner.workspace}}
           -B ${{runner.workspace}}/build \
           -DCMAKE_BUILD_TYPE=Debug \
