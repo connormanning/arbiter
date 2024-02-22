@@ -40,7 +40,7 @@ if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL MSVC)
     add_definitions("-DWINDOWS")
     add_definitions("-D_CRT_SECURE_NO_WARNINGS")
-    find_library(SHLWAPI Shlwapi)
+    find_library(SHLWAPI Shlwapi.lib)
 endif()
 
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
@@ -78,3 +78,4 @@ include_directories(src third/gtest-1.7.0/include third/gtest-1.7.0)
 add_subdirectory(test)
 
 install(TARGETS arbiter DESTINATION lib)
+
