@@ -26,6 +26,7 @@ jobs:
       run: brew install openssl curl
 
     - name: Install dependencies on Windows
+      if: matrix.os == 'windows-latest'
       run: choco install curl --params "/WinSSL /C /F" -y
 
     - name: CMake create build folder
