@@ -120,7 +120,6 @@ def amalgamate_source(source_top_dir=None,
     header.add_file("arbiter/util/http.hpp")
     header.add_file("arbiter/util/ini.hpp")
     header.add_file("arbiter/util/time.hpp")
-    header.add_file("arbiter/util/macros.hpp")
     header.add_file("arbiter/util/md5.hpp")
     header.add_file("arbiter/util/sha256.hpp")
     header.add_file("arbiter/util/transforms.hpp")

@@ -19,7 +19,6 @@ set(
     "${BASE}/exports.hpp"
     "${BASE}/http.hpp"
     "${BASE}/ini.hpp"
-    "${BASE}/macros.hpp"
     "${BASE}/md5.hpp"
     "${BASE}/sha256.hpp"
     "${BASE}/time.hpp"
