@@ -25,10 +25,6 @@ jobs:
       if: matrix.os == 'macos-latest'
       run: brew install openssl curl
 
-    - name: Install dependencies on Windows
-      if: matrix.os == 'windows-latest'
-      run: choco install openssl curl
-
     - name: CMake create build folder
       run: cmake -E make_directory build
 
