@@ -1,0 +1,49 @@
+name: Build Arbiter
+
+on:
+  - push
+  - pull_request
+  - workflow_dispatch
+
+jobs:
+  build-and-test:
+    name: Testing on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies on Ubuntu
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get update && sudo apt-get install -y libssl-dev libcurl4-openssl-dev
+
+    - name: Install dependencies on MacOS
+      if: matrix.os == 'macos-latest'
+      run: brew install openssl curl
+
+    - name: Install dependencies on Windows
+      if: matrix.os == 'windows-latest'
+      run: choco install openssl curl
+
+    - name: CMake create build folder
+      run: cmake -E make_directory build
+
+    - name: CMake setup
+      run: cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install -DCMAKE_VERBOSE_MAKEFILE=ON
+      working-directory: build
+
+    - name: CMake build
+      run: cmake --build . --config Release
+      working-directory: build
+
+    - name: CMake install
+      run: cmake --build . --config Release --target install
+      working-directory: build
+
+    - name: CMake test
+      run: cmake --build . --config Release --target test
+      working-directory: build
