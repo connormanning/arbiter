@@ -96,7 +96,11 @@ LocalHandle Endpoint::getLocalHandle(
         const std::string local(tmp + basename);
         if (isHttpDerived())
         {
-            if (auto fileSize = tryGetSize(subpath, headers, query))
+            const bool isChunked = env("ARBITER_CHUNKED_DOWNLOAD");
+            std::unique_ptr<std::size_t> fileSize;
+            if (isChunked) fileSize = tryGetSize(subpath, headers, query);
+
+            if (fileSize)
             {
                 std::ofstream stream(local, streamFlags);
                 if (!stream.good())
