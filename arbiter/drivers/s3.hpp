@@ -22,6 +22,12 @@ namespace arbiter
 namespace drivers
 {
 
+enum class ReauthMethod {
+    ASSUME_ROLE_WITH_WEB_IDENTITY,
+    IMDS_V1,
+    IMDS_V2,
+};
+
 /** @brief Amazon %S3 driver. */
 class S3 : public Http
 {
@@ -42,6 +48,7 @@ public:
      *      - JSON configuration
      *      - Well-known files or their environment overrides, like
      *          `~/.aws/credentials` or the file at AWS_CREDENTIAL_FILE.
+     *      - STS assume role with web identity.
      *      - EC2 instance profile.
      */
     static std::unique_ptr<S3> create(
@@ -113,9 +120,9 @@ public:
         , m_token(token)
     { }
 
-    Auth(std::string credUrl, bool imdsv2 = true)
+    Auth(std::string credUrl, ReauthMethod reauthMethod)
         : m_credUrl(internal::makeUnique<std::string>(credUrl))
-        , m_imdsv2(imdsv2)
+        , m_reauthMethod(reauthMethod)
     { }
 
     static std::unique_ptr<Auth> create(std::string profile, std::string s);
@@ -128,7 +135,7 @@ private:
     mutable std::string m_token;
 
     std::unique_ptr<std::string> m_credUrl;
-    bool m_imdsv2 = true;
+    ReauthMethod m_reauthMethod;
     mutable std::unique_ptr<Time> m_expiration;
     mutable std::mutex m_mutex;
 };
@@ -151,6 +158,8 @@ private:
     const std::string m_baseUrl;
     http::Headers m_baseHeaders;
     bool m_precheck;
+
+    friend class S3;
 };
 
 
