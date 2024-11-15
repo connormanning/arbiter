@@ -140,6 +140,29 @@ std::unique_ptr<std::string> env(const std::string& var)
     return result;
 }
 
+bool parseBoolFromEnv(const std::string& var, bool defaultValue)
+{
+    auto value = env(var);
+    if (!value)
+    {
+        // env var is not set
+        return defaultValue;
+    }
+    if (value->empty())
+    {
+        // env var is set to the empty string; interpret as false
+        return false;
+    }
+
+    const char firstChar = std::tolower((*value)[0]);
+    if (firstChar == 't' || firstChar == 'T' || firstChar == '1')
+        return true;
+    else if (firstChar == 'f' || firstChar == 'F' || firstChar == '0')
+        return false;
+    else
+        return defaultValue;
+}
+
 std::vector<std::string> split(const std::string& in, const char delimiter)
 {
     std::size_t index(0);
