@@ -256,8 +256,11 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
                     }
                 }
 
+                const std::string roleSessionName = env("AWS_ROLE_SESSION_NAME") ? *env("AWS_ROLE_SESSION_NAME") : "pdal";
+
                 const std::string stsAssumeRoleWithWebIdentityUrl = stsRootUrl
-                    + "/?Action=AssumeRoleWithWebIdentity&RoleSessionName=pdal&Version=2011-06-15"
+                    + "/?Action=AssumeRoleWithWebIdentity&Version=2011-06-15"
+                    + "&RoleSessionName=" + roleSessionName
                     + "&RoleArn=" + *roleArn
                     + "&WebIdentityToken=" + *webIdentityToken;
 
