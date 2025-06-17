@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -110,7 +111,12 @@ std::vector<char> Http::getBinary(
     std::vector<char> data;
     if (!get(path, data, headers, query))
     {
-        throw ArbiterError("Could not read from " + path);
+        std::stringstream oss;
+        oss << "Could not read from '" << path << "'.";
+
+        if (data.size())
+            oss << " Response message returned '" << std::string(data.data()) << "'";
+        throw ArbiterError(oss.str());
     }
     return data;
 }
@@ -149,11 +155,10 @@ bool Http::get(
     auto http(m_pool.acquire());
     Response res(http.get(typedPath(path), headers, query));
 
+
+    data = res.data();
     if (res.ok())
-    {
-        data = res.data();
         good = true;
-    }
 
     return good;
 }
