@@ -150,14 +150,14 @@ bool parseBoolFromEnv(const std::string& var, bool defaultValue)
     }
     if (value->empty())
     {
-        // env var is set to the empty string; interpret as false
-        return false;
+        // env var is set to the empty string; interpret as true (variable is present)
+        return true;
     }
 
     const char firstChar = std::tolower((*value)[0]);
-    if (firstChar == 't' || firstChar == 'T' || firstChar == '1')
+    if (firstChar == 't' || firstChar == '1')
         return true;
-    else if (firstChar == 'f' || firstChar == 'F' || firstChar == '0')
+    else if (firstChar == 'f' || firstChar == '0')
         return false;
     else
         return defaultValue;
