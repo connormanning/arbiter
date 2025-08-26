@@ -208,7 +208,7 @@ INSTANTIATE_TEST_CASE_P(
         ConfiguredTests,
         DriverTest,
         ::testing::ValuesIn(tests));
-
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(DriverTest);
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);

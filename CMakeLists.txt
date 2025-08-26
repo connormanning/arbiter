@@ -1,11 +1,14 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.13)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules" ${CMAKE_MODULE_PATH} )
 project(arbiter)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Curl)
+
+find_package(CURL)
 if (CURL_FOUND)
     message("Found curl")
     find_package(Threads REQUIRED)
@@ -30,7 +33,6 @@ MESSAGE(${CMAKE_CXX_COMPILER_ID})
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL GNU OR
         ${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
     add_definitions("-DUNIX")
-    add_definitions(${CMAKE_CXX_FLAGS} "-std=c++11")
     add_definitions(${CMAKE_CXX_FLAGS} "-Wno-deprecated-declarations")
     add_definitions(${CMAKE_CXX_FLAGS} "-Wall")
     add_definitions(${CMAKE_CXX_FLAGS} "-pedantic")
@@ -73,8 +75,8 @@ endif()
 
 target_link_libraries(arbiter PUBLIC ${SHLWAPI})
 
-add_subdirectory(third/gtest-1.7.0)
-include_directories(src third/gtest-1.7.0/include third/gtest-1.7.0)
+include (${CMAKE_SOURCE_DIR}/cmake/gtest.cmake)
+
 add_subdirectory(test)
 
 install(TARGETS arbiter DESTINATION lib)

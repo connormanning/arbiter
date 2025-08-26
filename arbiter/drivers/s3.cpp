@@ -443,7 +443,7 @@ std::string S3::Config::extractBaseUrl(
         for (const auto& partition : ep["partitions"])
         {
             if (
-                !partition.count("regions") || 
+                !partition.count("regions") ||
                 !partition.at("regions").count(region))
             {
                 continue;
@@ -451,7 +451,7 @@ std::string S3::Config::extractBaseUrl(
 
             // Look for an explicit hostname for this region/service.
             if (
-                partition.count("services") && 
+                partition.count("services") &&
                 partition["services"].count("s3") &&
                 partition["services"]["s3"].count("endpoints"))
             {
@@ -661,9 +661,10 @@ bool S3::get(
                 apiV4.query(),
                 size ? *size : 0));
 
+    data = res.data();
+
     if (res.ok())
     {
-        data = res.data();
         return true;
     }
 
