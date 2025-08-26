@@ -165,6 +165,10 @@ inline std::string join(std::string path, Paths&&... paths)
  */
 ARBITER_DLL std::unique_ptr<std::string> env(const std::string& var);
 
+/** Parses a boolean value from an environment variable.
+ * Values are like "TRUE"/"FALSE"/"0"/"1" */
+ARBITER_DLL bool parseBoolFromEnv(const std::string& var, bool defaultValue);
+
 /** @brief Split a string on a token. */
 ARBITER_DLL std::vector<std::string> split(
         const std::string& s,
