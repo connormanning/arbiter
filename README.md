@@ -95,5 +95,5 @@ Once the amalgamated files are integrated with your source tree, simply `#includ
 
 Arbiter depends on [Curl](http://curl.haxx.se/libcurl/), which comes preinstalled on most UNIX-based machines.  To manually link (for amalgamated usage) on Unix-based operating systems, link with `-lcurl`.  Arbiter also works on Windows, but you'll have to obtain Curl yourself there.
 
-Arbiter requires C++11.
+Arbiter requires C++17.
 
