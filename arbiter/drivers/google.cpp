@@ -116,8 +116,7 @@ std::unique_ptr<std::size_t> Google::tryGetSize(const std::string path) const
     const GResource resource(path);
 
     drivers::Https https(m_pool);
-    const auto res(
-            https.internalHead(resource.endpoint(), headers, altMediaQuery));
+    http::Response res(https.internalHead(resource.endpoint(), headers, altMediaQuery));
 
     if (res.ok())
     {
@@ -132,14 +131,14 @@ bool Google::get(
         const std::string path,
         std::vector<char>& data,
         const http::Headers userHeaders,
-        const http::Query query) const
+        const http::Query /*query*/) const
 {
     http::Headers headers(m_auth->headers());
     headers.insert(userHeaders.begin(), userHeaders.end());
     const GResource resource(path);
 
     drivers::Https https(m_pool);
-    const auto res(
+    http::Response res(
             https.internalGet(resource.endpoint(), headers, altMediaQuery));
 
     if (res.ok())
@@ -173,12 +172,13 @@ std::vector<char> Google::put(
     query["name"] = http::sanitize(resource.object(), GResource::exclusions);
 
     drivers::Https https(m_pool);
-    const auto res(https.internalPost(url, data, headers, query));
-    if (!res.ok()) throw ArbiterError(res.str());
+    http::Response res(https.internalPost(url, data, headers, query));
+    if (!res.ok())
+        throw ArbiterError(res.str());
     return res.data();
 }
 
-std::vector<std::string> Google::glob(std::string path, bool verbose) const
+std::vector<std::string> Google::glob(std::string path, bool /*verbose*/) const
 {
     std::vector<std::string> results;
 
@@ -203,12 +203,10 @@ std::vector<std::string> Google::glob(std::string path, bool verbose) const
     {
         if (pageToken.size()) query["pageToken"] = pageToken;
 
-        const auto res(https.internalGet(url, m_auth->headers(), query));
+        http::Response res(https.internalGet(url, m_auth->headers(), query));
 
         if (!res.ok())
-        {
             throw ArbiterError(std::to_string(res.code()) + ": " + res.str());
-        }
 
         const json j(json::parse(res.str()));
         for (const json& item : j.at("items"))
@@ -309,7 +307,7 @@ void Google::Auth::maybeRefresh() const
 
     http::Pool pool;
     drivers::Https https(pool);
-    const auto res(https.internalPost(tokenRequestUrl, body, headers));
+    http::Response res(https.internalPost(tokenRequestUrl, body, headers));
 
     if (!res.ok())
     {

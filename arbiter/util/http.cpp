@@ -3,9 +3,7 @@
 #include <arbiter/util/json.hpp>
 #endif
 
-#ifdef ARBITER_CURL
 #include <curl/curl.h>
-#endif
 
 #include <cctype>
 #include <chrono>
@@ -26,17 +24,25 @@ namespace arbiter
 namespace http
 {
 
-std::string sanitize(const std::string path, const std::string excStr)
+std::string sanitize(const std::string& path, const std::string& excStr)
 {
-    static const std::set<char> unreserved = { '-', '.', '_', '~' };
-    const std::set<char> exclusions(excStr.begin(), excStr.end());
+    auto ispunct = [](char c) -> bool
+    {
+        return c == '-' || c == '.' || c == '_' || c == '~';
+    };
+
+    auto isexclusion = [&excStr](char c) -> bool
+    {
+        return excStr.find(c) != std::string::npos;
+    };
+
     std::ostringstream result;
     result.fill('0');
     result << std::hex;
 
-    for (const auto c : path)
+    for (char c : path)
     {
-        if (std::isalnum(c) || unreserved.count(c) || exclusions.count(c))
+        if (std::isalnum(c) || ispunct(c) || isexclusion(c))
         {
             result << c;
         }
@@ -54,31 +60,30 @@ std::string sanitize(const std::string path, const std::string excStr)
 
 std::string buildQueryString(const Query& query)
 {
-    return std::accumulate(
-            query.begin(),
-            query.end(),
-            std::string(),
-            [](const std::string& out, const Query::value_type& keyVal)
-            {
-                const char sep(out.empty() ? '?' : '&');
-                return out + sep + keyVal.first + '=' + keyVal.second;
-            });
+    if (query.empty())
+        return std::string();
+
+    std::string out;
+    for (auto &[key, val] : query)
+    {
+        const char sep(out.empty() ? '?' : '&');
+        out += sep + key + '=' + val;
+    }
+    return out;
 }
 
 Resource::Resource(
         Pool& pool,
         Curl& curl,
-        const std::size_t id,
         const std::size_t retry)
     : m_pool(pool)
     , m_curl(curl)
-    , m_id(id)
     , m_retry(retry)
 { }
 
 Resource::~Resource()
 {
-    m_pool.release(m_id);
+    m_pool.release(m_curl);
 }
 
 Response Resource::get(
@@ -91,7 +96,9 @@ Response Resource::get(
 {
     return exec([this, path, headers, query, reserve, timeout]()->Response
     {
-        return m_curl.get(path, headers, query, reserve, timeout);
+        m_curl.prepareGet(path, headers, query, reserve, timeout);
+        m_pool.perform(m_curl);
+        return m_curl.response();
     }, retry);
 }
 
@@ -102,7 +109,9 @@ Response Resource::head(
 {
     return exec([this, path, headers, query]()->Response
     {
-        return m_curl.head(path, headers, query);
+        m_curl.prepareHead(path, headers, query);
+        m_pool.perform(m_curl);
+        return m_curl.response();
     });
 }
 
@@ -116,7 +125,9 @@ Response Resource::put(
 {
     return exec([this, path, &data, headers, query, timeout]()->Response
     {
-        return m_curl.put(path, data, headers, query, timeout);
+        m_curl.preparePut(path, data, headers, query, timeout);
+        m_pool.perform(m_curl);
+        return m_curl.response();
     }, retry);
 }
 
@@ -128,7 +139,9 @@ Response Resource::post(
 {
     return exec([this, path, &data, headers, query]()->Response
     {
-        return m_curl.post(path, data, headers, query);
+        m_curl.preparePost(path, data, headers, query);
+        m_pool.perform(m_curl);
+        return m_curl.response();
     });
 }
 
@@ -161,53 +174,173 @@ Response Resource::exec(std::function<Response()> f, const int userRetry)
 Pool::Pool(
         const std::size_t concurrent,
         const std::size_t retry,
-        const std::string s)
-    : m_curls(concurrent)
-    , m_available(concurrent)
-    , m_retry(retry)
-    , m_mutex()
-    , m_cv()
+        const std::string& config)
+    : m_retry(retry)
 {
-#ifdef ARBITER_CURL
+    for (std::size_t i = 0; i < concurrent; ++i)
+        m_curls.emplace_back(i, config);
     curl_global_init(CURL_GLOBAL_ALL);
-
-    const json config(s.size() ? json::parse(s) : json::object());
-
-    for (std::size_t i(0); i < concurrent; ++i)
-    {
-        m_available[i] = i;
-        m_curls[i].reset(new Curl(config.dump()));
-    }
-#endif
+    m_multi = curl_multi_init();
+    m_runner = std::thread(&Pool::run, this);
 }
 
-Pool::~Pool() { }
+Pool::~Pool()
+{
+    m_stop = true;
+    wakeup();
+    m_runner.join();
 
+    std::lock_guard l(m_mutex);
+    for (size_t i = 0; i < m_curls.size(); ++i)
+        curl_multi_remove_handle(m_multi, m_curls[i].m_curl);
+
+    // This deletes all the curl objects and does curl_easy_cleanup.
+    m_curls.clear();
+    curl_multi_cleanup(m_multi);
+}
+
+// Thread that performs the curl activity. Runs until told to stop.
+void Pool::run()
+{
+    while (true)
+    {
+        // Add ready transfers to the multi handle to run.
+        handleReady();
+
+        int still_running;
+        CURLMcode result = curl_multi_perform(m_multi, &still_running);
+        if (result == CURLM_OK)
+            result = curl_multi_poll(m_multi, NULL, 0, 500, NULL);
+
+        bool notify;
+        if (result != CURLM_OK)
+            notify = handleFailure();
+        else
+            notify = handleCompleted();
+
+        // If any threads have completed, notify waiters.
+        if (notify)
+            m_poolCv.notify_all();
+        if (m_stop)
+            break;
+    }
+}
+
+// For any any transfers that are ready, set the state to running, clear the code and
+// add the handle.
+void Pool::handleReady()
+{
+    std::lock_guard l(m_mutex);
+
+    for (Curl& curl : m_curls)
+        if (curl.m_state == Curl::State::READY)
+        {
+            curl.m_state = Curl::State::RUNNING;
+            curl.m_code = 0;
+            curl_multi_add_handle(m_multi, curl.m_curl);
+        }
+}
+
+// See if any curl requests completed. If so, mark the state as DONE.
+bool Pool::handleCompleted()
+{
+    bool notify = false;
+    while (true)
+    {
+        int msgCnt;
+        CURLMsg *m = curl_multi_info_read(m_multi, &msgCnt);
+        if (!m)
+            break;
+        if (m->msg != CURLMSG_DONE)
+            continue;
+
+        // If we have a completed transfer, set the state to done, update the http code
+        // and say we should notify.
+        curl_multi_remove_handle(m_multi, m->easy_handle);
+        std::lock_guard l(m_mutex);
+        for (Curl& curl : m_curls)
+            if (curl.m_curl == m->easy_handle)
+            {
+                curl.m_state = Curl::State::DONE;
+                curl_easy_getinfo(curl.m_curl, CURLINFO_RESPONSE_CODE, &curl.m_code);
+                notify = true;
+            }
+    }
+    return notify;
+}
+
+// Abort all the running transfers as curl has failed internally. Remove the handle.
+// Set the state to done. Update the http code and return the notification state..
+bool Pool::handleFailure()
+{
+    bool notify = false;
+
+    std::lock_guard l(m_mutex);
+    for (Curl& curl : m_curls)
+        if (curl.m_state == Curl::State::RUNNING)
+        {
+            curl_multi_remove_handle(m_multi, curl.m_curl);
+            curl.m_state = Curl::State::DONE;
+            curl.m_code = 550;  // Made-up error code.
+            notify = true;
+        }
+    return notify;
+}
+
+// Wakeup the run thread.
+void Pool::wakeup()
+{
+    curl_multi_wakeup(m_multi);
+}
+
+// Acquire a resource (a curl easy handle) from the pool.
 Resource Pool::acquire()
 {
     if (m_curls.empty())
-    {
         throw std::runtime_error("Cannot acquire from empty pool");
-    }
 
+    Curl *foundCurl = nullptr;
+
+    // Wait until we find an unused Curl object. If we find one, mark
+    // it acquired.
     std::unique_lock<std::mutex> lock(m_mutex);
-    m_cv.wait(lock, [this]()->bool { return !m_available.empty(); });
+    m_cv.wait(lock, [this, &foundCurl]()
+    {
+        for (Curl& curl : m_curls)
+            if (curl.m_state == Curl::State::UNUSED)
+            {
+                curl.m_state = Curl::State::ACQUIRED;
+                foundCurl = &curl;
+                return true;
+            }
+            return false;
+     });
 
-    const std::size_t id(m_available.back());
-    Curl& curl(*m_curls[id]);
-
-    m_available.pop_back();
-
-    return Resource(*this, curl, id, m_retry);
+    // Return the resource with the acquired Curl.
+    return Resource(*this, *foundCurl, m_retry);
 }
 
-void Pool::release(const std::size_t id)
+// Release a curl handle.
+void Pool::release(Curl& curl)
 {
-    std::unique_lock<std::mutex> lock(m_mutex);
-    m_available.push_back(id);
-    lock.unlock();
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_curls[curl.id()].m_state = Curl::State::UNUSED;
+    }
 
     m_cv.notify_one();
+}
+
+void Pool::perform(Curl& curl)
+{
+    std::unique_lock l(m_mutex);
+    curl.m_state = Curl::State::READY;
+    wakeup();
+    // Wait until the operation is done or a non-recoverable error occurs.
+    m_poolCv.wait(l, [&curl]()
+    {
+        return curl.m_state == Curl::State::DONE;
+    });
 }
 
 } // namepace http

@@ -46,15 +46,18 @@ namespace
 
     std::string makeLower(const std::string& in)
     {
-        return std::accumulate(
-                in.begin(),
-                in.end(),
-                std::string(),
-                [](const std::string& out, const char c) -> std::string
-                {
-                    return out + static_cast<char>(::tolower(c));
-                });
+        std::string out;
+        for (char c : in)
+            out += (char)std::tolower(c);
+        return out;
     }
+
+    std::string extractBaseUrl(const std::string& service, const std::string& endpoint,
+        const std::string& account)
+    {
+        return account + "." + service + "." + endpoint + "/";
+    }
+
 }
 
 namespace drivers
@@ -88,7 +91,7 @@ AZ::Config::Config(const std::string s)
     , m_storageAccount(extractStorageAccount(s))
     , m_storageAccessKey(extractStorageAccessKey(s))
     , m_endpoint(extractEndpoint(s))
-    , m_baseUrl(extractBaseUrl(s, m_service, m_endpoint, m_storageAccount))
+    , m_baseUrl(extractBaseUrl(m_service, m_endpoint, m_storageAccount))
 {
     const std::string sasString = extractSasToken(s);
     if (!sasString.empty())
@@ -247,18 +250,9 @@ std::string AZ::Config::extractEndpoint(const std::string s)
     return "core.windows.net";
 }
 
-std::string AZ::Config::extractBaseUrl(
-     const std::string s,
-     const std::string service,
-     const std::string endpoint,
-     const std::string account)
-{
-    return account + "." + service + "." + endpoint + "/";
-}
-
 std::unique_ptr<std::size_t> AZ::tryGetSize(
     const std::string rawPath,
-    const http::Headers userHeaders,
+    const http::Headers /*userHeaders*/,
     const http::Query query) const
 {
     Headers headers(m_config->baseHeaders());

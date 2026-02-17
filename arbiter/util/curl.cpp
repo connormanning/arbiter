@@ -10,9 +10,7 @@
 #include <arbiter/util/json.hpp>
 #endif
 
-#ifdef ARBITER_CURL
 #include <curl/curl.h>
-#endif
 
 #ifdef ARBITER_CUSTOM_NAMESPACE
 namespace ARBITER_CUSTOM_NAMESPACE
@@ -27,84 +25,8 @@ using namespace internal;
 namespace http
 {
 
-namespace
+Curl::Curl(std::size_t id, const std::string& s) : m_id(id)
 {
-#ifdef ARBITER_CURL
-    struct PutData
-    {
-        PutData(const std::vector<char>& data)
-            : data(data)
-            , offset(0)
-        { }
-
-        const std::vector<char>& data;
-        std::size_t offset;
-    };
-
-    std::size_t getCb(
-            const char* in,
-            std::size_t size,
-            std::size_t num,
-            std::vector<char>* out)
-    {
-        const std::size_t fullBytes(size * num);
-        const std::size_t startSize(out->size());
-
-        out->resize(out->size() + fullBytes);
-        std::memcpy(out->data() + startSize, in, fullBytes);
-
-        return fullBytes;
-    }
-
-    std::size_t putCb(
-            char* out,
-            std::size_t size,
-            std::size_t num,
-            PutData* in)
-    {
-        const std::size_t fullBytes(
-                (std::min)(
-                    size * num,
-                    in->data.size() - in->offset));
-        std::memcpy(out, in->data.data() + in->offset, fullBytes);
-
-        in->offset += fullBytes;
-        return fullBytes;
-    }
-
-    std::size_t headerCb(
-            const char *buffer,
-            std::size_t size,
-            std::size_t num,
-            http::Headers* out)
-    {
-        const std::size_t fullBytes(size * num);
-
-        std::string data(buffer, fullBytes);
-        data.erase(std::remove(data.begin(), data.end(), '\n'), data.end());
-        data.erase(std::remove(data.begin(), data.end(), '\r'), data.end());
-
-        const std::size_t split(data.find_first_of(":"));
-
-        // No colon means it isn't a header with data.
-        if (split == std::string::npos) return fullBytes;
-
-        const std::string key(data.substr(0, split));
-        const std::string val(data.substr(split + 1, data.size()));
-
-        (*out)[key] = val;
-
-        return fullBytes;
-    }
-
-#else
-    const std::string fail("Arbiter was built without curl");
-#endif // ARBITER_CURL
-} // unnamed namespace
-
-Curl::Curl(const std::string s)
-{
-#ifdef ARBITER_CURL
     const json c(s.size() ? json::parse(s) : json::object());
 
     m_curl = curl_easy_init();
@@ -210,24 +132,40 @@ Curl::Curl(const std::string s)
             "\n\tProxy: " << (m_proxy ? *m_proxy : "(default)") <<
             std::endl;
     }
-#endif
 }
 
 Curl::~Curl()
 {
-#ifdef ARBITER_CURL
-    curl_easy_cleanup(m_curl);
-    curl_slist_free_all(m_headers);
-    m_headers = nullptr;
-#endif
+    if (m_curl)
+        curl_easy_cleanup(m_curl);
+    if (m_headers)
+        curl_slist_free_all(m_headers);
+}
+
+// The only time this should be invoked is when things are moving in a vector of Curls.
+Curl::Curl(Curl&& other)
+{
+    m_curl = other.m_curl; other.m_curl = nullptr;
+    m_headers = other.m_headers; other.m_headers = nullptr;
+    m_id = other.m_id;
+    m_code = other.m_code;
+    m_state = other.m_state; other.m_state = State::UNUSED;
+    m_verbose = other.m_verbose;
+    m_timeout = other.m_timeout;
+    m_followRedirect = other.m_followRedirect;
+    m_verifyPeer = other.m_verifyPeer;
+    m_caPath = std::move(other.m_caPath);
+    m_caInfo = std::move(other.m_caInfo);
+    m_proxy = std::move(other.m_proxy);
+    m_response = std::move(other.m_response);
+    m_putData = std::move(other.m_putData);
 }
 
 void Curl::init(
-        const std::string rawPath,
+        const std::string& rawPath,
         const Headers& headers,
         const Query& query)
 {
-#ifdef ARBITER_CURL
     // Reset our curl instance and header list.
     curl_slist_free_all(m_headers);
     m_headers = nullptr;
@@ -278,143 +216,85 @@ void Curl::init(
                 m_headers,
                 (h.first + ": " + h.second).c_str());
     }
-#else
-    throw ArbiterError(fail);
-#endif
 }
 
-int Curl::perform()
-{
-#ifdef ARBITER_CURL
-    long httpCode(0);
-
-    const auto code(curl_easy_perform(m_curl));
-    curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &httpCode);
-    curl_easy_reset(m_curl);
-
-    if (code != CURLE_OK)
-    {
-        if (m_verbose)
-        {
-            std::cout << "Curl failure: " << curl_easy_strerror(code) << 
-                std::endl;
-        }
-        httpCode = 550;
-    }
-
-    return httpCode;
-#else
-    throw ArbiterError(fail);
-#endif
-}
-
-Response Curl::get(
+void Curl::prepareGet(
         std::string path,
         Headers headers,
         Query query,
         const std::size_t reserve,
         const std::size_t timeout)
 {
-#ifdef ARBITER_CURL
-    std::vector<char> data;
-
-    if (reserve) data.reserve(reserve);
+    m_response.init(reserve);
 
     init(path, headers, query);
     if (timeout) curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_TIME, timeout);
 
     // Register callback function and data pointer to consume the result.
-    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
-    curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &data);
+    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, Response::getCb);
+    curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &m_response);
 
     // Insert all headers into the request.
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
 
     // Set up callback and data pointer for received headers.
-    Headers receivedHeaders;
-    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, headerCb);
-    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &receivedHeaders);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, Response::headerCb);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &m_response);
 
-    // Run the command.
-    const int httpCode(perform());
-
-    for (auto& h : receivedHeaders)
-    {
-        std::string& v(h.second);
-        while (v.size() && v.front() == ' ') v = v.substr(1);
-        while (v.size() && v.back() == ' ') v.pop_back();
-    }
-
-    return Response(httpCode, data, receivedHeaders);
-#else
-    throw ArbiterError(fail);
-#endif
-}
-
-Response Curl::head(
+void Curl::prepareHead(
     std::string path,
     Headers headers,
     Query query,
     const std::size_t timeout)
 {
-#ifdef ARBITER_CURL
-    std::vector<char> data;
+    m_response.init();
 
     init(path, headers, query);
-    if (timeout) curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_TIME, timeout);
+    if (timeout)
+        curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_TIME, timeout);
 
     // Register callback function and data pointer to consume the result.
-    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
-    curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &data);
+    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, Response::getCb);
+    curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &m_response);
 
     // Insert all headers into the request.
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
 
     // Set up callback and data pointer for received headers.
-    Headers receivedHeaders;
-    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, headerCb);
-    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &receivedHeaders);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, Response::headerCb);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &m_response);
 
     // Specify a HEAD request.
     curl_easy_setopt(m_curl, CURLOPT_NOBODY, 1L);
-
-    // Run the command.
-    const int httpCode(perform());
-    return Response(httpCode, data, receivedHeaders);
-#else
-    throw ArbiterError(fail);
-#endif
 }
 
-Response Curl::put(
+void Curl::preparePut(
         std::string path,
         const std::vector<char>& data,
         Headers headers,
         Query query,
         const std::size_t timeout)
 {
-#ifdef ARBITER_CURL
+    m_response.init();
+    m_putData.init(data);
     init(path, headers, query);
     if (timeout) curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_TIME, timeout);
 
-    std::unique_ptr<PutData> putData(new PutData(data));
-    std::vector<char> writeData;
 
     // Register callback function and data pointer to create the request.
-    curl_easy_setopt(m_curl, CURLOPT_READFUNCTION, putCb);
-    curl_easy_setopt(m_curl, CURLOPT_READDATA, putData.get());
+    curl_easy_setopt(m_curl, CURLOPT_READFUNCTION, PutData::putCb);
+    curl_easy_setopt(m_curl, CURLOPT_READDATA, &m_putData);
 
     // Register callback function and data pointer to consume the result.
-    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
-    curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &writeData);
+    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, Response::getCb);
+    curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &m_response);
 
     // Insert all headers into the request.
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
 
     // Set up callback and data pointer for received headers.
-    Headers receivedHeaders;
-    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, headerCb);
-    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &receivedHeaders);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, Response::headerCb);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &m_response);
 
     // Specify that this is a PUT request.
     curl_easy_setopt(m_curl, CURLOPT_PUT, 1L);
@@ -425,44 +305,34 @@ Response Curl::put(
             m_curl,
             CURLOPT_INFILESIZE_LARGE,
             static_cast<curl_off_t>(data.size()));
-
-    // Run the command.
-    const int httpCode(perform());
-    return Response(httpCode, writeData, receivedHeaders);
-#else
-    throw ArbiterError(fail);
-#endif
 }
 
-Response Curl::post(
+void Curl::preparePost(
         std::string path,
         const std::vector<char>& data,
         Headers headers,
         Query query,
         const std::size_t timeout)
 {
-#ifdef ARBITER_CURL
+    m_response.init();
+    m_putData.init(data);
     init(path, headers, query);
     if (timeout) curl_easy_setopt(m_curl, CURLOPT_LOW_SPEED_TIME, timeout);
 
-    std::unique_ptr<PutData> putData(new PutData(data));
-    std::vector<char> writeData;
-
     // Register callback function and data pointer to create the request.
-    curl_easy_setopt(m_curl, CURLOPT_READFUNCTION, putCb);
-    curl_easy_setopt(m_curl, CURLOPT_READDATA, putData.get());
+    curl_easy_setopt(m_curl, CURLOPT_READFUNCTION, PutData::putCb);
+    curl_easy_setopt(m_curl, CURLOPT_READDATA, &m_putData);
 
     // Register callback function and data pointer to consume the result.
-    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, getCb);
-    curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &writeData);
+    curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, Response::getCb);
+    curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &m_response);
 
     // Insert all headers into the request.
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, m_headers);
 
     // Set up callback and data pointer for received headers.
-    Headers receivedHeaders;
-    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, headerCb);
-    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &receivedHeaders);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, Response::headerCb);
+    curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &m_response);
 
     // Specify that this is a POST request.
     curl_easy_setopt(m_curl, CURLOPT_POST, 1L);
@@ -473,13 +343,6 @@ Response Curl::post(
             m_curl,
             CURLOPT_INFILESIZE_LARGE,
             static_cast<curl_off_t>(data.size()));
-
-    // Run the command.
-    const int httpCode(perform());
-    return Response(httpCode, writeData, receivedHeaders);
-#else
-    throw ArbiterError(fail);
-#endif
 }
 
 } // namepace http

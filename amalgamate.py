@@ -102,12 +102,6 @@ def amalgamate_source(source_top_dir=None,
         header.add_file("arbiter/third/xml/rapidxml.hpp")
         header.add_file("arbiter/third/xml/xml.hpp")
 
-    if define_curl:
-        header.add_text("\n#pragma once")
-        header.add_text("#define ARBITER_CURL")
-    else:
-        print("NOT #defining ARBITER_CURL")
-
     if bundle_json:
         header.add_file("arbiter/third/json/json.hpp")
     else:
