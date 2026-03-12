@@ -240,6 +240,7 @@ void Curl::prepareGet(
     // Set up callback and data pointer for received headers.
     curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, Response::headerCb);
     curl_easy_setopt(m_curl, CURLOPT_HEADERDATA, &m_response);
+}
 
 void Curl::prepareHead(
     std::string path,

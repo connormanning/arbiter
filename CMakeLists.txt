@@ -53,7 +53,7 @@ if (${ARBITER_ZLIB})
 endif()
 
 target_link_libraries(arbiter PUBLIC ${CURL_LIBRARIES})
-target_include_directories(arbiter PRIVATE "${CURL_INCLUDE_DIR}")
+target_include_directories(arbiter PRIVATE ${CURL_INCLUDE_DIR})
 
 if (${ARBITER_OPENSSL})
     target_link_libraries(arbiter PUBLIC ${OPENSSL_LIBRARIES})

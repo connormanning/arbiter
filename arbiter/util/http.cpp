@@ -210,7 +210,7 @@ void Pool::run()
         int still_running;
         CURLMcode result = curl_multi_perform(m_multi, &still_running);
         if (result == CURLM_OK)
-            result = curl_multi_poll(m_multi, NULL, 0, 500, NULL);
+            result = curl_multi_poll(m_multi, NULL, 0, 200, NULL);
 
         bool notify;
         if (result != CURLM_OK)
@@ -307,13 +307,15 @@ Resource Pool::acquire()
     m_cv.wait(lock, [this, &foundCurl]()
     {
         for (Curl& curl : m_curls)
+        {
             if (curl.m_state == Curl::State::UNUSED)
             {
                 curl.m_state = Curl::State::ACQUIRED;
                 foundCurl = &curl;
                 return true;
             }
-            return false;
+        }
+        return false;
      });
 
     // Return the resource with the acquired Curl.

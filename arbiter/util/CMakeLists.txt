@@ -33,11 +33,10 @@ if (WIN32)
     set_target_properties(${MODULE}
         PROPERTIES
             COMPILE_DEFINITIONS ARBITER_DLL_EXPORT)
-    target_include_directories(util PRIVATE "${CURL_INCLUDE_DIR}")
-
 else()
     add_library(${MODULE} OBJECT ${SOURCES})
 endif()
+target_include_directories(${MODULE} PRIVATE "${CURL_INCLUDE_DIR}")
 
 install(FILES ${HEADERS} DESTINATION include/arbiter/${MODULE})
 
