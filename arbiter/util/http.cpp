@@ -270,7 +270,7 @@ bool Pool::handleCompleted()
 }
 
 // Abort all the running transfers as curl has failed internally. Remove the handle.
-// Set the state to done. Update the http code and return the notification state..
+// Set the state to done. Update the http code and return the notification state.
 bool Pool::handleFailure()
 {
     bool notify = false;
