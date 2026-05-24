@@ -141,7 +141,7 @@ private:
         }
 
         // Remove trailing \r or \n
-        const char *end = in + size;
+        const char *end = in + size - 1;
         while (size && (*end == '\n' || *end == '\r'))
         {
             end--;

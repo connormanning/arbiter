@@ -177,9 +177,9 @@ Pool::Pool(
         const std::string& config)
     : m_retry(retry)
 {
+    curl_global_init(CURL_GLOBAL_ALL);
     for (std::size_t i = 0; i < concurrent; ++i)
         m_curls.emplace_back(i, config);
-    curl_global_init(CURL_GLOBAL_ALL);
     m_multi = curl_multi_init();
     m_runner = std::thread(&Pool::run, this);
 }
