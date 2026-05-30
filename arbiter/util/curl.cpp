@@ -167,6 +167,7 @@ void Curl::init(
         const Query& query)
 {
     // Reset our curl instance and header list.
+    curl_easy_reset(m_curl);
     curl_slist_free_all(m_headers);
     m_headers = nullptr;
 
