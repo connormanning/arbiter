@@ -29,7 +29,6 @@ std::shared_ptr<Driver> Driver::create(
 
     if (type == "file") return Fs::create();
     if (type == "test") return Test::create();
-#ifdef ARBITER_CURL
     if (type == "http") return Http::create(pool);
     if (type == "https") return Https::create(pool);
     if (type == "s3") return S3::create(pool, entry.dump(), profile);
@@ -37,7 +36,6 @@ std::shared_ptr<Driver> Driver::create(
     if (type == "dbx") return Dropbox::create(pool, entry.dump(), profile);
 #ifdef ARBITER_OPENSSL
     if (type == "gs") return Google::create(pool, entry.dump(), profile);
-#endif
 #endif
     return std::shared_ptr<Driver>();
 }
@@ -123,7 +121,7 @@ std::vector<std::string> Driver::resolve(
     return results;
 }
 
-std::vector<std::string> Driver::glob(std::string path, bool verbose) const
+std::vector<std::string> Driver::glob(std::string path, bool /*verbose*/) const
 {
     throw ArbiterError("Cannot glob driver for: " + path);
 }

@@ -111,7 +111,6 @@ public:
 private:
     static std::string extractService(std::string j);
     static std::string extractEndpoint(std::string j);
-    static std::string extractBaseUrl(std::string j, std::string endpoint, std::string service, std::string account);
     static std::string extractStorageAccount(std::string j);
     static std::string extractStorageAccessKey(std::string j);
     static std::string extractSasToken(std::string j);

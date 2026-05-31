@@ -204,7 +204,7 @@ const auto tests = std::accumulate(
             return out;
         });
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
         ConfiguredTests,
         DriverTest,
         ::testing::ValuesIn(tests));

@@ -10,11 +10,7 @@
 #include <arbiter/util/types.hpp>
 #endif
 
-#ifdef ARBITER_CURL
 #include <curl/curl.h>
-#else
-typedef void CURL;
-#endif
 
 struct curl_slist;
 
@@ -38,60 +34,76 @@ class ARBITER_DLL Curl
 
     static constexpr std::size_t defaultHttpTimeout = 5;
 
+    enum class State
+    {
+        UNUSED,     // Waiting to be used for a request.
+        ACQUIRED,   // Acquired by a Resource.
+        READY,      // Initialization complete. Ready to be run.
+        RUNNING,    // Running.
+        DONE        // Operation completed
+    };
+
 public:
+    Curl(std::size_t id, const std::string& config);
+    Curl(Curl&& curl);
     ~Curl();
 
-    http::Response get(
+    void prepareGet(
             std::string path,
             Headers headers,
             Query query,
             std::size_t reserve,
             std::size_t timeout = 0);
 
-    http::Response head(
+    void prepareHead(
             std::string path,
             Headers headers,
             Query query,
             std::size_t timeout = 0);
 
-    http::Response put(
+    void preparePut(
             std::string path,
             const std::vector<char>& data,
             Headers headers,
             Query query,
             std::size_t timeout = 0);
 
-    http::Response post(
+    void preparePost(
             std::string path,
             const std::vector<char>& data,
             Headers headers,
             Query query,
             std::size_t timeout = 0);
+
+    // Note that the response is *moved*.
+    Response response()
+    {
+        m_response.setCode(m_code);
+        return std::move(m_response);
+    }
+
+    std::size_t id() const
+    { return m_id; }
 
 private:
-    Curl(std::string j);
-
-    void init(std::string path, const Headers& headers, const Query& query);
-
-    // Returns HTTP status code.
-    int perform();
-
-    Curl(const Curl&);
-    Curl& operator=(const Curl&);
+    void init(const std::string& path, const Headers& headers, const Query& query);
 
     CURL* m_curl = nullptr;
     curl_slist* m_headers = nullptr;
 
+    std::size_t m_id;
+    State m_state = State::UNUSED;
     bool m_verbose = false;
     long m_timeout = defaultHttpTimeout;
     bool m_followRedirect = true;
     bool m_verifyPeer = true;
+    int m_code = 0;
     std::unique_ptr<std::string> m_caPath;
     std::unique_ptr<std::string> m_caBundle;
     std::unique_ptr<std::string> m_caInfo;
     std::unique_ptr<std::string> m_proxy;
-
-    std::vector<char> m_data;
+    Response m_response;
+    PutData m_putData;
 };
 
 /** @endcond */

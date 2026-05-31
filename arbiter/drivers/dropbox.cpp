@@ -147,20 +147,21 @@ bool Dropbox::get(
     headers["Dropbox-API-Arg"] = json{{ "path", "/" + path }}.dump();
     headers.insert(userHeaders.begin(), userHeaders.end());
 
-    const Response res(Http::internalGet(getUrl, headers, query));
+    Response res(Http::internalGet(getUrl, headers, query));
 
     if (res.ok())
     {
         if (!userHeaders.count("Range"))
         {
-            if (!res.headers().count("dropbox-api-result"))
+            Headers headers = res.headers();
+            if (!headers.count("dropbox-api-result"))
             {
                 std::cout << "No dropbox-api-result header found" << std::endl;
                 return false;
             }
 
             json rx;
-            try { rx = json::parse(res.headers().at("dropbox-api-result")); }
+            try { rx = json::parse(headers.at("dropbox-api-result")); }
             catch (...) { std::cout << "Failed to parse result" << std::endl; }
 
             if (!rx.is_null())
@@ -215,9 +216,10 @@ std::vector<char> Dropbox::put(
 
     headers.insert(userHeaders.begin(), userHeaders.end());
 
-    const Response res(Http::internalPost(putUrl, data, headers, query));
+    Response res(Http::internalPost(putUrl, data, headers, query));
 
-    if (!res.ok()) throw ArbiterError(res.str());
+    if (!res.ok())
+        throw ArbiterError(res.str());
     return res.data();
 }
 

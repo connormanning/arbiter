@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <condition_variable>
 #include <cstddef>
 #include <functional>
@@ -7,6 +8,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #ifndef ARBITER_IS_AMALGAMATION
@@ -28,7 +30,7 @@ namespace http
 /** Perform URI percent-encoding, without encoding characters included in
  * @p exclusions.
  */
-ARBITER_DLL std::string sanitize(std::string path, std::string exclusions = "/");
+ARBITER_DLL std::string sanitize(const std::string& path, const std::string& exclusions = "/");
 
 /** Build a query string from key-value pairs.  If @p query is empty, the
  * result is an empty string.  Otherwise, the result will start with the
@@ -43,7 +45,7 @@ class ARBITER_DLL Pool;
 class ARBITER_DLL Resource
 {
 public:
-    Resource(Pool& pool, Curl& curl, std::size_t id, std::size_t retry);
+    Resource(Pool& pool, Curl& curl, std::size_t retry);
     ~Resource();
 
     http::Response get(
@@ -76,7 +78,6 @@ public:
 private:
     Pool& m_pool;
     Curl& m_curl;
-    std::size_t m_id;
     std::size_t m_retry;
 
     http::Response exec(std::function<http::Response()> f, int retry = -1);
@@ -89,20 +90,32 @@ class ARBITER_DLL Pool
 
 public:
     Pool() : Pool(4, 4, "") { }
-    Pool(std::size_t concurrent, std::size_t retry, std::string j);
+    Pool(std::size_t concurrent, std::size_t retry, const std::string& config);
     ~Pool();
 
     Resource acquire();
+    void wakeup();
+    void perform(Curl& curl);
 
 private:
-    void release(std::size_t id);
+    void run();
+    void release(Curl& curl);
+    void handleReady();
+    bool handleFailure();
+    bool handleCompleted();
 
-    std::vector<std::unique_ptr<Curl>> m_curls;
-    std::vector<std::size_t> m_available;
+    CURL *m_multi;
+    std::vector<Curl> m_curls;
+    std::thread m_runner;
     std::size_t m_retry;
+    std::atomic<bool> m_stop;
 
     std::mutex m_mutex;
+    // Provide notification between a thread waiting on a Curl and one
+    // making one available.
     std::condition_variable m_cv;
+    // Provide notification between the run thread and those waiting.
+    std::condition_variable m_poolCv;
 };
 
 /** @endcond */

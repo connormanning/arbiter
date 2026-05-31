@@ -148,7 +148,7 @@ void Fs::copy(std::string src, std::string dst) const
     outstream << instream.rdbuf();
 }
 
-std::vector<std::string> Fs::glob(std::string path, bool verbose) const
+std::vector<std::string> Fs::glob(std::string path, bool /*verbose*/) const
 {
     return arbiter::glob(path);
 }

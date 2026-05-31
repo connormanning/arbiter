@@ -24,10 +24,8 @@ namespace
 {
     const std::string delimiter("://");
 
-#ifdef ARBITER_CURL
     const std::size_t concurrentHttpReqs(32);
     const std::size_t httpRetryCount(8);
-#endif
 
     json getConfig(const std::string& s)
     {
@@ -52,14 +50,12 @@ Arbiter::Arbiter() : Arbiter("") { }
 
 Arbiter::Arbiter(const std::string s)
     : m_config(s)
-#ifdef ARBITER_CURL
     , m_pool(
             new http::Pool(
                 concurrentHttpReqs,
                 httpRetryCount,
                 getConfig(s).dump()))
-#endif
-{ }
+{}
 
 void Arbiter::addDriver(const std::string type, std::shared_ptr<Driver> driver)
 {
@@ -330,7 +326,7 @@ std::shared_ptr<drivers::Http> Arbiter::getHttpDriver(const std::string path) co
 
 LocalHandle Arbiter::getLocalHandle(
         const std::string path,
-        const Endpoint& tempEndpoint) const
+        const Endpoint& /*tempEndpoint*/) const
 {
     const Endpoint fromEndpoint(getEndpoint(getDirname(path)));
     return fromEndpoint.getLocalHandle(getBasename(path));

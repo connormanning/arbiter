@@ -38,11 +38,9 @@ using namespace internal;
 
 namespace
 {
-#ifdef ARBITER_CURL
     // Re-fetch credentials when there are less than 4 minutes remaining.  New
     // ones are guaranteed by AWS to be available within 5 minutes remaining.
     constexpr int64_t reauthSeconds(60 * 4);
-#endif
 
     // See:
     // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
@@ -218,7 +216,6 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
         }
     }
 
-#ifdef ARBITER_CURL
     http::Pool pool;
     drivers::Http httpDriver(pool);
 
@@ -283,7 +280,7 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
             // which only support v1, this request will fail.  That's ok, the
             // next request looks the same anyway (except without the token of
             // course), and that corresponds to the IMDSv1 flow as a fallback.
-            const auto res = httpDriver.internalPut(
+            auto res = httpDriver.internalPut(
                 ec2TokenBase,
                 std::vector<char>(),
                 {{ "X-aws-ec2-metadata-token-ttl-seconds", "21600" }},
@@ -294,15 +291,14 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
 
             if (!res.ok()) throw ArbiterError("Failed to get IMDSv2 token");
 
-            const auto tokenvec = res.data();
-            token = std::string(tokenvec.data(), tokenvec.size());
+            token = res.str();
         }
         catch (...) { }
 
         http::Headers headers;
         if (!token.empty()) headers["X-aws-ec2-metadata-token"] = token;
 
-        const auto res = httpDriver.internalGet(
+        auto res = httpDriver.internalGet(
             ec2CredBase,
             headers,
             {{ }},
@@ -311,8 +307,7 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
             1);
         if (!res.ok()) throw ArbiterError("Failed to get IAM role");
 
-        const auto rolevec = res.data();
-        const auto iamRole = std::string(rolevec.begin(), rolevec.end());
+        std::string iamRole = res.str();
 
         if (!iamRole.empty())
         {
@@ -328,7 +323,6 @@ std::unique_ptr<S3::Auth> S3::Auth::create(
     {
         return makeUnique<Auth>(fargateCredIp + "/" + *relUri, ReauthMethod::IMDS_V2);
     }
-#endif
 
     return std::unique_ptr<Auth>();
 }
@@ -482,7 +476,6 @@ std::string S3::Config::extractBaseUrl(
 
 S3::AuthFields S3::Auth::fields() const
 {
-#ifdef ARBITER_CURL
     if (m_credUrl)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -499,7 +492,7 @@ S3::AuthFields S3::Auth::fields() const
             {
                 try
                 {
-                    const auto res = httpDriver.internalPut(
+                    Response res = httpDriver.internalPut(
                         ec2TokenBase,
                         std::vector<char>(),
                         {{ "X-aws-ec2-metadata-token-ttl-seconds", "21600" }},
@@ -512,8 +505,7 @@ S3::AuthFields S3::Auth::fields() const
                         throw ArbiterError("Failed to get IMDSv2 token");
                     }
 
-                    const auto tokenvec = res.data();
-                    token = std::string(tokenvec.data(), tokenvec.size());
+                    token = res.str();
                 }
                 catch (...) { }
             }
@@ -521,12 +513,13 @@ S3::AuthFields S3::Auth::fields() const
             http::Headers headers;
             if (!token.empty()) headers["X-aws-ec2-metadata-token"] = token;
 
-            const auto res = httpDriver.internalGet(*m_credUrl, headers);
+            Response res = httpDriver.internalGet(*m_credUrl, headers);
             if (!res.ok())
             {
                 throw ArbiterError("Failed to get token");
             }
-            std::vector<char> data(res.data());
+
+            std::vector<char> data = res.data();
             data.push_back('\0');
 
             if (m_reauthMethod == ReauthMethod::ASSUME_ROLE_WITH_WEB_IDENTITY)
@@ -593,7 +586,6 @@ S3::AuthFields S3::Auth::fields() const
         // releasing the lock.
         return S3::AuthFields(m_access, m_hidden, m_token);
     }
-#endif
 
     return S3::AuthFields(m_access, m_hidden, m_token);
 }

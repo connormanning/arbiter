@@ -37,11 +37,7 @@ Http::Http(
     : Driver(driverProtocol, profile)
     , m_pool(pool)
     , m_httpProtocol(httpProtocol)
-{
-#ifndef ARBITER_CURL
-    throw ArbiterError("Cannot create HTTP driver - no curl support was built");
-#endif
-}
+{}
 
 std::unique_ptr<Http> Http::create(Pool& pool)
 {
@@ -150,17 +146,11 @@ bool Http::get(
         const Headers headers,
         const Query query) const
 {
-    bool good(false);
-
-    auto http(m_pool.acquire());
+    Resource http(m_pool.acquire());
     Response res(http.get(typedPath(path), headers, query));
 
-
     data = res.data();
-    if (res.ok())
-        good = true;
-
-    return good;
+    return res.ok();
 }
 
 std::vector<char> Http::put(
@@ -169,8 +159,8 @@ std::vector<char> Http::put(
         const Headers headers,
         const Query query) const
 {
-    auto http(m_pool.acquire());
-    auto res(http.put(typedPath(path), data, headers, query));
+    Resource http(m_pool.acquire());
+    Response res(http.put(typedPath(path), data, headers, query));
 
     if (!res.ok())
     {
@@ -195,8 +185,8 @@ void Http::post(
         const Headers headers,
         const Query query) const
 {
-    auto http(m_pool.acquire());
-    auto res(http.post(typedPath(path), data, headers, query));
+    Resource http(m_pool.acquire());
+    Response res(http.post(typedPath(path), data, headers, query));
 
     if (!res.ok())
     {

@@ -64,7 +64,7 @@ inline bool isDirectory(std::string path)
     return (path.size() && isSlash(path.back())) || isGlob(path);
 }
 
-inline std::string joinImpl(bool first = false) { return std::string(); }
+inline std::string joinImpl(bool /* first */) { return std::string(); }
 
 template <typename ...Paths>
 inline std::string joinImpl(
