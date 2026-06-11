@@ -100,7 +100,7 @@ public:
 private:
     void run();
     void release(Curl& curl);
-    void handleReady();
+    int handleReady();
     bool handleFailure();
     bool handleCompleted();
 
