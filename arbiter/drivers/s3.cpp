@@ -565,7 +565,7 @@ S3::AuthFields S3::Auth::fields() const
             else
             {
                 // Parse JSON response.
-                const json creds = json::parse(res.data());
+                const json creds = json::parse(data.data());
 
                 m_access = creds.at("AccessKeyId").get<std::string>();
                 m_hidden = creds.at("SecretAccessKey").get<std::string>();
