@@ -159,6 +159,7 @@ Curl::Curl(Curl&& other)
     m_followRedirect = other.m_followRedirect;
     m_verifyPeer = other.m_verifyPeer;
     m_caPath = std::move(other.m_caPath);
+    m_caBundle = std::move(other.m_caBundle);
     m_caInfo = std::move(other.m_caInfo);
     m_proxy = std::move(other.m_proxy);
     m_response = std::move(other.m_response);
