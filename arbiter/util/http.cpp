@@ -24,6 +24,14 @@ namespace arbiter
 namespace http
 {
 
+namespace
+{
+    // HTTP code given to a transfer that failed in curl itself (connection
+    // error, timeout, body cut off after the headers).  Not a real HTTP
+    // status, but a 5xx, so Resource::exec retries it.
+    const int retryableCurlError(550);
+}
+
 std::string sanitize(const std::string& path, const std::string& excStr)
 {
     auto ispunct = [](char c) -> bool
@@ -290,7 +298,7 @@ bool Pool::handleCompleted()
                         std::cout << "Curl failure: " <<
                             curl_easy_strerror(result) << std::endl;
                     }
-                    curl.m_code = 550;  // Made-up error code.
+                    curl.m_code = retryableCurlError;
                 }
                 notify = true;
             }
@@ -310,7 +318,7 @@ bool Pool::handleFailure()
         {
             curl_multi_remove_handle(m_multi, curl.m_curl);
             curl.m_state = Curl::State::DONE;
-            curl.m_code = 550;  // Made-up error code.
+            curl.m_code = retryableCurlError;
             notify = true;
         }
     return notify;
