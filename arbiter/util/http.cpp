@@ -266,15 +266,32 @@ bool Pool::handleCompleted()
         if (m->msg != CURLMSG_DONE)
             continue;
 
+        // The message doesn't survive curl_multi_remove_handle, so copy it.
+        CURL* easyHandle = m->easy_handle;
+        const CURLcode result = m->data.result;
+
         // If we have a completed transfer, set the state to done, update the http code
         // and say we should notify.
-        curl_multi_remove_handle(m_multi, m->easy_handle);
+        curl_multi_remove_handle(m_multi, easyHandle);
         std::lock_guard l(m_mutex);
         for (Curl& curl : m_curls)
-            if (curl.m_curl == m->easy_handle)
+            if (curl.m_curl == easyHandle)
             {
                 curl.m_state = Curl::State::DONE;
                 curl_easy_getinfo(curl.m_curl, CURLINFO_RESPONSE_CODE, &curl.m_code);
+
+                // A transfer that failed (connection error, timeout, body cut
+                // off after the headers) may still have an HTTP code of 200.
+                // Report it as a server error so that it is retried.
+                if (result != CURLE_OK)
+                {
+                    if (curl.m_verbose)
+                    {
+                        std::cout << "Curl failure: " <<
+                            curl_easy_strerror(result) << std::endl;
+                    }
+                    curl.m_code = 550;  // Made-up error code.
+                }
                 notify = true;
             }
     }
